@@ -14,11 +14,14 @@ openai = "^0.16.0"
 gym = "^0.23.1"
 dollar-lambda = "^0.4.3"
 numpy = "^1.22.3"
+better-partial = "^1.0.6"
+persist-queue = "^0.7.0"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.2.0"
 ipdb = "^0.13.9"
 black = "^22.3.0"
+pre-commit = "^2.18.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
