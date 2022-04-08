@@ -11,6 +11,7 @@ torch = [
     {platform = 'linux', url = "https://download.pytorch.org/whl/cu115/torch-1.11.0%2Bcu115-cp39-cp39-linux_x86_64.whl"}
 ]
 openai = "^0.16.0"
+gym = "^0.23.1"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.2.0"
