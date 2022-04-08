@@ -12,6 +12,8 @@ torch = [
 ]
 openai = "^0.16.0"
 gym = "^0.23.1"
+dollar-lambda = "^0.4.3"
+numpy = "^1.22.3"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.2.0"
