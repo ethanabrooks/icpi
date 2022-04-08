@@ -1,21 +1,17 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer
+import os
+import openai
 
-model = AutoModelForCausalLM.from_pretrained("EleutherAI/gpt-j-6B")
-tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-j-6B")
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-prompt = (
-    "In a shocking finding, scientists discovered a herd of unicorns living in a remote, "
-    "previously unexplored valley, in the Andes Mountains. Even more surprising to the "
-    "researchers was the fact that the unicorns spoke perfect English."
+response = openai.Completion.create(
+    engine="text-davinci-002",
+    prompt="You are at state 3. Go left. You are at state 2. Receive a reward.\nYou are at state 2. Receive a reward.\nYou are at state 0. Go right. You are at state 1. Go right. You are at state 2. Receive a reward.\nYou are at state 4. Go left. You are at 3. Go left. You are at state 2. Receive a reward. \nYou are at state 1. Go right. You are at state 2. Receive a reward.\n",
+    temperature=0.1,
+    max_tokens=200,
+    top_p=1,
+    frequency_penalty=0,
+    presence_penalty=0,
 )
-
-input_ids = tokenizer(prompt, return_tensors="pt").input_ids
-
-gen_tokens = model.generate(
-    input_ids,
-    do_sample=True,
-    temperature=0.9,
-    max_length=100,
-)
-gen_text = tokenizer.batch_decode(gen_tokens)[0]
-
+for i, choice in enumerate(response.choices):
+    print("Output", i)
+    print(choice.text)
