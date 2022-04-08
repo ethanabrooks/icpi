@@ -15,7 +15,6 @@ gym = "^0.23.1"
 dollar-lambda = "^0.4.3"
 numpy = "^1.22.3"
 better-partial = "^1.0.6"
-persist-queue = "^0.7.0"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.2.0"
