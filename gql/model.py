@@ -123,12 +123,12 @@ class Q(Model):
         action_values = list(zip(actions, values))
         self.rng.shuffle(action_values)
         action, value = max(action_values, key=lambda x: self.env.quantify(x[1]))
-        # print("Q")
-        # print("state", state)
-        # for a, v in zip(actions, values):
-        #     print("action", a)
-        #     print("value", v)
-        # print("chosen", action)
+        print("Q")
+        print("state", state)
+        for a, v in zip(actions, values):
+            print("action", a)
+            print("value", v)
+        print("chosen", action)
         # breakpoint()
         return action, value
 
@@ -180,10 +180,10 @@ class V(Model):
                 if value.startswith(action_str):
                     action = maybe_action
         assert value is not None
-        # print("V")
-        # print("state", state)
-        # print("action", action)
-        # print("value", value)
+        print("V")
+        print("state", state)
+        print("action", action)
+        print("value", value)
         # breakpoint()
         return action, value
 
