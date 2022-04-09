@@ -1,9 +1,8 @@
 import abc
 import shelve
 import sys
-from collections import deque
 from dataclasses import dataclass
-from typing import Optional, Tuple, cast
+from typing import Deque, Optional, Tuple, cast
 
 import openai
 from env import ACTIONS, MAX_TOKENS, REWARDS, Env
@@ -20,6 +19,9 @@ class Prompt:
     @staticmethod
     def make(state: int, action: int, value: str):
         return Prompt(state, action, value.lstrip())
+
+    def to_value_quantity(self, env: Env) -> float:
+        return env.quantify(self.to_string(env))
 
     def to_string(self, env: Env) -> str:
         return f"{env.state_str(self.state)} {env.action_str(self.action)} {self.value}"
@@ -66,14 +68,11 @@ class GPT3:
 
 @dataclass
 class Model(abc.ABC):
+    buffer: Deque[Prompt]
     env: Env
     gpt3: GPT3
-    prompt_buffer_size: int
     prompt_size: int
     rng: Generator
-
-    def __post_init__(self):
-        self.buffer = deque(maxlen=self.prompt_buffer_size)
 
     def act(self, state: int) -> int:
         if self.ready():
@@ -85,18 +84,17 @@ class Model(abc.ABC):
     def action_value(self, state: int) -> Tuple[int, str]:
         ...
 
-    @abc.abstractmethod
-    def learn(self, prompt: Prompt):
-        ...
-
-    def __len__(self):
-        return len(self.buffer)
-
     def ready(self) -> bool:
-        return len(self) >= self.prompt_size
+        return len(self.buffer) >= self.prompt_size
 
     def sample(self):
         prompts = [p.to_string(self.env) for p in self.buffer]
+        self.rng.shuffle(prompts)
+        return prompts
+
+    def sample_best(self):
+        buffer = sorted(self.buffer, key=lambda p: p.quantify(self.env), reverse=True)
+        prompts = [p.to_string(self.env) for p in buffer][: self.prompt_size]
         self.rng.shuffle(prompts)
         return prompts
 
@@ -129,6 +127,8 @@ class Q(Model):
         #     print("action", a)
         #     print("value", v)
         # print("chosen", action)
+        # breakpoint()
+
         return action, value
 
     def learn(self, prompt: Prompt):
@@ -142,8 +142,8 @@ class Q(Model):
         completions = []
         state = self.env.state_str(state)
         action = self.env.action_str(action)
+        prompt = self.sample()
         while True:
-            prompt = self.sample()
             new_prompt = "\n".join([*prompt, f"{state} {action}"])
             # pprint(new_prompt)
             # print(f"{state} {action}", end=" :: ")
@@ -158,6 +158,7 @@ class Q(Model):
                 break
             completions.append(action)
             state = state_or_reward
+            prompt = self.sample_best()
 
         completion = " ".join(completions)
         # print("state", original_state)
@@ -187,15 +188,11 @@ class V(Model):
         # breakpoint()
         return action, value
 
-    def learn(self, prompt: Prompt):
-        if self.env.quantify(prompt.value) > 0:
-            self.buffer.append(prompt)
-
     def value(self, state: int, action: Optional[int] = None) -> str:
         completions = []
         state = self.env.state_str(state)
         while True:
-            prompt = self.sample()
+            prompt = self.sample_best()
             completion = self.gpt3("\n".join([*prompt, state])).lstrip()
             action, state_or_reward, *_ = completion.split(".")
             action, state_or_reward = map(reformat, [action, state_or_reward])

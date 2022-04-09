@@ -54,19 +54,20 @@ def main(
             head.state, head.action, f"{reward_str}{sep}{tail_trajectory}"
         ).to_string(env)
 
+    buffer = deque(maxlen=prompt_buffer_size)
     with shelve.open("completions/completions.pkl") as db:
         gpt3 = GPT3(db)
         v = V(
+            buffer=buffer,
             env=env,
             gpt3=gpt3,
-            prompt_buffer_size=prompt_buffer_size,
             prompt_size=v_prompt_size,
             rng=rng,
         )
         q = Q(
+            buffer=buffer,
             env=env,
             gpt3=gpt3,
-            prompt_buffer_size=prompt_buffer_size,
             prompt_size=q_prompt_size,
             rng=rng,
         )
@@ -107,15 +108,13 @@ def main(
                 if not value:
                     value = env.reward_str(head.reward)
                 prompt = Prompt.make(head.state, head.action, value)
-                q.learn(prompt)
-                v.learn(prompt)
+                buffer.append(prompt)
 
         df = (
             pd.DataFrame(np.array(returns).reshape(-1, 1), columns=["returns"])
-            .rolling(10)
-            .mean()
-            .reset_index()
-            .rename(columns=dict(index="episode"))
+            # .rolling(10)
+            # .mean()
+            .reset_index().rename(columns=dict(index="episode"))
         )
 
         alt.Chart(df).mark_line(interpolate="bundle").encode(
