@@ -20,14 +20,14 @@ class TimeStep:
 
 def main(
     batch_size: int = 1,
-    goal: int = 0,
+    goal: int = 4,
     max_trajectory: int = 5,
     prompt_buffer_size: int = 20,
     q_prompt_size: int = 10,
     v_prompt_size: int = 5,
     replay_buffer_size: int = 50,
     seed: int = 0,
-    states: int = 5,
+    states: int = 8,
     episodes: int = 100,
 ):
     openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -53,7 +53,6 @@ def main(
         ).to_string(env)
 
     with shelve.open("completions/completions.pkl") as db:
-
         gpt3 = GPT3(db)
         v = V(
             env=env,
@@ -84,10 +83,10 @@ def main(
                 next_state, reward, done, _ = env.step(action)
                 step = TimeStep(state, action, reward, None if done else next_state)
                 if done and model.ready():
-                    # print(i)
-                    # print("state", state)
-                    # print("action", action)
-                    # print("reward", reward)
+                    print(i)
+                    print("state", state)
+                    print("action", action)
+                    print("reward", reward)
                     # breakpoint()
                     lastN.append(reward)
                 # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$ Reward:", reward)

@@ -7,9 +7,9 @@ import gym.spaces
 import numpy as np
 
 ACTIONS = [
-    "Go left.",
-    "Try reward.",
-    "Go right.",
+    "Left.",
+    "Try goal.",
+    "Right.",
 ]
 
 REWARDS = {
@@ -79,7 +79,7 @@ class Env(gym.Env[int, int]):
 
     @staticmethod
     def state_str(state: int) -> str:
-        return f"You are at state {state}."
+        return f"{state}."
 
     def step(self, action: int) -> Tuple[int, float, bool, dict]:
         return self.iterator.send(action)
