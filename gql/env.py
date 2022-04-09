@@ -1,10 +1,11 @@
 from dataclasses import dataclass
-from typing import Generator, Iterator, Optional, Tuple, Union
+from typing import Generator, Optional, Tuple
+
 import gym
 import gym.spaces
 import numpy as np
 
-actions = [
+ACTIONS = [
     "Go left.",
     "Try reward",
     "Go right.",
@@ -27,7 +28,7 @@ class Env(gym.Env[int, int]):
 
     @staticmethod
     def action_str(action: int) -> str:
-        return actions[action]
+        return ACTIONS[action]
 
     def generator(self) -> Generator[Tuple[int, float, bool, dict], int, None]:
         state = self.random.choice(self.n)
