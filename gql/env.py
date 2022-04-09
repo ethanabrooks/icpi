@@ -1,3 +1,4 @@
+import itertools
 from dataclasses import dataclass
 from typing import Generator, Optional, Tuple
 
@@ -7,9 +8,17 @@ import numpy as np
 
 ACTIONS = [
     "Go left.",
-    "Try reward",
+    "Try reward.",
     "Go right.",
 ]
+
+REWARDS = {
+    1.0: "Success.",
+    0.0: "Failure.",
+}
+
+lengths = [len(a) + len(r) for a, r in itertools.product(ACTIONS, REWARDS.values())]
+MAX_TOKENS = max(lengths)
 
 
 @dataclass
@@ -24,7 +33,7 @@ class Env(gym.Env[int, int]):
 
     @staticmethod
     def success_str():
-        return "and succeed!"
+        return REWARDS[1.0]
 
     @staticmethod
     def action_str(action: int) -> str:
@@ -46,9 +55,9 @@ class Env(gym.Env[int, int]):
 
     @classmethod
     def quantify(cls, value: str) -> float:
-        if value.endswith(cls.success_str()):
-            return 0.9 ** value.count(".")
-        return 0
+        success = value.endswith(cls.success_str())
+        value = 0.9 ** value.count(".")
+        return value if success else -value
 
     def render(self, mode="human"):
         pass
@@ -66,10 +75,7 @@ class Env(gym.Env[int, int]):
 
     @classmethod
     def reward_str(cls, reward: float) -> str:
-        if reward:
-            return cls.success_str()
-        else:
-            return "and fail."
+        return REWARDS[reward]
 
     @staticmethod
     def state_str(state: int) -> str:

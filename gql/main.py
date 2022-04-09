@@ -55,7 +55,6 @@ def main(
         v = V(
             env=env,
             gpt3=gpt3,
-            optimistic=True,
             prompt_buffer_size=prompt_buffer_size,
             prompt_size=v_prompt_size,
             seed=seed,
@@ -63,7 +62,6 @@ def main(
         q = Q(
             env=env,
             gpt3=gpt3,
-            optimistic=False,
             prompt_buffer_size=prompt_buffer_size,
             prompt_size=q_prompt_size,
             seed=seed,
@@ -73,22 +71,23 @@ def main(
             done = False
             state = env.reset()
             trajectory: List[TimeStep] = []
-            # use_v = i % 2 == 0 and v.ready()
-            model = q
+            use_v = i % 2 == 0 and v.ready()
+            model = v if use_v else q
             while not done:
                 action = model.act(state)
                 next_state, reward, done, _ = env.step(action)
                 step = TimeStep(state, action, reward, None if done else next_state)
-                if done and q.ready():
+                if done and model.ready():
                     print("state", state)
                     print("action", action)
                     print("reward", reward)
+                    breakpoint()
                     last10.append(reward)
                 # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$ Reward:", reward)
                 trajectory.append(step)
                 state = next_state
 
-            if v.ready():
+            if model.ready():
                 _last10 = sorted(last10, reverse=True)
                 print("".join(["#" if r else " " for r in _last10]) + "|")
 
@@ -100,7 +99,7 @@ def main(
                 prompt = Prompt.make(head.state, head.action, value)
                 q.learn(prompt)
                 v.learn(prompt)
-                # print(len(v))
+                print(len(v))
 
 
 if __name__ == "__main__":
