@@ -27,13 +27,14 @@ def main(
     replay_buffer_size: int = 50,
     seed: int = 0,
     states: int = 5,
-    training_steps: int = 100000,
+    episodes: int = 100,
 ):
     openai.api_key = os.getenv("OPENAI_API_KEY")
+    # rng = np.random.default_rng(seed)
     env = Env(states, goal, seed)
     assert batch_size <= replay_buffer_size
 
-    last10 = deque(maxlen=10)
+    lastN = deque()
 
     def evaluate_trajectory(_trajectory: List[TimeStep]) -> str:
         if not _trajectory:
@@ -67,29 +68,30 @@ def main(
             seed=seed,
         )
 
-        for i in range(training_steps):
+        for i in range(episodes):
             done = False
             state = env.reset()
             trajectory: List[TimeStep] = []
             use_v = i % 2 == 0 and v.ready()
-            model = v if use_v else q
             while not done:
+                model = v if use_v else q
                 action = model.act(state)
                 next_state, reward, done, _ = env.step(action)
                 step = TimeStep(state, action, reward, None if done else next_state)
                 if done and model.ready():
-                    print("state", state)
-                    print("action", action)
-                    print("reward", reward)
-                    breakpoint()
-                    last10.append(reward)
+                    # print(i)
+                    # print("state", state)
+                    # print("action", action)
+                    # print("reward", reward)
+                    # breakpoint()
+                    lastN.append(reward)
                 # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$ Reward:", reward)
                 trajectory.append(step)
                 state = next_state
 
             if model.ready():
-                _last10 = sorted(last10, reverse=True)
-                print("".join(["#" if r else " " for r in _last10]) + "|")
+                _last10 = sorted(lastN, reverse=True)
+                print("\n", i, "".join(["#" if r else " " for r in _last10]) + "|")
 
             if len(trajectory) < max_trajectory:
                 head, *tail = trajectory
@@ -99,7 +101,6 @@ def main(
                 prompt = Prompt.make(head.state, head.action, value)
                 q.learn(prompt)
                 v.learn(prompt)
-                print(len(v))
 
 
 if __name__ == "__main__":
