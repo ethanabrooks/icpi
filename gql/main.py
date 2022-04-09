@@ -74,16 +74,20 @@ def main(
             state = env.reset()
             trajectory: List[TimeStep] = []
             while not done:
-                model = v if rng.random() < 0.5 else q
+                models = [m for m in [q, v] if m.ready()]
+                if len(models) == 2:
+                    model = rng.choice(models)
+                else:
+                    model = next(iter(models), q)
                 action = model.act(state)
                 next_state, reward, done, _ = env.step(action)
                 step = TimeStep(state, action, reward, None if done else next_state)
                 if done and model.ready():
-                    # print(i)
-                    # print("state", state)
-                    # print("action", action)
-                    # print("reward", reward)
-                    # breakpoint()
+                    print(i)
+                    print("state", state)
+                    print("action", action)
+                    print("reward", reward)
+                    breakpoint()
                     lastN.append(reward)
                 # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$ Reward:", reward)
                 trajectory.append(step)
