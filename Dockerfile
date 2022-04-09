@@ -52,7 +52,7 @@ RUN pip3 install poetry && poetry install
 
 FROM base AS runtime
 
-WORKDIR "/project"
+WORKDIR "/root"
 ENV VIRTUAL_ENV=/root/.cache/pypoetry/virtualenvs/gql-K3BlsyQa-py3.9
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 COPY --from=python-deps $VIRTUAL_ENV $VIRTUAL_ENV

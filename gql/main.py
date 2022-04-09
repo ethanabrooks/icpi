@@ -53,6 +53,7 @@ def main(
         ).to_string(env)
 
     with shelve.open("completions/completions.pkl") as db:
+
         gpt3 = GPT3(db)
         v = V(
             env=env,
@@ -83,11 +84,11 @@ def main(
                 next_state, reward, done, _ = env.step(action)
                 step = TimeStep(state, action, reward, None if done else next_state)
                 if done and model.ready():
-                    print(i)
-                    print("state", state)
-                    print("action", action)
-                    print("reward", reward)
-                    breakpoint()
+                    # print(i)
+                    # print("state", state)
+                    # print("action", action)
+                    # print("reward", reward)
+                    # breakpoint()
                     lastN.append(reward)
                 # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$ Reward:", reward)
                 trajectory.append(step)
