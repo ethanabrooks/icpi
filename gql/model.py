@@ -41,8 +41,9 @@ class GPT3:
         # print(prompt)
         # breakpoint()
 
+        print("<", end="")
         while True:
-            print("Prompt:", prompt.split("\n")[-1])
+            # print("Prompt:", prompt.split("\n")[-1])
             sys.stdout.flush()
             choice, *_ = openai.Completion.create(
                 engine="text-davinci-002",
@@ -56,9 +57,10 @@ class GPT3:
             completion = choice.text.lstrip()
             if "." in completion:
                 self.db[prompt] = completion
+                print(">", end="")
                 # if pause:
-                print("Completion:", completion.split("\n")[0])
-                breakpoint()
+                # print("Completion:", completion.split("\n")[0])
+                # breakpoint()
                 return completion
 
 
@@ -122,12 +124,12 @@ class Q(Model):
         action_values = list(zip(actions, values))
         self.rng.shuffle(action_values)
         action, value = max(action_values, key=lambda x: self.env.quantify(x[1]))
-        print("Q")
-        print("state", state)
-        for a, v in zip(actions, values):
-            print("action", a)
-            print("value", v)
-        print("chosen", action)
+        # print("Q")
+        # print("state", state)
+        # for a, v in zip(actions, values):
+        #     print("action", a)
+        #     print("value", v)
+        # print("chosen", action)
         # breakpoint()
         return action, value
 
@@ -137,8 +139,8 @@ class Q(Model):
     def value(self, state: int, action: Optional[int] = None) -> str:
         assert action is not None
 
-        original_state = state
-        original_action = action
+        # original_state = state
+        # original_action = action
         completions = []
         state = self.env.state_str(state)
         action = self.env.action_str(action)
@@ -159,10 +161,10 @@ class Q(Model):
             state = state_or_reward
 
         completion = " ".join(completions)
-        print("state", original_state)
-        print("action", original_action)
-        print(completion)
-        breakpoint()
+        # print("state", original_state)
+        # print("action", original_action)
+        # print(completion)
+        # breakpoint()
         return completion
 
 
@@ -179,10 +181,10 @@ class V(Model):
                 if value.startswith(action_str):
                     action = maybe_action
         assert value is not None
-        print("V")
-        print("state", state)
-        print("action", action)
-        print("value", value)
+        # print("V")
+        # print("state", state)
+        # print("action", action)
+        # print("value", value)
         # breakpoint()
         return action, value
 
@@ -203,6 +205,6 @@ class V(Model):
                 break
             state = state_or_reward
         completion = " ".join(completions)
-        print(completion)
-        breakpoint()
+        # print(completion)
+        # breakpoint()
         return completion
