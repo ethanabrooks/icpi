@@ -4,6 +4,7 @@ from collections import deque
 from dataclasses import dataclass
 from typing import List, Optional
 
+import numpy as np
 import openai
 from env import Env
 from model import GPT3, Prompt, Q, V
@@ -19,7 +20,7 @@ class TimeStep:
 
 def main(
     batch_size: int = 1,
-    goal: int = 3,
+    goal: int = 0,
     max_trajectory: int = 5,
     prompt_buffer_size: int = 20,
     q_prompt_size: int = 10,
@@ -30,7 +31,7 @@ def main(
     episodes: int = 100,
 ):
     openai.api_key = os.getenv("OPENAI_API_KEY")
-    # rng = np.random.default_rng(seed)
+    rng = np.random.default_rng(seed)
     env = Env(states, goal, seed)
     assert batch_size <= replay_buffer_size
 
@@ -58,23 +59,22 @@ def main(
             gpt3=gpt3,
             prompt_buffer_size=prompt_buffer_size,
             prompt_size=v_prompt_size,
-            seed=seed,
+            rng=rng,
         )
         q = Q(
             env=env,
             gpt3=gpt3,
             prompt_buffer_size=prompt_buffer_size,
             prompt_size=q_prompt_size,
-            seed=seed,
+            rng=rng,
         )
 
         for i in range(episodes):
             done = False
             state = env.reset()
             trajectory: List[TimeStep] = []
-            use_v = i % 2 == 0 and v.ready()
             while not done:
-                model = v if use_v else q
+                model = v if rng.random() < 0.5 else q
                 action = model.act(state)
                 next_state, reward, done, _ = env.step(action)
                 step = TimeStep(state, action, reward, None if done else next_state)
