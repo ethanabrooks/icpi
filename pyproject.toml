@@ -15,6 +15,7 @@ gym = "^0.23.1"
 dollar-lambda = "^0.4.3"
 numpy = "^1.22.3"
 better-partial = "^1.0.6"
+altair = "^4.2.0"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.2.0"
