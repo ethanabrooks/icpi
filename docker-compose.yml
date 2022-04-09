@@ -44,9 +44,7 @@ services:
       - --command=python ${SCRIPT} sweep --sweep
     volumes:
       - "${PWD}/logs:/tmp/logs"
-      - "${HOME}/.cache/GPT/:/root/.cache/GPT"
-      - "${HOME}/.cache/data/:/root/.cache/data"
-      - "${HOME}/.cache/huggingface/:/root/.cache/huggingface"
+      - "${PWD}/completions:/root/completions"
     deploy:
       replicas: ${REPLICAS}
       resources:
