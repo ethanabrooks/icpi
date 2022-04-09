@@ -35,7 +35,7 @@ def main(
     env = Env(states, goal, seed)
     assert batch_size <= replay_buffer_size
 
-    lastN = deque()
+    lastN = deque(maxlen=10)
 
     def evaluate_trajectory(_trajectory: List[TimeStep]) -> str:
         if not _trajectory:
@@ -83,10 +83,10 @@ def main(
                 next_state, reward, done, _ = env.step(action)
                 step = TimeStep(state, action, reward, None if done else next_state)
                 if done and model.ready():
-                    print(i)
-                    print("state", state)
-                    print("action", action)
-                    print("reward", reward)
+                    # print(i)
+                    # print("state", state)
+                    # print("action", action)
+                    # print("reward", reward)
                     # breakpoint()
                     lastN.append(reward)
                 # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$ Reward:", reward)
@@ -94,8 +94,10 @@ def main(
                 state = next_state
 
             if model.ready():
-                _last10 = sorted(lastN, reverse=True)
-                print("\n", i, "".join(["#" if r else " " for r in _last10]) + "|")
+                _last10 = list(lastN) + [0] * (10 - len(lastN))
+                _last10 = sorted(_last10, reverse=True)
+                # print()
+                print(i, "".join(["#" if r > 0 else " " for r in _last10]) + "|")
 
             if len(trajectory) < max_trajectory:
                 head, *tail = trajectory

@@ -40,8 +40,8 @@ class GPT3:
         # print("Prompt:")
         # print(prompt)
         # breakpoint()
-
-        print("<", end="")
+        #
+        # print("<", end="")
         while True:
             # print("Prompt:", prompt.split("\n")[-1])
             sys.stdout.flush()
@@ -57,7 +57,7 @@ class GPT3:
             completion = choice.text.lstrip()
             if "." in completion:
                 self.db[prompt] = completion
-                print(">", end="")
+                # print(">", end="")
                 # if pause:
                 # print("Completion:", completion.split("\n")[0])
                 # breakpoint()
@@ -123,13 +123,12 @@ class Q(Model):
         action_values = list(zip(actions, values))
         self.rng.shuffle(action_values)
         action, value = max(action_values, key=lambda x: self.env.quantify(x[1]))
-        print("Q")
-        print("state", state)
-        for a, v in zip(actions, values):
-            print("action", a)
-            print("value", v)
-        print("chosen", action)
-        # breakpoint()
+        # print("Q")
+        # print("state", state)
+        # for a, v in zip(actions, values):
+        #     print("action", a)
+        #     print("value", v)
+        # print("chosen", action)
         return action, value
 
     def learn(self, prompt: Prompt):
@@ -146,6 +145,7 @@ class Q(Model):
         while True:
             prompt = self.sample()
             new_prompt = "\n".join([*prompt, f"{state} {action}"])
+            # pprint(new_prompt)
             # print(f"{state} {action}", end=" :: ")
             completion = self.gpt3(new_prompt).lstrip()
             state_or_reward, action, *_ = completion.split(".")
@@ -180,10 +180,10 @@ class V(Model):
                 if value.startswith(action_str):
                     action = maybe_action
         assert value is not None
-        print("V")
-        print("state", state)
-        print("action", action)
-        print("value", value)
+        # print("V")
+        # print("state", state)
+        # print("action", action)
+        # print("value", value)
         # breakpoint()
         return action, value
 
