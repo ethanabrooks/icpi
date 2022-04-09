@@ -5,10 +5,10 @@ from collections import deque
 from dataclasses import dataclass
 from typing import Optional, Tuple, cast
 
-import numpy as np
 import openai
 from env import ACTIONS, MAX_TOKENS, REWARDS, Env
 from gym.spaces import Discrete
+from numpy.random import Generator
 
 
 @dataclass
@@ -70,11 +70,10 @@ class Model(abc.ABC):
     gpt3: GPT3
     prompt_buffer_size: int
     prompt_size: int
-    seed: int
+    rng: Generator
 
     def __post_init__(self):
         self.buffer = deque(maxlen=self.prompt_buffer_size)
-        self.rng = np.random.default_rng(seed=self.seed)
 
     def act(self, state: int) -> int:
         if self.ready():
