@@ -21,6 +21,9 @@ RUN apt-get update -q \
       # primary interpreter
       python3.9 \
 
+      # for shelve
+      python3.9-gdb \
+
       # redis-python
       redis \
 
