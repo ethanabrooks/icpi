@@ -4,8 +4,10 @@ from collections import deque
 from dataclasses import dataclass
 from typing import List, Optional
 
+import altair as alt
 import numpy as np
 import openai
+import pandas as pd
 from env import Env
 from model import GPT3, Prompt, Q, V
 
@@ -28,14 +30,14 @@ def main(
     replay_buffer_size: int = 50,
     seed: int = 0,
     states: int = 8,
-    episodes: int = 100,
+    episodes: int = 40,
 ):
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
     env = Env(states, goal, seed)
     assert batch_size <= replay_buffer_size
 
-    lastN = deque(maxlen=10)
+    returns = deque()
 
     def evaluate_trajectory(_trajectory: List[TimeStep]) -> str:
         if not _trajectory:
@@ -88,16 +90,16 @@ def main(
                     # print("action", action)
                     # print("reward", reward)
                     # breakpoint()
-                    lastN.append(reward)
+                    returns.append(reward)
                 # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$ Reward:", reward)
                 trajectory.append(step)
                 state = next_state
 
-            if model.ready():
-                _last10 = list(lastN) + [0] * (10 - len(lastN))
-                _last10 = sorted(_last10, reverse=True)
-                # print()
-                print(i, "".join(["#" if r > 0 else " " for r in _last10]) + "|")
+            # if model.ready():
+            #     _last10 = list(returns) + [0] * (10 - len(returns))
+            #     _last10 = sorted(_last10, reverse=True)
+            #     # print()
+            #     print(i, "".join(["#" if r > 0 else " " for r in _last10]) + "|")
 
             if len(trajectory) < max_trajectory:
                 head, *tail = trajectory
@@ -107,6 +109,18 @@ def main(
                 prompt = Prompt.make(head.state, head.action, value)
                 q.learn(prompt)
                 v.learn(prompt)
+
+        df = (
+            pd.DataFrame(np.array(returns).reshape(-1, 1), columns=["returns"])
+            .rolling(10)
+            .mean()
+            .reset_index()
+            .rename(columns=dict(index="episode"))
+        )
+
+        alt.Chart(df).mark_line(interpolate="bundle").encode(
+            x="episode", y="returns"
+        ).save("logs/returns.json")
 
 
 if __name__ == "__main__":
