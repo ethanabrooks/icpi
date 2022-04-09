@@ -4,43 +4,48 @@ import gym
 import gym.spaces
 import numpy as np
 
+actions = [
+    "Go left.",
+    "Try reward",
+    "Go right.",
+]
+
 
 @dataclass
 class Env(gym.Env[int, int]):
     n: int
     goal: int
+    random_seed: int
 
     def __post_init__(self):
-        self.random = np.random.default_rng()
-        self.action_space = gym.spaces.Discrete(3)
+        self.random = np.random.default_rng(self.random_seed)
+        self.action_space = gym.spaces.Discrete(3, seed=self.random_seed)
+
+    @staticmethod
+    def success_str():
+        return "and succeed!"
 
     @staticmethod
     def action_str(action: int) -> str:
-        if action == 0:
-            return "left"
-        if action == 1:
-            return "Try to get reward."
-        if action == 2:
-            return "right"
-        raise RuntimeError()
+        return actions[action]
 
     def generator(self) -> Generator[Tuple[int, float, bool, dict], int, None]:
         state = self.random.choice(self.n)
+        reward = 0
+        done = False
         info = {}
-        action = yield state, 0, False, info
         while True:
-            action -= 1
-            done = action == 0
+            action = yield state, reward, done, info
+            state += action - 1
+            state = np.clip(state, 0, self.n - 1)
+            done = action == 1
             success = done and state == self.goal
             reward = float(success)
             state = int(state)
-            action = yield state, reward, done, info
-            state += action
-            state = np.clip(state, 0, self.n - 1)
 
-    @staticmethod
-    def quantify(value: str) -> float:
-        if value.endswith("Receive a reward."):
+    @classmethod
+    def quantify(cls, value: str) -> float:
+        if value.endswith(cls.success_str()):
             return 0.9 ** value.count(".")
         return 0
 
@@ -58,12 +63,12 @@ class Env(gym.Env[int, int]):
         s, _, _, _ = next(self.iterator)
         return s
 
-    @staticmethod
-    def reward_str(reward: float) -> str:
+    @classmethod
+    def reward_str(cls, reward: float) -> str:
         if reward:
-            return "Got reward."
+            return cls.success_str()
         else:
-            return "No reward."
+            return "and fail."
 
     @staticmethod
     def state_str(state: int) -> str:

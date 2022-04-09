@@ -1,5 +1,5 @@
 # inspired by https://sourcery.ai/blog/python-docker/
-FROM ubuntu20.04 as base
+FROM ubuntu:20.04 as base
 ENV LC_ALL C.UTF-8
 
 # no .pyc files
@@ -46,14 +46,13 @@ WORKDIR "/deps"
 COPY pyproject.toml poetry.lock /deps/
 RUN pip3 install poetry && poetry install
 
-#ENV VIRTUAL_ENV=/root/.cache/pypoetry/virtualenvs/generalization-K3BlsyQa-py3.8/
-#
-#FROM base AS runtime
-#
-#WORKDIR "/project"
-#ENV VIRTUAL_ENV=/root/.cache/pypoetry/virtualenvs/generalization-K3BlsyQa-py3.8/
-#ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-#COPY --from=python-deps $VIRTUAL_ENV $VIRTUAL_ENV
-#COPY . .
-#
-#ENTRYPOINT ["python"]
+
+FROM base AS runtime
+
+WORKDIR "/project"
+ENV VIRTUAL_ENV=/root/.cache/pypoetry/virtualenvs/gql-K3BlsyQa-py3.9
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+COPY --from=python-deps $VIRTUAL_ENV $VIRTUAL_ENV
+COPY . .
+
+ENTRYPOINT ["python"]
