@@ -57,7 +57,7 @@ class Env(gym.Env[int, int]):
     def quantify(cls, value: str) -> float:
         success = value.endswith(cls.success_str())
         value = 0.9 ** value.count(".")
-        return value if success else -1e5 * value
+        return value if success else -1e-5 * value
 
     def render(self, mode="human"):
         pass

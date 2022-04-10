@@ -23,8 +23,7 @@ class TimeStep:
 def main(
     batch_size: int = 1,
     goal: int = 4,
-    max_trajectory: int = 5,
-    prompt_buffer_size: int = 20,
+    max_trajectory: int = 8,
     q_prompt_size: int = 10,
     v_prompt_size: int = 5,
     replay_buffer_size: int = 50,
@@ -54,7 +53,7 @@ def main(
             head.state, head.action, f"{reward_str}{sep}{tail_trajectory}"
         ).to_string(env)
 
-    buffer = deque(maxlen=prompt_buffer_size)
+    buffer = deque()
     with shelve.open("completions/completions.pkl") as db:
         gpt3 = GPT3(db)
         v = V(
@@ -76,7 +75,6 @@ def main(
             done = False
             state = env.reset()
             trajectory: List[TimeStep] = []
-
             while not done:
                 models = [m for m in [q, v] if m.ready()]
                 if len(models) == 2:
@@ -87,10 +85,11 @@ def main(
                 next_state, reward, done, _ = env.step(action)
                 step = TimeStep(state, action, reward, None if done else next_state)
                 if done and model.ready():
-                    print(i)
-                    print("state", state)
-                    print("action", action)
-                    print("reward", reward)
+                    # print(i)
+                    # print("state", state)
+                    # print("action", action)
+                    # print("reward", reward)
+                    # breakpoint()
                     returns.append(reward)
                 # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$ Reward:", reward)
                 trajectory.append(step)
@@ -109,8 +108,6 @@ def main(
                     value = env.reward_str(head.reward)
                 prompt = Prompt.make(head.state, head.action, value)
                 buffer.append(prompt)
-                # print("Buffer value")
-                # print(sum([p.to_value_quantity(env) for p in buffer]))
 
         df = (
             pd.DataFrame(np.array(returns).reshape(-1, 1), columns=["returns"])
