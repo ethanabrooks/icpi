@@ -38,11 +38,12 @@ class GPT3:
             # print(value)
             return completion
 
+        # if pause:
         # print("Prompt:")
         # print(prompt)
         # breakpoint()
-
-        print("<", end="")
+        #
+        # print("<", end="")
         while True:
             # print("Prompt:", prompt.split("\n")[-1])
             sys.stdout.flush()
@@ -58,7 +59,8 @@ class GPT3:
             completion = choice.text.lstrip()
             if "." in completion:
                 self.db[prompt] = completion
-                print(">", end="")
+                # print(">", end="")
+                # if pause:
                 # print("Completion:", completion.split("\n")[0])
                 # breakpoint()
                 return completion
@@ -121,13 +123,14 @@ class Q(Model):
         action_values = list(zip(actions, values))
         self.rng.shuffle(action_values)
         action, value = max(action_values, key=lambda x: self.env.quantify(x[1]))
-        print("Q")
-        print("state", state)
-        for a, v in zip(actions, values):
-            print("action", a)
-            print("value", v)
-        print("chosen", action)
-        breakpoint()
+        # print("Q")
+        # print("state", state)
+        # for a, v in zip(actions, values):
+        #     print("action", a)
+        #     print("value", v)
+        # print("chosen", action)
+        # breakpoint()
+
         return action, value
 
     def learn(self, prompt: Prompt):
@@ -146,7 +149,6 @@ class Q(Model):
             new_prompt = "\n".join([*prompt, f"{state} {action}"])
             # pprint(new_prompt)
             # print(f"{state} {action}", end=" :: ")
-            # print(new_prompt)
             completion = self.gpt3(new_prompt).lstrip()
             state_or_reward, action, *_ = completion.split(".")
             state_or_reward, action = map(reformat, [state_or_reward, action])
@@ -173,31 +175,29 @@ class V(Model):
         action = None
         value = None
         while action is None:
+            # print("\n".join(prompt))
+            # breakpoint()
             value = self.value(state).lstrip()
             for maybe_action, action_str in enumerate(ACTIONS):
                 # print(value.startswith(action_str), action_str, value)
                 if value.startswith(action_str):
                     action = maybe_action
         assert value is not None
-        print("V")
-        print("state", state)
-        print("action", action)
-        print("value", value)
-        breakpoint()
+        # print("V")
+        # print("state", state)
+        # print("action", action)
+        # print("value", value)
+        # breakpoint()
         return action, value
 
     def ready(self) -> bool:
-        return (
-            sum(
-                [p.to_value_quantity(self.env) for p in self.buffer]
-            )  # TODO: this is a bit of a cheat
-            >= self.prompt_size
-        )
+        value_quantities = [p.to_value_quantity(self.env) for p in self.buffer]
+        top_n = sorted(value_quantities, reverse=True)[: self.prompt_size]
+        return sum(top_n) >= self.prompt_size  # TODO: this is a bit of a cheat
 
     def value(self, state: int, action: Optional[int] = None) -> str:
         completions = []
         state = self.env.state_str(state)
-        # print("state", state)
         while True:
             prompt = self.sample_best()
             completion = self.gpt3("\n".join([*prompt, state])).lstrip()
