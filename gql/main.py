@@ -76,6 +76,7 @@ def main(
             done = False
             state = env.reset()
             trajectory: List[TimeStep] = []
+
             while not done:
                 models = [m for m in [q, v] if m.ready()]
                 if len(models) == 2:
@@ -86,11 +87,10 @@ def main(
                 next_state, reward, done, _ = env.step(action)
                 step = TimeStep(state, action, reward, None if done else next_state)
                 if done and model.ready():
-                    # print(i)
-                    # print("state", state)
-                    # print("action", action)
-                    # print("reward", reward)
-                    # breakpoint()
+                    print(i)
+                    print("state", state)
+                    print("action", action)
+                    print("reward", reward)
                     returns.append(reward)
                 # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$ Reward:", reward)
                 trajectory.append(step)
@@ -109,6 +109,8 @@ def main(
                     value = env.reward_str(head.reward)
                 prompt = Prompt.make(head.state, head.action, value)
                 buffer.append(prompt)
+                # print("Buffer value")
+                # print(sum([p.to_value_quantity(env) for p in buffer]))
 
         df = (
             pd.DataFrame(np.array(returns).reshape(-1, 1), columns=["returns"])
