@@ -91,11 +91,9 @@ class Model(abc.ABC):
         return prompts
 
     def sample_best(self):
-        buffer = list(self.buffer)
-        self.rng.shuffle(buffer)
         buffer = sorted(
             self.buffer,
-            key=lambda p: p.to_value_quantity(self.env),
+            key=lambda p: (p.to_value_quantity(self.env), self.rng.random()),
             reverse=True,
         )
         prompts = [p.to_string(self.env) for p in buffer][: self.prompt_size]
@@ -120,7 +118,10 @@ class Q(Model):
         values = list(get_values())
         action_values = list(zip(actions, values))
         self.rng.shuffle(action_values)
-        action, value = max(action_values, key=lambda x: self.env.quantify(x[1]))
+        action, value = max(
+            action_values,
+            key=lambda x: (self.env.quantify(x[1], gamma=0.9), self.rng.random()),
+        )
 
         print("Q")
         print("state", state)
@@ -143,14 +144,14 @@ class Q(Model):
         state = self.env.state_str(state)
         action = self.env.action_str(action)
         prompt = self.sample()
+        new_prompt = "\n".join([*prompt, f"{state} {action}"])
         while True:
-            new_prompt = "\n".join([*prompt, f"{state} {action}"])
             print(new_prompt)
             # print(f"{state} {action}", end=" :: ")
             completion = self.gpt3(new_prompt).lstrip()
             state_or_reward, action, *_ = completion.split(".")
             state_or_reward, action = map(reformat, [state_or_reward, action])
-            # print(f"{state_or_reward} {action}")
+            print(f"{state_or_reward} {action}")
             # breakpoint()
 
             completions.append(state_or_reward)
@@ -159,6 +160,7 @@ class Q(Model):
             completions.append(action)
             state = state_or_reward
             prompt = self.sample_best()
+            new_prompt = "\n".join([*prompt, state])
 
         completion = " ".join(completions)
         # print("state", original_state)
