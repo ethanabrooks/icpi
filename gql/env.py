@@ -54,10 +54,12 @@ class Env(gym.Env[int, int]):
             state = int(state)
 
     @classmethod
-    def quantify(cls, value: str) -> float:
+    def quantify(cls, value: str, gamma: Optional[float] = None) -> float:
+        if gamma is None:
+            gamma = 1
         success = value.endswith(cls.success_str())
-        value = 0.9 ** value.count(".")
-        return value if success else -1e-5 * value
+        value = gamma ** value.count(".")
+        return value if success else (gamma - 1) * value
 
     def render(self, mode="human"):
         pass

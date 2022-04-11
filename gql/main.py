@@ -1,3 +1,4 @@
+import math
 import os
 import shelve
 from collections import deque
@@ -9,7 +10,7 @@ import numpy as np
 import openai
 import pandas as pd
 from env import Env
-from model import GPT3, Prompt, Q, V
+from model import GPT3, Pi, Prompt, Q
 
 
 @dataclass
@@ -21,24 +22,22 @@ class TimeStep:
 
 
 def main(
-    batch_size: int = 1,
     goal: int = 4,
     max_trajectory: int = 8,
+    n=10,
     q_prompt_size: int = 10,
-    v_prompt_size: int = 5,
-    replay_buffer_size: int = 50,
+    pi_prompt_size: int = 8,
     seed: int = 0,
     states: int = 8,
-    episodes: int = 40,
+    episodes: int = 400,
 ):
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
     env = Env(states, goal, seed)
-    assert batch_size <= replay_buffer_size
 
     returns = deque()
 
-    def evaluate_trajectory(_trajectory: List[TimeStep]) -> str:
+    def to_string(_trajectory: List[TimeStep]) -> str:
         if not _trajectory:
             return ""
         head, *tail = _trajectory
@@ -47,7 +46,7 @@ def main(
         else:
             reward_str = ""
 
-        tail_trajectory = evaluate_trajectory(tail)
+        tail_trajectory = to_string(tail)
         sep = " " if tail_trajectory and reward_str else ""
         return Prompt.make(
             head.state, head.action, f"{reward_str}{sep}{tail_trajectory}"
@@ -56,11 +55,11 @@ def main(
     buffer = deque()
     with shelve.open("completions/completions.pkl") as db:
         gpt3 = GPT3(db)
-        v = V(
+        pi = Pi(
             buffer=buffer,
             env=env,
             gpt3=gpt3,
-            prompt_size=v_prompt_size,
+            prompt_size=pi_prompt_size,
             rng=rng,
         )
         q = Q(
@@ -75,21 +74,28 @@ def main(
             done = False
             state = env.reset()
             trajectory: List[TimeStep] = []
+            use_pi = i % 2 == 0
             while not done:
-                models = [m for m in [q, v] if m.ready()]
-                if len(models) == 2:
-                    model = rng.choice(models)
+                value_quantities = [p.to_value_quantity(env) for p in list(buffer)]
+                value_quantities = sorted(value_quantities, reverse=True)[:n]
+                value_sum = sum(value_quantities)
+                use_model_prob = 1 / (1 + math.exp(2 * (1 - value_sum)))
+                print("use_model_prob", round(use_model_prob, 3))
+                use_model = rng.random() < use_model_prob
+                if use_model:
+                    model = pi if use_pi else q
+                    action = model.act(state)
                 else:
-                    model = next(iter(models), q)
-                action = model.act(state)
+                    action = env.action_space.sample()
                 next_state, reward, done, _ = env.step(action)
                 step = TimeStep(state, action, reward, None if done else next_state)
-                if done and model.ready():
-                    # print(i)
-                    # print("state", state)
-                    # print("action", action)
-                    # print("reward", reward)
-                    # breakpoint()
+                if done and use_pi:
+                    print(i)
+                    print("state", state)
+                    print("action", action)
+                    print("reward", reward)
+                    if reward > 0:
+                        breakpoint()
                     returns.append(reward)
                 # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$ Reward:", reward)
                 trajectory.append(step)
@@ -103,7 +109,7 @@ def main(
 
             if len(trajectory) < max_trajectory:
                 head, *tail = trajectory
-                value = evaluate_trajectory(tail)
+                value = to_string(tail)
                 if not value:
                     value = env.reward_str(head.reward)
                 prompt = Prompt.make(head.state, head.action, value)

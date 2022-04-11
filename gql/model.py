@@ -2,7 +2,7 @@ import abc
 import shelve
 import sys
 from dataclasses import dataclass
-from typing import Deque, Optional, Tuple, cast
+from typing import Deque, Optional, cast
 
 import openai
 from env import ACTIONS, MAX_TOKENS, REWARDS, Env
@@ -20,8 +20,8 @@ class Prompt:
     def make(state: int, action: int, value: str):
         return Prompt(state, action, value.lstrip())
 
-    def to_value_quantity(self, env: Env) -> float:
-        return env.quantify(self.to_string(env))
+    def to_value_quantity(self, env: Env, gamma: Optional[float] = None) -> float:
+        return env.quantify(self.to_string(env), gamma=gamma)
 
     def to_string(self, env: Env) -> str:
         return f"{env.state_str(self.state)} {env.action_str(self.action)} {self.value}"
@@ -32,18 +32,18 @@ class GPT3:
     db: shelve.DbfilenameShelf
 
     def __call__(self, prompt, pause=True):
+        print("<", end="")
         if prompt in self.db:
             completion = cast(str, self.db[prompt])
             # print("Completion:")
             # print(value)
+            print(">", end="")
             return completion
 
-        # if pause:
         # print("Prompt:")
         # print(prompt)
         # breakpoint()
         #
-        # print("<", end="")
         while True:
             # print("Prompt:", prompt.split("\n")[-1])
             sys.stdout.flush()
@@ -59,8 +59,7 @@ class GPT3:
             completion = choice.text.lstrip()
             if "." in completion:
                 self.db[prompt] = completion
-                # print(">", end="")
-                # if pause:
+                print(">", end="")
                 # print("Completion:", completion.split("\n")[0])
                 # breakpoint()
                 return completion
@@ -76,12 +75,11 @@ class Model(abc.ABC):
 
     def act(self, state: int) -> int:
         if self.ready():
-            act, _ = self.action_value(state)
-            return act
+            return self._act(state)
         return self.env.action_space.sample()
 
     @abc.abstractmethod
-    def action_value(self, state: int) -> Tuple[int, str]:
+    def _act(self, state: int) -> int:
         ...
 
     def ready(self) -> bool:
@@ -93,16 +91,16 @@ class Model(abc.ABC):
         return prompts
 
     def sample_best(self):
+        buffer = list(self.buffer)
+        self.rng.shuffle(buffer)
         buffer = sorted(
-            self.buffer, key=lambda p: p.to_value_quantity(self.env), reverse=True
+            self.buffer,
+            key=lambda p: p.to_value_quantity(self.env),
+            reverse=True,
         )
         prompts = [p.to_string(self.env) for p in buffer][: self.prompt_size]
         self.rng.shuffle(prompts)
         return prompts
-
-    @abc.abstractmethod
-    def value(self, state: int, action: Optional[int] = None) -> str:
-        ...
 
 
 def reformat(completion: str) -> str:
@@ -111,7 +109,7 @@ def reformat(completion: str) -> str:
 
 @dataclass
 class Q(Model):
-    def action_value(self, state: int) -> Tuple[int, str]:
+    def _act(self, state: int) -> int:
         assert isinstance(self.env.action_space, Discrete)
         actions = range(self.env.action_space.n)
 
@@ -123,15 +121,15 @@ class Q(Model):
         action_values = list(zip(actions, values))
         self.rng.shuffle(action_values)
         action, value = max(action_values, key=lambda x: self.env.quantify(x[1]))
-        # print("Q")
-        # print("state", state)
-        # for a, v in zip(actions, values):
-        #     print("action", a)
-        #     print("value", v)
-        # print("chosen", action)
-        # breakpoint()
 
-        return action, value
+        print("Q")
+        print("state", state)
+        for a, v in zip(actions, values):
+            print("action", a)
+            print("value", v)
+        print("chosen", action)
+        breakpoint()
+        return action
 
     def learn(self, prompt: Prompt):
         self.buffer.append(prompt)
@@ -147,7 +145,7 @@ class Q(Model):
         prompt = self.sample()
         while True:
             new_prompt = "\n".join([*prompt, f"{state} {action}"])
-            # pprint(new_prompt)
+            print(new_prompt)
             # print(f"{state} {action}", end=" :: ")
             completion = self.gpt3(new_prompt).lstrip()
             state_or_reward, action, *_ = completion.split(".")
@@ -170,44 +168,22 @@ class Q(Model):
         return completion
 
 
-class V(Model):
-    def action_value(self, state: int) -> Tuple[int, str]:
-        action = None
-        value = None
-        while action is None:
-            # print("\n".join(prompt))
-            # breakpoint()
-            value = self.value(state).lstrip()
-            for maybe_action, action_str in enumerate(ACTIONS):
-                # print(value.startswith(action_str), action_str, value)
-                if value.startswith(action_str):
-                    action = maybe_action
-        assert value is not None
-        # print("V")
-        # print("state", state)
-        # print("action", action)
-        # print("value", value)
-        # breakpoint()
-        return action, value
-
-    def ready(self) -> bool:
-        value_quantities = [p.to_value_quantity(self.env) for p in self.buffer]
-        top_n = sorted(value_quantities, reverse=True)[: self.prompt_size]
-        return sum(top_n) >= self.prompt_size  # TODO: this is a bit of a cheat
-
-    def value(self, state: int, action: Optional[int] = None) -> str:
-        completions = []
+class Pi(Model):
+    def _act(self, state: int) -> int:
         state = self.env.state_str(state)
-        while True:
+        action = None
+        while action is None:
             prompt = self.sample_best()
-            completion = self.gpt3("\n".join([*prompt, state])).lstrip()
-            action, state_or_reward, *_ = completion.split(".")
-            action, state_or_reward = map(reformat, [action, state_or_reward])
-            completions.extend([action, state_or_reward])
-            if state_or_reward in REWARDS.values():
-                break
-            state = state_or_reward
-        completion = " ".join(completions)
-        # print(completion)
-        # breakpoint()
-        return completion
+            prompt = "\n".join([*prompt, state])
+            print("pi prompt:")
+            print(prompt)
+            completion = self.gpt3(prompt).lstrip()
+            maybe_action, *_ = completion.split(".")
+            print("Action:", maybe_action)
+            breakpoint()
+
+            try:
+                action = ACTIONS.index(maybe_action + ".")
+            except ValueError:
+                pass
+        return action
