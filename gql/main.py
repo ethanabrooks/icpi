@@ -107,13 +107,12 @@ def main(
             #     # print()
             #     print(i, "".join(["#" if r > 0 else " " for r in _last10]) + "|")
 
-            if len(trajectory) < max_trajectory:
-                head, *tail = trajectory
-                value = to_string(tail)
-                if not value:
-                    value = env.reward_str(head.reward)
-                prompt = Prompt.make(head.state, head.action, value)
-                buffer.append(prompt)
+            head, *tail = trajectory[-max_trajectory:]
+            value = to_string(tail)
+            if not value:
+                value = env.reward_str(head.reward)
+            prompt = Prompt.make(head.state, head.action, value)
+            buffer.append(prompt)
 
         df = (
             pd.DataFrame(np.array(returns).reshape(-1, 1), columns=["returns"])

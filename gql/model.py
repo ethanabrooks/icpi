@@ -145,22 +145,29 @@ class Q(Model):
         action = self.env.action_str(action)
         prompt = self.sample()
         new_prompt = "\n".join([*prompt, f"{state} {action}"])
-        while True:
+        print("Q prompt:")
+        print(new_prompt)
+        completion = self.gpt3(new_prompt).lstrip()
+        state_or_reward, action, *_ = completion.split(".")
+        state_or_reward, action = map(reformat, [state_or_reward, action])
+        print("state/reward", state_or_reward)
+        print("action", action)
+        completions.append(state_or_reward)
+
+        while state_or_reward not in REWARDS.values():
+            state = state_or_reward
+            prompt = self.sample_best()
+
+            new_prompt = "\n".join([*prompt, state])
+            print("Q prompt:")
             print(new_prompt)
             # print(f"{state} {action}", end=" :: ")
             completion = self.gpt3(new_prompt).lstrip()
-            state_or_reward, action, *_ = completion.split(".")
-            state_or_reward, action = map(reformat, [state_or_reward, action])
-            print(f"{state_or_reward} {action}")
-            # breakpoint()
-
-            completions.append(state_or_reward)
-            if state_or_reward in REWARDS.values():
-                break
-            completions.append(action)
-            state = state_or_reward
-            prompt = self.sample_best()
-            new_prompt = "\n".join([*prompt, state])
+            action, state_or_reward, *_ = completion.split(".")
+            action, state_or_reward = map(reformat, [action, state_or_reward])
+            print("action", action)
+            print("state/reward", state_or_reward)
+            completions.extend([action, state_or_reward])
 
         completion = " ".join(completions)
         # print("state", original_state)
