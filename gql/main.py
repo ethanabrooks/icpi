@@ -27,7 +27,7 @@ def main(
     n=10,
     q_prompt_size: int = 10,
     pi_prompt_size: int = 8,
-    seed: int = 0,
+    seed: int = 1,
     states: int = 8,
     episodes: int = 400,
 ):
