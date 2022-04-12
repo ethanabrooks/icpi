@@ -205,3 +205,9 @@ class Pi(Model):
             except ValueError:
                 pass
         return action
+
+    def ready(self) -> bool:
+        trajectories = [
+            t for t in self.buffer if get_value(*t, gamma=1) > self.failure_threshold
+        ]
+        return len(trajectories) > 0

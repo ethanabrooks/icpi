@@ -22,7 +22,7 @@ def main(
     n=10,
     q_prompt_size: int = 10,
     pi_prompt_size: int = 8,
-    seed: int = 2,
+    seed: int = 3,
     states: int = 8,
     episodes: int = 50,
 ):
@@ -67,9 +67,9 @@ def main(
                 value_sum = sum(value_quantities)
                 use_model_prob = 1 / (1 + math.exp(2 * (min_successes - value_sum)))
                 print("use_model_prob", round(use_model_prob, 3))
-                use_model = rng.random() < use_model_prob
+                model = pi if use_pi else q
+                use_model = (rng.random() < use_model_prob) and model.ready()
                 if use_model:
-                    model = pi if use_pi else q
                     action = model.act(state)
                 else:
                     action = env.action_space.sample()
