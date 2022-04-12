@@ -97,7 +97,11 @@ class Model(abc.ABC):
         #     key=lambda p: (p.to_value_quantity(self.env), self.rng.random()),
         #     reverse=True,
         # )
-        success_prompts = [p for p in self.buffer if p.to_value_quantity(self.env) > self.failure_threshold]
+        success_prompts = [
+            p
+            for p in self.buffer
+            if p.to_value_quantity(self.env) > self.failure_threshold
+        ]
         self.rng.shuffle(success_prompts)
         return [p.to_string(self.env) for p in success_prompts][: self.prompt_size]
 
@@ -132,7 +136,7 @@ class Q(Model):
             print("action", a)
             print("value", v)
         print("chosen", action)
-        breakpoint()
+        # breakpoint()
         return action
 
     def learn(self, prompt: Prompt):
@@ -198,7 +202,7 @@ class Pi(Model):
             completion = self.gpt3(prompt).lstrip()
             maybe_action, *_ = completion.split(".")
             print("Action:", maybe_action)
-            breakpoint()
+            # breakpoint()
 
             try:
                 action = ACTIONS.index(maybe_action + ".")
