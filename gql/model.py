@@ -17,36 +17,6 @@ class TimeStep:
     reward: float
     next_state: Optional[int]
 
-    def transition_string(self, env: Env) -> str:
-        return (
-            env.state_str(self.state)
-            + " "
-            + env.action_str(self.action)
-            + " "
-            + env.reward_str(self.reward, self.next_state)
-            + ("" if self.next_state is None else env.state_str(self.next_state))
-        )
-
-    def state_action_string(self, env: Env) -> str:
-        return f"{env.state_str(self.state)} {env.action_str(self.action)}"
-
-
-@dataclass
-class Prompt:
-    state: int
-    action: int
-    value: str
-
-    @staticmethod
-    def make(state: int, action: int, value: str):
-        return Prompt(state, action, value.lstrip())
-
-    def to_value_quantity(self, env: Env, gamma: Optional[float]) -> float:
-        return env.quantify(self.to_string(env), gamma=gamma)
-
-    def to_string(self, env: Env) -> str:
-        return f"{env.state_str(self.state)} {env.action_str(self.action)} {self.value}"
-
 
 def to_string(*_trajectory: TimeStep, env) -> str:
 
@@ -130,13 +100,11 @@ class Model(abc.ABC):
         return prompts[: self.prompt_size]
 
     def sample_best(self):
-        success_prompts = [
+        trajectories = [
             t for t in self.buffer if get_value(*t, gamma=1) > self.failure_threshold
         ]
-        self.rng.shuffle(success_prompts)
-        return [to_string(*t, env=self.env) for t in success_prompts][
-            : self.prompt_size
-        ]
+        self.rng.shuffle(trajectories)
+        return [to_string(*t, env=self.env) for t in trajectories][: self.prompt_size]
 
 
 def reformat(completion: str) -> str:
