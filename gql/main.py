@@ -23,6 +23,7 @@ class TimeStep:
 
 def main(
     failure_threshold: float = 0.0,
+    gamma: float = 0.9,
     goal: int = 4,
     max_steps: int = 16,
     max_trajectory: int = 8,
@@ -38,7 +39,7 @@ def main(
     rng = np.random.default_rng(seed)
     env = Env(states, goal, seed)
 
-    returns = deque()
+    regrets = deque()
 
     def to_string(_trajectory: List[TimeStep]) -> str:
         if not _trajectory:
@@ -79,6 +80,7 @@ def main(
         for i in range(episodes):
             done = False
             state = env.reset()
+            optimal = gamma ** (abs(env.goal - state) + 1)
             trajectory: List[TimeStep] = []
             use_pi = i % 2 == 0
             timed_out = False
@@ -108,7 +110,7 @@ def main(
                     if use_pi:
                         # if reward > 0:
                         #     breakpoint()
-                        returns.append((i, reward))
+                        regrets.append((i, optimal - reward * gamma ** t))
                 # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$ Reward:", reward)
                 trajectory.append(step)
                 state = next_state
@@ -132,7 +134,7 @@ def main(
 
         df = (
             pd.DataFrame(
-                np.array(returns).reshape(-1, 2), columns=["episode", "returns"]
+                np.array(regrets).reshape(-1, 2), columns=["episode", "regrets"]
             )
             # .rolling(10)
             # .mean()
@@ -140,7 +142,7 @@ def main(
         )
 
         alt.Chart(df).mark_line(interpolate="bundle").encode(
-            x="episode", y="returns"
+            x="episode", y="regrets"
         ).save("logs/returns.json")
 
 
