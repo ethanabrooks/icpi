@@ -2,7 +2,7 @@ import abc
 import shelve
 import sys
 from dataclasses import dataclass
-from typing import Deque, Optional, cast
+from typing import Deque, List, Optional, cast
 
 import openai
 from env import ACTIONS, MAX_TOKENS, REWARDS, Env
@@ -11,20 +11,31 @@ from numpy.random import Generator
 
 
 @dataclass
-class Prompt:
+class TimeStep:
     state: int
     action: int
-    value: str
+    reward: float
+    next_state: Optional[int]
 
-    @staticmethod
-    def make(state: int, action: int, value: str):
-        return Prompt(state, action, value.lstrip())
 
-    def to_value_quantity(self, env: Env, gamma: Optional[float] = None) -> float:
-        return env.quantify(self.to_string(env), gamma=gamma)
+def to_string(*_trajectory: TimeStep, env) -> str:
 
-    def to_string(self, env: Env) -> str:
-        return f"{env.state_str(self.state)} {env.action_str(self.action)} {self.value}"
+    if not _trajectory:
+        return ""
+    head, *tail = _trajectory
+    if head.next_state is None:
+        reward_str = env.reward_str(head.reward, next_state=None)
+    else:
+        reward_str = ""
+
+    tail_trajectory = to_string(*tail, env=env)
+    sep = " " if tail_trajectory and reward_str else ""
+    value = f"{reward_str}{sep}{tail_trajectory}"
+    return f"{env.state_str(head.state)} {env.action_str(head.action)} {value}"
+
+
+def get_value(*trajectory: TimeStep, gamma: float) -> float:
+    return sum([gamma ** t * ts.reward for t, ts in enumerate(trajectory)])
 
 
 @dataclass
@@ -52,9 +63,6 @@ class GPT3:
                 prompt=prompt,
                 temperature=0.1,
                 max_tokens=len(prompt) + MAX_TOKENS + 1,
-                top_p=1,
-                frequency_penalty=0,
-                presence_penalty=0,
             ).choices
             completion = choice.text.lstrip()
             if "." in completion:
@@ -67,7 +75,7 @@ class GPT3:
 
 @dataclass
 class Model(abc.ABC):
-    buffer: Deque[Prompt]
+    buffer: Deque[List[TimeStep]]
     env: Env
     failure_threshold: float
     gpt3: GPT3
@@ -87,23 +95,16 @@ class Model(abc.ABC):
         return len(self.buffer) >= self.prompt_size
 
     def sample(self):
-        prompts = [p.to_string(self.env) for p in self.buffer]
+        prompts = [to_string(*t, env=self.env) for t in self.buffer]
         self.rng.shuffle(prompts)
         return prompts[: self.prompt_size]
 
     def sample_best(self):
-        # buffer = sorted(
-        #     self.buffer,
-        #     key=lambda p: (p.to_value_quantity(self.env), self.rng.random()),
-        #     reverse=True,
-        # )
-        success_prompts = [
-            p
-            for p in self.buffer
-            if p.to_value_quantity(self.env) > self.failure_threshold
+        trajectories = [
+            t for t in self.buffer if get_value(*t, gamma=1) > self.failure_threshold
         ]
-        self.rng.shuffle(success_prompts)
-        return [p.to_string(self.env) for p in success_prompts][: self.prompt_size]
+        self.rng.shuffle(trajectories)
+        return [to_string(*t, env=self.env) for t in trajectories][: self.prompt_size]
 
 
 def reformat(completion: str) -> str:
@@ -112,7 +113,8 @@ def reformat(completion: str) -> str:
 
 @dataclass
 class Q(Model):
-    max_trajectory: int
+    gamma: float
+    max_steps: int
 
     def _act(self, state: int) -> int:
         assert isinstance(self.env.action_space, Discrete)
@@ -127,7 +129,10 @@ class Q(Model):
         self.rng.shuffle(action_values)
         action, value = max(
             action_values,
-            key=lambda x: (self.env.quantify(x[1], gamma=0.9), self.rng.random()),
+            key=lambda x: (
+                self.env.quantify(x[1], gamma=self.gamma),
+                self.rng.random(),
+            ),
         )
 
         print("Q")
@@ -139,9 +144,6 @@ class Q(Model):
         # breakpoint()
         return action
 
-    def learn(self, prompt: Prompt):
-        self.buffer.append(prompt)
-
     def value(self, state: int, action: Optional[int] = None) -> str:
         assert action is not None
 
@@ -150,13 +152,12 @@ class Q(Model):
         completions = []
         state = self.env.state_str(state)
         action = self.env.action_str(action)
-        prompt = self.sample()
-        new_prompt = "\n".join([*prompt, f"{state} {action}"])
+        trajectories = self.sample()
+        new_prompt = "\n".join([*trajectories, f"{state} {action}"])
         print("Q prompt:")
         print(new_prompt)
 
-        completion = self.gpt3(new_prompt).lstrip()
-        state_or_reward, action, *_ = completion.split(".")
+        state_or_reward, action, *_ = self.gpt3(new_prompt).lstrip().split(".")
         state_or_reward, action = map(reformat, [state_or_reward, action])
         print("state/reward", state_or_reward)
         print("action", action)
@@ -165,9 +166,9 @@ class Q(Model):
 
         while state_or_reward not in REWARDS.values():
             state = state_or_reward
-            prompt = self.sample_best()
+            trajectories = self.sample_best()
 
-            new_prompt = "\n".join([*prompt, state])
+            new_prompt = "\n".join([*trajectories, state])
             print("Q prompt:")
             print(new_prompt)
 
@@ -175,19 +176,14 @@ class Q(Model):
             completion = self.gpt3(new_prompt).lstrip()
             action, state_or_reward, *_ = completion.split(".")
             action, state_or_reward = map(reformat, [action, state_or_reward])
-            if t == self.max_trajectory:
+            if t == self.max_steps:
                 state_or_reward = REWARDS[0.0]
             t += 1
             print("action", action)
             print("state/reward", state_or_reward)
             completions.extend([action, state_or_reward])
 
-        completion = " ".join(completions)
-        # print("state", original_state)
-        # print("action", original_action)
-        # print(completion)
-        # breakpoint()
-        return completion
+        return " ".join(completions)
 
 
 class Pi(Model):
@@ -195,8 +191,8 @@ class Pi(Model):
         state = self.env.state_str(state)
         action = None
         while action is None:
-            prompt = self.sample_best()
-            prompt = "\n".join([*prompt, state])
+            trajectories = self.sample_best()
+            prompt = "\n".join([*trajectories, state])
             print("pi prompt:")
             print(prompt)
             completion = self.gpt3(prompt).lstrip()
