@@ -45,7 +45,8 @@ class Prompt:
         return f"{env.state_str(self.state)} {env.action_str(self.action)} {self.value}"
 
 
-def to_string(_trajectory: List[TimeStep], env) -> str:
+def to_string(*_trajectory: TimeStep, env) -> str:
+
     if not _trajectory:
         return ""
     head, *tail = _trajectory
@@ -54,7 +55,7 @@ def to_string(_trajectory: List[TimeStep], env) -> str:
     else:
         reward_str = ""
 
-    tail_trajectory = to_string(tail, env)
+    tail_trajectory = to_string(*tail, env=env)
     sep = " " if tail_trajectory and reward_str else ""
     return Prompt.make(
         head.state, head.action, f"{reward_str}{sep}{tail_trajectory}"

@@ -9,23 +9,7 @@ import numpy as np
 import openai
 import pandas as pd
 from env import Env
-from model import GPT3, Pi, Prompt, Q, TimeStep
-
-
-def to_string(_trajectory: List[TimeStep], env) -> str:
-    if not _trajectory:
-        return ""
-    head, *tail = _trajectory
-    if head.next_state is None:
-        reward_str = env.reward_str(head.reward, next_state=None)
-    else:
-        reward_str = ""
-
-    tail_trajectory = to_string(tail, env)
-    sep = " " if tail_trajectory and reward_str else ""
-    return Prompt.make(
-        head.state, head.action, f"{reward_str}{sep}{tail_trajectory}"
-    ).to_string(env)
+from model import GPT3, Pi, Prompt, Q, TimeStep, to_string
 
 
 def main(
@@ -112,10 +96,13 @@ def main(
             if not timed_out:
                 while trajectory:
                     head, *tail = trajectory
-                    value = to_string(tail, env)
+                    value = to_string(*tail, env=env)
                     if not value:
                         value = env.reward_str(head.reward, next_state=None)
                     prompt = Prompt.make(head.state, head.action, value)
+
+                    if not prompt.to_string(env) == to_string(*trajectory, env=env):
+                        breakpoint()
                     buffer.append(prompt)
                     trajectory = tail
 
