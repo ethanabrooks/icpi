@@ -9,7 +9,7 @@ import numpy as np
 import openai
 import pandas as pd
 from env import Env
-from model import GPT3, Pi, Prompt, Q, TimeStep, to_string
+from model import GPT3, Pi, Prompt, Q, TimeStep, get_value, to_string
 
 
 def main(
@@ -101,8 +101,13 @@ def main(
                         value = env.reward_str(head.reward, next_state=None)
                     prompt = Prompt.make(head.state, head.action, value)
 
-                    if not prompt.to_string(env) == to_string(*trajectory, env=env):
+                    if prompt.to_string(env) != to_string(*trajectory, env=env):
                         breakpoint()
+                    if prompt.to_value_quantity(env, gamma=1) != get_value(
+                        *trajectory, gamma=1
+                    ):
+                        breakpoint()
+                        get_value(*trajectory, gamma=1)
                     buffer.append(prompt)
                     trajectory = tail
 
