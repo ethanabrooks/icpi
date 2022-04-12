@@ -64,6 +64,10 @@ def to_string(*_trajectory: TimeStep, env) -> str:
     return f"{env.state_str(head.state)} {env.action_str(head.action)} {value}"
 
 
+def get_value(*trajectory: TimeStep, gamma: float) -> float:
+    return sum([t ** gamma * ts.reward for t, ts in enumerate(trajectory)])
+
+
 @dataclass
 class GPT3:
     db: shelve.DbfilenameShelf
