@@ -108,7 +108,7 @@ def main(
                         print("reward", reward)
                         # if reward > 0:
                         #     breakpoint()
-                        returns.append(reward)
+                        returns.append((i, reward))
                 # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$ Reward:", reward)
                 trajectory.append(step)
                 state = next_state
@@ -128,10 +128,10 @@ def main(
                 buffer.append(prompt)
 
         df = (
-            pd.DataFrame(np.array(returns).reshape(-1, 1), columns=["returns"])
+            pd.DataFrame(np.array(returns).reshape(-1, 2), columns=["episode", "returns"])
             # .rolling(10)
             # .mean()
-            .reset_index().rename(columns=dict(index="episode"))
+            # .reset_index().rename(columns=dict(index="episode"))
         )
 
         alt.Chart(df).mark_line(interpolate="bundle").encode(
