@@ -101,11 +101,11 @@ def main(
                 if t >= max_steps:
                     done = timed_out = True
                 if done:
+                    print(i)
+                    print("state", state)
+                    print("action", action)
+                    print("reward", reward)
                     if use_pi:
-                        print(i)
-                        print("state", state)
-                        print("action", action)
-                        print("reward", reward)
                         # if reward > 0:
                         #     breakpoint()
                         returns.append((i, reward))
