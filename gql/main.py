@@ -14,7 +14,7 @@ from model import GPT3, Pi, Q, TimeStep, get_value
 
 def main(
     failure_threshold: float = 0.0,
-    gamma: float = 0.9,
+    gamma: float = 0.99,
     goal: int = 4,
     max_steps: int = 16,
     max_trajectory: int = 8,
@@ -24,7 +24,7 @@ def main(
     pi_prompt_size: int = 8,
     seed: int = 1,
     states: int = 8,
-    episodes: int = 40,
+    episodes: int = 50,
 ):
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
@@ -86,7 +86,7 @@ def main(
                     if use_pi:
                         # if reward > 0:
                         #     breakpoint()
-                        regrets.append((i, optimal - reward * gamma ** t))
+                        regrets.append((i, optimal - reward * gamma**t))
                 trajectory.append(step)
                 state = next_state
 
