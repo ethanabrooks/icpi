@@ -31,9 +31,9 @@ def main(
     n=10,
     q_prompt_size: int = 10,
     pi_prompt_size: int = 8,
-    seed: int = 0,
+    seed: int = 1,
     states: int = 8,
-    episodes: int = 60,
+    episodes: int = 40,
 ):
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
@@ -110,7 +110,7 @@ def main(
                     if use_pi:
                         # if reward > 0:
                         #     breakpoint()
-                        regrets.append((i, optimal - reward * gamma ** t))
+                        regrets.append((i, optimal - reward * gamma**t))
                 # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$ Reward:", reward)
                 trajectory.append(step)
                 state = next_state
