@@ -101,7 +101,7 @@ def main(
                 if t >= max_steps:
                     done = timed_out = True
                 if done:
-                    print(i)
+                    print("episode", i)
                     print("state", state)
                     print("action", action)
                     print("reward", reward)
