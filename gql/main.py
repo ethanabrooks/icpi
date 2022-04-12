@@ -106,8 +106,8 @@ def main(
                         print("state", state)
                         print("action", action)
                         print("reward", reward)
-                        if reward > 0:
-                            breakpoint()
+                        # if reward > 0:
+                        #     breakpoint()
                         returns.append(reward)
                 # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$ Reward:", reward)
                 trajectory.append(step)
