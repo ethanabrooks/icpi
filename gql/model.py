@@ -125,23 +125,18 @@ class Model(abc.ABC):
         return len(self.buffer) >= self.prompt_size
 
     def sample(self):
-        prompts = [p.to_string(self.env) for p in self.buffer]
+        prompts = [to_string(*t, env=self.env) for t in self.buffer]
         self.rng.shuffle(prompts)
         return prompts[: self.prompt_size]
 
     def sample_best(self):
-        # buffer = sorted(
-        #     self.buffer,
-        #     key=lambda p: (p.to_value_quantity(self.env), self.rng.random()),
-        #     reverse=True,
-        # )
         success_prompts = [
-            p
-            for p in self.buffer
-            if p.to_value_quantity(self.env, gamma=1) > self.failure_threshold
+            t for t in self.buffer if get_value(*t, gamma=1) > self.failure_threshold
         ]
         self.rng.shuffle(success_prompts)
-        return [p.to_string(self.env) for p in success_prompts][: self.prompt_size]
+        return [to_string(*t, env=self.env) for t in success_prompts][
+            : self.prompt_size
+        ]
 
 
 def reformat(completion: str) -> str:

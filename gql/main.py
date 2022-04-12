@@ -62,9 +62,7 @@ def main(
             timed_out = False
             t = 0
             while not done:
-                value_quantities = [
-                    p.to_value_quantity(env, gamma=1) for p in list(buffer)
-                ]
+                value_quantities = [get_value(*t, gamma=1) for t in list(buffer)]
                 value_quantities = sorted(value_quantities, reverse=True)[:n]
                 value_sum = sum(value_quantities)
                 use_model_prob = 1 / (1 + math.exp(2 * (min_successes - value_sum)))
@@ -108,7 +106,7 @@ def main(
                     ):
                         breakpoint()
                         get_value(*trajectory, gamma=1)
-                    buffer.append(prompt)
+                    buffer.append(trajectory)
                     trajectory = tail
 
         df = pd.DataFrame(
