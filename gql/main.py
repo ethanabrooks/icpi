@@ -2,7 +2,7 @@ import math
 import os
 import shelve
 from collections import deque
-from typing import List
+from typing import Deque, List
 
 import altair as alt
 import numpy as np
@@ -47,8 +47,7 @@ def main(
     env = Env(states, goal, seed)
 
     regrets = deque()
-
-    buffer = deque()
+    buffer: Deque[List[TimeStep]] = deque()
     with shelve.open("completions/completions.pkl") as db:
         gpt3 = GPT3(db)
         pi = Pi(

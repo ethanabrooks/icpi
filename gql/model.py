@@ -86,9 +86,6 @@ class GPT3:
                 prompt=prompt,
                 temperature=0.1,
                 max_tokens=len(prompt) + MAX_TOKENS + 1,
-                top_p=1,
-                frequency_penalty=0,
-                presence_penalty=0,
             ).choices
             completion = choice.text.lstrip()
             if "." in completion:
@@ -101,7 +98,7 @@ class GPT3:
 
 @dataclass
 class Model(abc.ABC):
-    buffer: Deque[Prompt]
+    buffer: Deque[List[TimeStep]]
     env: Env
     failure_threshold: float
     gpt3: GPT3
@@ -182,13 +179,12 @@ class Q(Model):
         completions = []
         state = self.env.state_str(state)
         action = self.env.action_str(action)
-        prompt = self.sample()
-        new_prompt = "\n".join([*prompt, f"{state} {action}"])
+        trajectories = self.sample()
+        new_prompt = "\n".join([*trajectories, f"{state} {action}"])
         print("Q prompt:")
         print(new_prompt)
 
-        completion = self.gpt3(new_prompt).lstrip()
-        state_or_reward, action, *_ = completion.split(".")
+        state_or_reward, action, *_ = self.gpt3(new_prompt).lstrip().split(".")
         state_or_reward, action = map(reformat, [state_or_reward, action])
         print("state/reward", state_or_reward)
         print("action", action)
@@ -197,9 +193,9 @@ class Q(Model):
 
         while state_or_reward not in REWARDS.values():
             state = state_or_reward
-            prompt = self.sample_best()
+            trajectories = self.sample_best()
 
-            new_prompt = "\n".join([*prompt, state])
+            new_prompt = "\n".join([*trajectories, state])
             print("Q prompt:")
             print(new_prompt)
 
@@ -222,8 +218,8 @@ class Pi(Model):
         state = self.env.state_str(state)
         action = None
         while action is None:
-            prompt = self.sample_best()
-            prompt = "\n".join([*prompt, state])
+            trajectories = self.sample_best()
+            prompt = "\n".join([*trajectories, state])
             print("pi prompt:")
             print(prompt)
             completion = self.gpt3(prompt).lstrip()
