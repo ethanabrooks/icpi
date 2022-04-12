@@ -129,7 +129,10 @@ class Q(Model):
         self.rng.shuffle(action_values)
         action, value = max(
             action_values,
-            key=lambda x: (self.env.quantify(x[1], gamma=0.9), self.rng.random()),
+            key=lambda x: (
+                self.env.quantify(x[1], gamma=self.gamma),
+                self.rng.random(),
+            ),
         )
 
         print("Q")
