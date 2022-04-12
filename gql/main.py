@@ -2,23 +2,14 @@ import math
 import os
 import shelve
 from collections import deque
-from dataclasses import dataclass
-from typing import List, Optional
+from typing import Deque, List
 
 import altair as alt
 import numpy as np
 import openai
 import pandas as pd
 from env import Env
-from model import GPT3, Pi, Prompt, Q
-
-
-@dataclass
-class TimeStep:
-    state: int
-    action: int
-    reward: float
-    next_state: Optional[int]
+from model import GPT3, Pi, Q, TimeStep, get_value
 
 
 def main(
@@ -40,23 +31,7 @@ def main(
     env = Env(states, goal, seed)
 
     regrets = deque()
-
-    def to_string(_trajectory: List[TimeStep]) -> str:
-        if not _trajectory:
-            return ""
-        head, *tail = _trajectory
-        if head.next_state is None:
-            reward_str = env.reward_str(head.reward)
-        else:
-            reward_str = ""
-
-        tail_trajectory = to_string(tail)
-        sep = " " if tail_trajectory and reward_str else ""
-        return Prompt.make(
-            head.state, head.action, f"{reward_str}{sep}{tail_trajectory}"
-        ).to_string(env)
-
-    buffer = deque()
+    buffer: Deque[List[TimeStep]] = deque()
     with shelve.open("completions/completions.pkl") as db:
         gpt3 = GPT3(db)
         pi = Pi(
@@ -71,8 +46,9 @@ def main(
             buffer=buffer,
             env=env,
             failure_threshold=failure_threshold,
+            gamma=gamma,
             gpt3=gpt3,
-            max_trajectory=max_trajectory,
+            max_steps=max_trajectory,
             prompt_size=q_prompt_size,
             rng=rng,
         )
@@ -86,7 +62,7 @@ def main(
             timed_out = False
             t = 0
             while not done:
-                value_quantities = [p.to_value_quantity(env) for p in list(buffer)]
+                value_quantities = [get_value(*t, gamma=1) for t in list(buffer)]
                 value_quantities = sorted(value_quantities, reverse=True)[:n]
                 value_sum = sum(value_quantities)
                 use_model_prob = 1 / (1 + math.exp(2 * (min_successes - value_sum)))
@@ -110,35 +86,18 @@ def main(
                     if use_pi:
                         # if reward > 0:
                         #     breakpoint()
-                        regrets.append((i, optimal - reward * gamma**t))
-                # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$ Reward:", reward)
+                        regrets.append((i, optimal - reward * gamma ** t))
                 trajectory.append(step)
                 state = next_state
-
-            # if model.ready():
-            #     _last10 = list(returns) + [0] * (10 - len(returns))
-            #     _last10 = sorted(_last10, reverse=True)
-            #     # print()
-            #     print(i, "".join(["#" if r > 0 else " " for r in _last10]) + "|")
 
             trajectory = trajectory[-max_trajectory:]
             if not timed_out:
                 while trajectory:
-                    head, *tail = trajectory
-                    value = to_string(tail)
-                    if not value:
-                        value = env.reward_str(head.reward)
-                    prompt = Prompt.make(head.state, head.action, value)
-                    buffer.append(prompt)
-                    trajectory = tail
+                    buffer.append(trajectory)
+                    head, *trajectory = trajectory
 
-        df = (
-            pd.DataFrame(
-                np.array(regrets).reshape(-1, 2), columns=["episode", "regrets"]
-            )
-            # .rolling(10)
-            # .mean()
-            # .reset_index().rename(columns=dict(index="episode"))
+        df = pd.DataFrame(
+            np.array(regrets).reshape(-1, 2), columns=["episode", "regrets"]
         )
 
         alt.Chart(df).mark_line(interpolate="bundle").encode(
