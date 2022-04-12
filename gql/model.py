@@ -17,6 +17,15 @@ class TimeStep:
     reward: float
     next_state: Optional[int]
 
+    def state_action_string(self, env: Env):
+        return f"{env.state_str(self.state)} {env.action_str(self.action)}"
+
+    def transition_string(self, env: Env):
+        return (
+            f"{self.state_action_string(env)} "
+            f"{env.reward_str(self.reward, self.next_state) if self.next_state is None else env.state_str(self.next_state)}"
+        )
+
 
 def to_string(*_trajectory: TimeStep, env) -> str:
 
@@ -31,7 +40,7 @@ def to_string(*_trajectory: TimeStep, env) -> str:
     tail_trajectory = to_string(*tail, env=env)
     sep = " " if tail_trajectory and reward_str else ""
     value = f"{reward_str}{sep}{tail_trajectory}"
-    return f"{env.state_str(head.state)} {env.action_str(head.action)} {value}"
+    return f"{head.state_action_string(env)} {value}"
 
 
 def get_value(*trajectory: TimeStep, gamma: float) -> float:
@@ -95,7 +104,7 @@ class Model(abc.ABC):
         return len(self.buffer) >= self.prompt_size
 
     def sample(self):
-        prompts = [to_string(*t, env=self.env) for t in self.buffer]
+        prompts = list(self.buffer)
         self.rng.shuffle(prompts)
         return prompts[: self.prompt_size]
 
@@ -104,7 +113,7 @@ class Model(abc.ABC):
             t for t in self.buffer if get_value(*t, gamma=1) > self.failure_threshold
         ]
         self.rng.shuffle(trajectories)
-        return [to_string(*t, env=self.env) for t in trajectories][: self.prompt_size]
+        return trajectories[: self.prompt_size]
 
 
 def reformat(completion: str) -> str:
@@ -153,7 +162,9 @@ class Q(Model):
         state = self.env.state_str(state)
         action = self.env.action_str(action)
         trajectories = self.sample()
-        new_prompt = "\n".join([*trajectories, f"{state} {action}"])
+        prompts = [ts.transition_string(self.env) for t in trajectories for ts in t]
+        self.rng.shuffle(prompts)
+        new_prompt = "\n".join([*prompts, f"{state} {action}"])
         print("Q prompt:")
         print(new_prompt)
 
@@ -167,8 +178,8 @@ class Q(Model):
         while state_or_reward not in REWARDS.values():
             state = state_or_reward
             trajectories = self.sample_best()
-
-            new_prompt = "\n".join([*trajectories, state])
+            prompts = [to_string(*t, env=self.env) for t in trajectories]
+            new_prompt = "\n".join([*prompts, state])
             print("Q prompt:")
             print(new_prompt)
 
@@ -192,7 +203,8 @@ class Pi(Model):
         action = None
         while action is None:
             trajectories = self.sample_best()
-            prompt = "\n".join([*trajectories, state])
+            prompts = [to_string(*t, env=self.env) for t in trajectories]
+            prompt = "\n".join([*prompts, state])
             print("pi prompt:")
             print(prompt)
             completion = self.gpt3(prompt).lstrip()
