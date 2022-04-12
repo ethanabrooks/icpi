@@ -2,7 +2,7 @@ import abc
 import shelve
 import sys
 from dataclasses import dataclass
-from typing import Deque, Optional, cast
+from typing import Deque, Iterable, List, Optional, cast
 
 import openai
 from env import ACTIONS, MAX_TOKENS, REWARDS, Env
@@ -38,6 +38,29 @@ class Transition:
 
 
 @dataclass
+class TimeStep:
+    state: int
+    action: int
+    reward: float
+    next_state: Optional[int]
+
+    def to_string(self, env: Env) -> str:
+        return (
+            # env.value_str(self.value)
+            env.state_str(self.state)
+            + " "
+            + env.action_str(self.action)
+            + " "
+            + env.reward_str(self.reward, self.next_state)
+            + ("" if self.next_state is None else env.state_str(self.next_state))
+        )
+
+
+def value(*trajectory: TimeStep, gamma: float = 1) -> float:
+    return sum([t**gamma * ts.reward for t, ts in enumerate(trajectory)])
+
+
+@dataclass
 class GPT3:
     db: shelve.DbfilenameShelf
 
@@ -60,7 +83,7 @@ class GPT3:
             choice, *_ = openai.Completion.create(
                 engine="text-davinci-002",
                 prompt=prompt,
-                top_p=0.2,
+                temperature=0.1,
                 max_tokens=len(prompt) + MAX_TOKENS + 1,
             ).choices
             completion = choice.text.lstrip()
@@ -74,7 +97,7 @@ class GPT3:
 
 @dataclass
 class Model(abc.ABC):
-    buffer: Deque[Transition]
+    buffer: Deque[List[TimeStep]]
     env: Env
     failure_threshold: float
     gpt3: GPT3
@@ -93,15 +116,27 @@ class Model(abc.ABC):
     def ready(self) -> bool:
         return len(self.buffer) >= self.prompt_size
 
-    def sample(self):
-        transitions = [t.to_string(self.env) for t in self.buffer]
-        self.rng.shuffle(transitions)
-        return transitions[: self.prompt_size]
+    def sample(self, buffer: Optional[Iterable[List[TimeStep]]] = None):
+        if buffer is None:
+            buffer = self.buffer
+        idxs = self.rng.choice(
+            len(buffer), min(len(buffer), self.prompt_size), replace=False
+        )
+        trajectories = [buffer[i] for i in idxs]
+        prompts = [
+            ts.to_string(self.env) for trajectory in trajectories for ts in trajectory
+        ]
+        self.rng.shuffle(prompts)
+        return prompts[: self.prompt_size]
 
     def sample_best(self):
-        transitions = [t for t in self.buffer if t.get_value() > self.failure_threshold]
-        self.rng.shuffle(transitions)
-        return [t.to_string(self.env) for t in transitions][: self.prompt_size]
+        return self.sample(
+            [
+                trajectory
+                for trajectory in self.buffer
+                if value(*trajectory) > self.failure_threshold
+            ]
+        )
 
 
 def reformat(completion: str) -> str:

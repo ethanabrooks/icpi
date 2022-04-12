@@ -2,23 +2,14 @@ import math
 import os
 import shelve
 from collections import deque
-from dataclasses import asdict, dataclass
-from typing import List, Optional
+from typing import Deque, List
 
 import altair as alt
 import numpy as np
 import openai
 import pandas as pd
 from env import Env
-from model import GPT3, Pi, Transition, Q
-
-
-@dataclass
-class TimeStep:
-    state: int
-    action: int
-    reward: float
-    next_state: Optional[int]
+from model import GPT3, Pi, TimeStep, Q, value
 
 
 def main(
@@ -54,7 +45,7 @@ def main(
     #         head.state, head.action, f"{reward_str}{sep}{tail_trajectory}"
     #     ).to_string(env)
 
-    buffer = deque()
+    buffer: Deque[List[TimeStep]] = deque()
     with shelve.open("completions/completions.pkl") as db:
         gpt3 = GPT3(db)
         pi = Pi(
@@ -85,7 +76,7 @@ def main(
             timed_out = False
             t = 0
             while not done:
-                value_quantities = [p.get_value() for p in list(buffer)]
+                value_quantities = [value(*t, gamma=gamma) for t in list(buffer)]
                 value_quantities = sorted(value_quantities, reverse=True)[:n]
                 value_sum = sum(value_quantities)
                 use_model_prob = 1 / (1 + math.exp(2 * (min_successes - value_sum)))
@@ -110,30 +101,14 @@ def main(
                         # if reward > 0:
                         #     breakpoint()
                         regrets.append((i, optimal - reward * gamma**t))
-                # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$ Reward:", reward)
                 trajectory.append(step)
                 state = next_state
 
-            # if model.ready():
-            #     _last10 = list(returns) + [0] * (10 - len(returns))
-            #     _last10 = sorted(_last10, reverse=True)
-            #     # print()
-            #     print(i, "".join(["#" if r > 0 else " " for r in _last10]) + "|")
-
-            value = sum([t**gamma * ts.reward for t, ts in enumerate(trajectory)])
             if not timed_out:
-                while trajectory:
-                    head, *trajectory = trajectory
-                    transition = Transition.make(**asdict(head), value=value)
-                    buffer.append(transition)
+                buffer.append(trajectory)
 
-        df = (
-            pd.DataFrame(
-                np.array(regrets).reshape(-1, 2), columns=["episode", "regrets"]
-            )
-            # .rolling(10)
-            # .mean()
-            # .reset_index().rename(columns=dict(index="episode"))
+        df = pd.DataFrame(
+            np.array(regrets).reshape(-1, 2), columns=["episode", "regrets"]
         )
 
         alt.Chart(df).mark_line(interpolate="bundle").encode(
