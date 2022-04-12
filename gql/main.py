@@ -32,7 +32,7 @@ def main(
     pi_prompt_size: int = 8,
     seed: int = 1,
     states: int = 8,
-    episodes: int = 400,
+    episodes: int = 60,
 ):
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
