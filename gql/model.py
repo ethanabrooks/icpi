@@ -95,7 +95,7 @@ class Model(abc.ABC):
         return len(self.buffer) >= self.prompt_size
 
     def sample(self):
-        prompts = [to_string(*t, env=self.env) for t in self.buffer]
+        prompts = list(self.buffer)
         self.rng.shuffle(prompts)
         return prompts[: self.prompt_size]
 
@@ -104,7 +104,7 @@ class Model(abc.ABC):
             t for t in self.buffer if get_value(*t, gamma=1) > self.failure_threshold
         ]
         self.rng.shuffle(trajectories)
-        return [to_string(*t, env=self.env) for t in trajectories][: self.prompt_size]
+        return trajectories[: self.prompt_size]
 
 
 def reformat(completion: str) -> str:
@@ -153,7 +153,8 @@ class Q(Model):
         state = self.env.state_str(state)
         action = self.env.action_str(action)
         trajectories = self.sample()
-        new_prompt = "\n".join([*trajectories, f"{state} {action}"])
+        prompts = [to_string(*t, env=self.env) for t in trajectories]
+        new_prompt = "\n".join([*prompts, f"{state} {action}"])
         print("Q prompt:")
         print(new_prompt)
 
@@ -167,8 +168,8 @@ class Q(Model):
         while state_or_reward not in REWARDS.values():
             state = state_or_reward
             trajectories = self.sample_best()
-
-            new_prompt = "\n".join([*trajectories, state])
+            prompts = [to_string(*t, env=self.env) for t in trajectories]
+            new_prompt = "\n".join([*prompts, state])
             print("Q prompt:")
             print(new_prompt)
 
@@ -192,7 +193,8 @@ class Pi(Model):
         action = None
         while action is None:
             trajectories = self.sample_best()
-            prompt = "\n".join([*trajectories, state])
+            prompts = [to_string(*t, env=self.env) for t in trajectories]
+            prompt = "\n".join([*prompts, state])
             print("pi prompt:")
             print(prompt)
             completion = self.gpt3(prompt).lstrip()
