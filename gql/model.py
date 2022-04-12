@@ -11,6 +11,24 @@ from numpy.random import Generator
 
 
 @dataclass
+class TimeStep:
+    state: int
+    action: int
+    reward: float
+    next_state: Optional[int]
+
+    def to_string(self, env: Env) -> str:
+        return (
+            env.state_str(self.state)
+            + " "
+            + env.action_str(self.action)
+            + " "
+            + env.reward_str(self.reward, self.next_state)
+            + ("" if self.next_state is None else env.state_str(self.next_state))
+        )
+
+
+@dataclass
 class Prompt:
     state: int
     action: int
@@ -112,7 +130,8 @@ def reformat(completion: str) -> str:
 
 @dataclass
 class Q(Model):
-    max_trajectory: int
+    gamma: float
+    max_steps: int
 
     def _act(self, state: int) -> int:
         assert isinstance(self.env.action_space, Discrete)
@@ -172,7 +191,7 @@ class Q(Model):
             completion = self.gpt3(new_prompt).lstrip()
             action, state_or_reward, *_ = completion.split(".")
             action, state_or_reward = map(reformat, [action, state_or_reward])
-            if t == self.max_trajectory:
+            if t == self.max_steps:
                 state_or_reward = REWARDS[0.0]
             t += 1
             print("action", action)

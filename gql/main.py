@@ -2,23 +2,14 @@ import math
 import os
 import shelve
 from collections import deque
-from dataclasses import dataclass
-from typing import List, Optional
+from typing import List
 
 import altair as alt
 import numpy as np
 import openai
 import pandas as pd
 from env import Env
-from model import GPT3, Pi, Prompt, Q
-
-
-@dataclass
-class TimeStep:
-    state: int
-    action: int
-    reward: float
-    next_state: Optional[int]
+from model import GPT3, Pi, Prompt, Q, TimeStep
 
 
 def main(
@@ -71,8 +62,9 @@ def main(
             buffer=buffer,
             env=env,
             failure_threshold=failure_threshold,
+            gamma=gamma,
             gpt3=gpt3,
-            max_trajectory=max_trajectory,
+            max_steps=max_trajectory,
             prompt_size=q_prompt_size,
             rng=rng,
         )
@@ -86,7 +78,9 @@ def main(
             timed_out = False
             t = 0
             while not done:
-                value_quantities = [p.to_value_quantity(env, gamma=1) for p in list(buffer)]
+                value_quantities = [
+                    p.to_value_quantity(env, gamma=1) for p in list(buffer)
+                ]
                 value_quantities = sorted(value_quantities, reverse=True)[:n]
                 value_sum = sum(value_quantities)
                 use_model_prob = 1 / (1 + math.exp(2 * (min_successes - value_sum)))
