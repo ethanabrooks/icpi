@@ -167,7 +167,6 @@ class Q(Model):
         new_prompt = "\n".join([*prompts, f"{state} {action}"])
         print("Q prompt:")
         print(new_prompt)
-        breakpoint()
 
         state_or_reward, action, *_ = self.gpt3(new_prompt).lstrip().split(".")
         state_or_reward, action = map(reformat, [state_or_reward, action])

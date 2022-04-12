@@ -83,9 +83,11 @@ def main(
                     print("state", state)
                     print("action", action)
                     print("reward", reward)
+                    if t % 10 == 0:
+                        # if use_model:
+                        breakpoint()
                     if use_pi:
                         # if reward > 0:
-                        #     breakpoint()
                         regrets.append((i, optimal - reward * gamma ** t))
                 trajectory.append(step)
                 state = next_state
