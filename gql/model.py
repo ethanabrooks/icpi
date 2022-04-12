@@ -35,7 +35,7 @@ def to_string(*_trajectory: TimeStep, env) -> str:
 
 
 def get_value(*trajectory: TimeStep, gamma: float) -> float:
-    return sum([gamma ** t * ts.reward for t, ts in enumerate(trajectory)])
+    return sum([gamma**t * ts.reward for t, ts in enumerate(trajectory)])
 
 
 @dataclass
