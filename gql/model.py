@@ -142,7 +142,7 @@ class Q(Model):
             print("action", a)
             print("value", v)
         print("chosen", action)
-        breakpoint()
+        # breakpoint()
         return action
 
     def value(self, state: int, action: Optional[int] = None) -> str:
@@ -207,7 +207,7 @@ class Pi(Model):
             completion = self.gpt3(prompt).lstrip()
             maybe_action, *_ = completion.split(".")
             print("Action:", maybe_action)
-            breakpoint()
+            # breakpoint()
 
             try:
                 action = ACTIONS.index(maybe_action + ".")

@@ -31,22 +31,6 @@ def main(
     env = Env(states, goal, seed)
 
     regrets = deque()
-
-    # def to_string(_trajectory: List[TimeStep]) -> str:
-    #     if not _trajectory:
-    #         return ""
-    #     head, *tail = _trajectory
-    #     if head.next_state is None:
-    #         reward_str = env.reward_str(head.reward)
-    #     else:
-    #         reward_str = ""
-    #
-    #     tail_trajectory = to_string(tail)
-    #     sep = " " if tail_trajectory and reward_str else ""
-    #     return Transition.make(
-    #         head.state, head.action, f"{reward_str}{sep}{tail_trajectory}"
-    #     ).to_string(env)
-
     buffer: Deque[List[TimeStep]] = deque()
     with shelve.open("completions/completions.pkl") as db:
         gpt3 = GPT3(db)
@@ -85,8 +69,6 @@ def main(
                 print("use_model_prob", round(use_model_prob, 3))
                 use_model = rng.random() < use_model_prob
                 if use_model:
-                    breakpoint()
-
                     model = pi if use_pi else q
                     action = model.act(state)
                 else:
