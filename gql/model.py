@@ -17,6 +17,15 @@ class TimeStep:
     reward: float
     next_state: Optional[int]
 
+    def state_action_string(self, env: Env):
+        return f"{env.state_str(self.state)} {env.action_str(self.action)}"
+
+    def transition_string(self, env: Env):
+        return (
+            f"{self.state_action_string(env)} "
+            f"{env.reward_str(self.reward, self.next_state) if self.next_state is None else env.state_str(self.next_state)}"
+        )
+
 
 def to_string(*_trajectory: TimeStep, env) -> str:
 
@@ -31,7 +40,7 @@ def to_string(*_trajectory: TimeStep, env) -> str:
     tail_trajectory = to_string(*tail, env=env)
     sep = " " if tail_trajectory and reward_str else ""
     value = f"{reward_str}{sep}{tail_trajectory}"
-    return f"{env.state_str(head.state)} {env.action_str(head.action)} {value}"
+    return f"{head.state_action_string(env)} {value}"
 
 
 def get_value(*trajectory: TimeStep, gamma: float) -> float:
@@ -153,10 +162,12 @@ class Q(Model):
         state = self.env.state_str(state)
         action = self.env.action_str(action)
         trajectories = self.sample()
-        prompts = [to_string(*t, env=self.env) for t in trajectories]
+        prompts = [ts.transition_string(self.env) for t in trajectories for ts in t]
+        self.rng.shuffle(prompts)
         new_prompt = "\n".join([*prompts, f"{state} {action}"])
         print("Q prompt:")
         print(new_prompt)
+        breakpoint()
 
         state_or_reward, action, *_ = self.gpt3(new_prompt).lstrip().split(".")
         state_or_reward, action = map(reformat, [state_or_reward, action])
