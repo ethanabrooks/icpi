@@ -9,7 +9,7 @@ import numpy as np
 import openai
 import pandas as pd
 from env import Env
-from model import GPT3, Pi, TimeStep, Q, value
+from model import GPT3, Pi, Q, TimeStep, value
 
 
 def main(
@@ -17,9 +17,11 @@ def main(
     gamma: float = 0.9,
     goal: int = 4,
     max_steps: int = 16,
+    max_trajectory: int = 8,
     min_successes: int = 3,
     n=10,
-    prompt_size: int = 16,
+    q_prompt_size: int = 10,
+    pi_prompt_size: int = 8,
     seed: int = 1,
     states: int = 8,
     episodes: int = 40,
@@ -53,7 +55,7 @@ def main(
             env=env,
             failure_threshold=failure_threshold,
             gpt3=gpt3,
-            prompt_size=prompt_size,
+            prompt_size=pi_prompt_size,
             rng=rng,
         )
         q = Q(
@@ -62,8 +64,8 @@ def main(
             failure_threshold=failure_threshold,
             gamma=gamma,
             gpt3=gpt3,
-            max_steps=max_steps,
-            prompt_size=prompt_size,
+            max_steps=max_trajectory,
+            prompt_size=q_prompt_size,
             rng=rng,
         )
 
@@ -83,6 +85,8 @@ def main(
                 print("use_model_prob", round(use_model_prob, 3))
                 use_model = rng.random() < use_model_prob
                 if use_model:
+                    breakpoint()
+
                     model = pi if use_pi else q
                     action = model.act(state)
                 else:
@@ -100,12 +104,15 @@ def main(
                     if use_pi:
                         # if reward > 0:
                         #     breakpoint()
-                        regrets.append((i, optimal - reward * gamma**t))
+                        regrets.append((i, optimal - reward * gamma ** t))
                 trajectory.append(step)
                 state = next_state
 
+            trajectory = trajectory[-max_trajectory:]
             if not timed_out:
-                buffer.append(trajectory)
+                while trajectory:
+                    buffer.append(trajectory)
+                    head, *trajectory = trajectory
 
         df = pd.DataFrame(
             np.array(regrets).reshape(-1, 2), columns=["episode", "regrets"]

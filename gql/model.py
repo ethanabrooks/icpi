@@ -11,33 +11,6 @@ from numpy.random import Generator
 
 
 @dataclass
-class Transition:
-    state: int
-    action: int
-    reward: float
-    next_state: Optional[int]
-    value: float
-
-    @staticmethod
-    def make(state: int, action: int, reward: float, next_state: int, value: float):
-        return Transition(state, action, reward, next_state, value)
-
-    def get_value(self) -> float:
-        return self.value
-
-    def to_string(self, env: Env) -> str:
-        return (
-            # env.value_str(self.value)
-            env.state_str(self.state)
-            + " "
-            + env.action_str(self.action)
-            + " "
-            + env.reward_str(self.reward, self.next_state)
-            + ("" if self.next_state is None else env.state_str(self.next_state))
-        )
-
-
-@dataclass
 class TimeStep:
     state: int
     action: int
@@ -46,7 +19,6 @@ class TimeStep:
 
     def to_string(self, env: Env) -> str:
         return (
-            # env.value_str(self.value)
             env.state_str(self.state)
             + " "
             + env.action_str(self.action)
@@ -56,8 +28,12 @@ class TimeStep:
         )
 
 
-def value(*trajectory: TimeStep, gamma: float = 1) -> float:
-    return sum([t**gamma * ts.reward for t, ts in enumerate(trajectory)])
+def value(*trajectory: TimeStep, gamma: float) -> float:
+    return sum([t ** gamma * ts.reward for t, ts in enumerate(trajectory)])
+
+
+def to_string(*trajectory: TimeStep, env: Env) -> str:
+    return " ".join([ts.to_string(env) for ts in trajectory])
 
 
 @dataclass
@@ -116,27 +92,20 @@ class Model(abc.ABC):
     def ready(self) -> bool:
         return len(self.buffer) >= self.prompt_size
 
-    def sample(self, buffer: Optional[Iterable[List[TimeStep]]] = None):
+    def sample(
+        self, buffer: Optional[Iterable[List[TimeStep]]] = None
+    ) -> List[List[str]]:
         if buffer is None:
             buffer = self.buffer
-        idxs = self.rng.choice(
-            len(buffer), min(len(buffer), self.prompt_size), replace=False
-        )
-        trajectories = [buffer[i] for i in idxs]
         prompts = [
-            ts.to_string(self.env) for trajectory in trajectories for ts in trajectory
+            [ts.to_string(self.env) for ts in trajectory] for trajectory in buffer
         ]
         self.rng.shuffle(prompts)
         return prompts[: self.prompt_size]
 
-    def sample_best(self):
-        return self.sample(
-            [
-                trajectory
-                for trajectory in self.buffer
-                if value(*trajectory) > self.failure_threshold
-            ]
-        )
+    def sample_best(self) -> List[List[str]]:
+        buffer = [t for t in self.buffer if value(*t, gamma=1) > self.failure_threshold]
+        return self.sample(buffer=buffer)
 
 
 def reformat(completion: str) -> str:
@@ -176,9 +145,6 @@ class Q(Model):
         breakpoint()
         return action
 
-    def learn(self, prompt: Transition):
-        self.buffer.append(prompt)
-
     def value(self, state: int, action: Optional[int] = None) -> str:
         assert action is not None
 
@@ -187,8 +153,9 @@ class Q(Model):
         completions = []
         state = self.env.state_str(state)
         action = self.env.action_str(action)
-        prompt = self.sample()
-        new_prompt = "\n".join([*prompt, f"{state} {action}"])
+        trajectories = self.sample()
+        prompts = [to_string(*trajectory, env=self.env) for trajectory in trajectories]
+        new_prompt = "\n".join([*prompts, f"{state} {action}"])
         print("Q prompt:")
         print(new_prompt)
 
@@ -201,9 +168,12 @@ class Q(Model):
 
         while state_or_reward not in REWARDS.values():
             state = state_or_reward
-            prompt = self.sample_best()
+            trajectories = self.sample_best()
+            prompts = [
+                to_string(*trajectory, env=self.env) for trajectory in trajectories
+            ]
 
-            new_prompt = "\n".join([*prompt, state])
+            new_prompt = "\n".join([*prompts, state])
             print(f"Q prompt ({self.max_steps - t} left):")
             print(new_prompt)
 
@@ -226,9 +196,12 @@ class Pi(Model):
         state = self.env.state_str(state)
         action = None
         while action is None:
-            prompt = self.sample_best()
+            trajectories = self.sample_best()
+            prompts = [
+                to_string(*trajectory, env=self.env) for trajectory in trajectories
+            ]
 
-            prompt = "\n".join([*prompt, state])
+            prompt = "\n".join([*prompts, state])
             print("pi prompt:")
             print(prompt)
             completion = self.gpt3(prompt).lstrip()
