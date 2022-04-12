@@ -2,7 +2,7 @@ import abc
 import shelve
 import sys
 from dataclasses import dataclass
-from typing import Deque, Optional, cast
+from typing import Deque, List, Optional, cast
 
 import openai
 from env import ACTIONS, MAX_TOKENS, REWARDS, Env
@@ -43,6 +43,22 @@ class Prompt:
 
     def to_string(self, env: Env) -> str:
         return f"{env.state_str(self.state)} {env.action_str(self.action)} {self.value}"
+
+
+def to_string(_trajectory: List[TimeStep], env) -> str:
+    if not _trajectory:
+        return ""
+    head, *tail = _trajectory
+    if head.next_state is None:
+        reward_str = env.reward_str(head.reward, next_state=None)
+    else:
+        reward_str = ""
+
+    tail_trajectory = to_string(tail, env)
+    sep = " " if tail_trajectory and reward_str else ""
+    return Prompt.make(
+        head.state, head.action, f"{reward_str}{sep}{tail_trajectory}"
+    ).to_string(env)
 
 
 @dataclass
