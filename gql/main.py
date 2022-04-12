@@ -119,16 +119,21 @@ def main(
             #     # print()
             #     print(i, "".join(["#" if r > 0 else " " for r in _last10]) + "|")
 
+            trajectory = trajectory[-max_trajectory:]
             if not timed_out:
-                head, *tail = trajectory[-max_trajectory:]
-                value = to_string(tail)
-                if not value:
-                    value = env.reward_str(head.reward)
-                prompt = Prompt.make(head.state, head.action, value)
-                buffer.append(prompt)
+                while trajectory:
+                    head, *tail = trajectory
+                    value = to_string(tail)
+                    if not value:
+                        value = env.reward_str(head.reward)
+                    prompt = Prompt.make(head.state, head.action, value)
+                    buffer.append(prompt)
+                    trajectory = tail
 
         df = (
-            pd.DataFrame(np.array(returns).reshape(-1, 2), columns=["episode", "returns"])
+            pd.DataFrame(
+                np.array(returns).reshape(-1, 2), columns=["episode", "returns"]
+            )
             # .rolling(10)
             # .mean()
             # .reset_index().rename(columns=dict(index="episode"))
