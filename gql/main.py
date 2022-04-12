@@ -22,8 +22,11 @@ class TimeStep:
 
 
 def main(
+    failure_threshold: float = 0.0,
     goal: int = 4,
+    max_steps: int = 16,
     max_trajectory: int = 8,
+    min_successes: int = 3,
     n=10,
     q_prompt_size: int = 10,
     pi_prompt_size: int = 8,
@@ -58,6 +61,7 @@ def main(
         pi = Pi(
             buffer=buffer,
             env=env,
+            failure_threshold=failure_threshold,
             gpt3=gpt3,
             prompt_size=pi_prompt_size,
             rng=rng,
@@ -65,7 +69,9 @@ def main(
         q = Q(
             buffer=buffer,
             env=env,
+            failure_threshold=failure_threshold,
             gpt3=gpt3,
+            max_trajectory=max_trajectory,
             prompt_size=q_prompt_size,
             rng=rng,
         )
@@ -75,11 +81,13 @@ def main(
             state = env.reset()
             trajectory: List[TimeStep] = []
             use_pi = i % 2 == 0
+            timed_out = False
+            t = 0
             while not done:
                 value_quantities = [p.to_value_quantity(env) for p in list(buffer)]
                 value_quantities = sorted(value_quantities, reverse=True)[:n]
                 value_sum = sum(value_quantities)
-                use_model_prob = 1 / (1 + math.exp(2 * (1 - value_sum)))
+                use_model_prob = 1 / (1 + math.exp(2 * (min_successes - value_sum)))
                 print("use_model_prob", round(use_model_prob, 3))
                 use_model = rng.random() < use_model_prob
                 if use_model:
@@ -89,14 +97,18 @@ def main(
                     action = env.action_space.sample()
                 next_state, reward, done, _ = env.step(action)
                 step = TimeStep(state, action, reward, None if done else next_state)
-                if done and use_pi:
-                    print(i)
-                    print("state", state)
-                    print("action", action)
-                    print("reward", reward)
-                    if reward > 0:
-                        breakpoint()
-                    returns.append(reward)
+                t += 1
+                if t >= max_steps:
+                    done = timed_out = True
+                if done:
+                    if use_pi:
+                        print(i)
+                        print("state", state)
+                        print("action", action)
+                        print("reward", reward)
+                        if reward > 0:
+                            breakpoint()
+                        returns.append(reward)
                 # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$ Reward:", reward)
                 trajectory.append(step)
                 state = next_state
@@ -107,12 +119,13 @@ def main(
             #     # print()
             #     print(i, "".join(["#" if r > 0 else " " for r in _last10]) + "|")
 
-            head, *tail = trajectory[-max_trajectory:]
-            value = to_string(tail)
-            if not value:
-                value = env.reward_str(head.reward)
-            prompt = Prompt.make(head.state, head.action, value)
-            buffer.append(prompt)
+            if not timed_out:
+                head, *tail = trajectory[-max_trajectory:]
+                value = to_string(tail)
+                if not value:
+                    value = env.reward_str(head.reward)
+                prompt = Prompt.make(head.state, head.action, value)
+                buffer.append(prompt)
 
         df = (
             pd.DataFrame(np.array(returns).reshape(-1, 1), columns=["returns"])
