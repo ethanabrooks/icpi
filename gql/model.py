@@ -17,7 +17,7 @@ class TimeStep:
     reward: float
     next_state: Optional[int]
 
-    def to_string(self, env: Env) -> str:
+    def transition_string(self, env: Env) -> str:
         return (
             env.state_str(self.state)
             + " "
@@ -26,6 +26,9 @@ class TimeStep:
             + env.reward_str(self.reward, self.next_state)
             + ("" if self.next_state is None else env.state_str(self.next_state))
         )
+
+    def state_action_string(self, env: Env) -> str:
+        return f"{env.state_str(self.state)} {env.action_str(self.action)}"
 
 
 @dataclass
@@ -57,9 +60,8 @@ def to_string(*_trajectory: TimeStep, env) -> str:
 
     tail_trajectory = to_string(*tail, env=env)
     sep = " " if tail_trajectory and reward_str else ""
-    return Prompt.make(
-        head.state, head.action, f"{reward_str}{sep}{tail_trajectory}"
-    ).to_string(env)
+    value = f"{reward_str}{sep}{tail_trajectory}"
+    return f"{env.state_str(head.state)} {env.action_str(head.action)} {value}"
 
 
 @dataclass
