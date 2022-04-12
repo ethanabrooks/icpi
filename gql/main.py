@@ -22,7 +22,7 @@ def main(
     n=10,
     q_prompt_size: int = 10,
     pi_prompt_size: int = 8,
-    seed: int = 1,
+    seed: int = 2,
     states: int = 8,
     episodes: int = 50,
 ):
@@ -100,9 +100,10 @@ def main(
             np.array(regrets).reshape(-1, 2), columns=["episode", "regrets"]
         )
 
+        df.to_pickle(f"logs/{seed}.pkl")
         alt.Chart(df).mark_line(interpolate="bundle").encode(
             x="episode", y="regrets"
-        ).save("logs/returns.json")
+        ).save(f"logs/{seed}.json")
 
 
 if __name__ == "__main__":
