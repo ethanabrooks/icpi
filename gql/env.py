@@ -17,6 +17,11 @@ REWARDS = {
     0.0: "Failure.",
 }
 
+VALUES = [
+    "Fail:",
+    "Succeed:",
+]
+
 lengths = [len(a) + len(r) for a, r in itertools.product(ACTIONS, REWARDS.values())]
 MAX_TOKENS = max(lengths)
 
@@ -54,9 +59,7 @@ class Env(gym.Env[int, int]):
             state = int(state)
 
     @classmethod
-    def quantify(cls, value: str, gamma: Optional[float] = None) -> float:
-        if gamma is None:
-            gamma = 1
+    def quantify(cls, value: str, gamma: Optional[float]) -> float:
         success = value.endswith(cls.success_str())
         value = gamma ** value.count(".")
         return value if success else (gamma - 1) * value
@@ -76,8 +79,8 @@ class Env(gym.Env[int, int]):
         return s
 
     @classmethod
-    def reward_str(cls, reward: float) -> str:
-        return REWARDS[reward]
+    def reward_str(cls, reward: float, next_state: Optional[str]) -> str:
+        return REWARDS[reward] if next_state is None else ""
 
     @staticmethod
     def state_str(state: int) -> str:
@@ -85,3 +88,7 @@ class Env(gym.Env[int, int]):
 
     def step(self, action: int) -> Tuple[int, float, bool, dict]:
         return self.iterator.send(action)
+
+    @classmethod
+    def value_str(cls, value: float) -> str:
+        return VALUES[0] if value == 0 else VALUES[1]

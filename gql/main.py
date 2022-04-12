@@ -2,7 +2,7 @@ import math
 import os
 import shelve
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import List, Optional
 
 import altair as alt
@@ -10,7 +10,7 @@ import numpy as np
 import openai
 import pandas as pd
 from env import Env
-from model import GPT3, Pi, Prompt, Q
+from model import GPT3, Pi, Transition, Q
 
 
 @dataclass
@@ -26,11 +26,9 @@ def main(
     gamma: float = 0.9,
     goal: int = 4,
     max_steps: int = 16,
-    max_trajectory: int = 8,
     min_successes: int = 3,
     n=10,
-    q_prompt_size: int = 10,
-    pi_prompt_size: int = 8,
+    prompt_size: int = 16,
     seed: int = 1,
     states: int = 8,
     episodes: int = 40,
@@ -41,20 +39,20 @@ def main(
 
     regrets = deque()
 
-    def to_string(_trajectory: List[TimeStep]) -> str:
-        if not _trajectory:
-            return ""
-        head, *tail = _trajectory
-        if head.next_state is None:
-            reward_str = env.reward_str(head.reward)
-        else:
-            reward_str = ""
-
-        tail_trajectory = to_string(tail)
-        sep = " " if tail_trajectory and reward_str else ""
-        return Prompt.make(
-            head.state, head.action, f"{reward_str}{sep}{tail_trajectory}"
-        ).to_string(env)
+    # def to_string(_trajectory: List[TimeStep]) -> str:
+    #     if not _trajectory:
+    #         return ""
+    #     head, *tail = _trajectory
+    #     if head.next_state is None:
+    #         reward_str = env.reward_str(head.reward)
+    #     else:
+    #         reward_str = ""
+    #
+    #     tail_trajectory = to_string(tail)
+    #     sep = " " if tail_trajectory and reward_str else ""
+    #     return Transition.make(
+    #         head.state, head.action, f"{reward_str}{sep}{tail_trajectory}"
+    #     ).to_string(env)
 
     buffer = deque()
     with shelve.open("completions/completions.pkl") as db:
@@ -64,16 +62,17 @@ def main(
             env=env,
             failure_threshold=failure_threshold,
             gpt3=gpt3,
-            prompt_size=pi_prompt_size,
+            prompt_size=prompt_size,
             rng=rng,
         )
         q = Q(
             buffer=buffer,
             env=env,
             failure_threshold=failure_threshold,
+            gamma=gamma,
             gpt3=gpt3,
-            max_trajectory=max_trajectory,
-            prompt_size=q_prompt_size,
+            max_steps=max_steps,
+            prompt_size=prompt_size,
             rng=rng,
         )
 
@@ -86,7 +85,7 @@ def main(
             timed_out = False
             t = 0
             while not done:
-                value_quantities = [p.to_value_quantity(env) for p in list(buffer)]
+                value_quantities = [p.get_value() for p in list(buffer)]
                 value_quantities = sorted(value_quantities, reverse=True)[:n]
                 value_sum = sum(value_quantities)
                 use_model_prob = 1 / (1 + math.exp(2 * (min_successes - value_sum)))
@@ -121,16 +120,12 @@ def main(
             #     # print()
             #     print(i, "".join(["#" if r > 0 else " " for r in _last10]) + "|")
 
-            trajectory = trajectory[-max_trajectory:]
+            value = sum([t**gamma * ts.reward for t, ts in enumerate(trajectory)])
             if not timed_out:
                 while trajectory:
-                    head, *tail = trajectory
-                    value = to_string(tail)
-                    if not value:
-                        value = env.reward_str(head.reward)
-                    prompt = Prompt.make(head.state, head.action, value)
-                    buffer.append(prompt)
-                    trajectory = tail
+                    head, *trajectory = trajectory
+                    transition = Transition.make(**asdict(head), value=value)
+                    buffer.append(transition)
 
         df = (
             pd.DataFrame(
