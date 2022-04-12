@@ -46,7 +46,7 @@ def main(
             return ""
         head, *tail = _trajectory
         if head.next_state is None:
-            reward_str = env.reward_str(head.reward)
+            reward_str = env.reward_str(head.reward, next_state=None)
         else:
             reward_str = ""
 
@@ -86,7 +86,7 @@ def main(
             timed_out = False
             t = 0
             while not done:
-                value_quantities = [p.to_value_quantity(env) for p in list(buffer)]
+                value_quantities = [p.to_value_quantity(env, gamma=1) for p in list(buffer)]
                 value_quantities = sorted(value_quantities, reverse=True)[:n]
                 value_sum = sum(value_quantities)
                 use_model_prob = 1 / (1 + math.exp(2 * (min_successes - value_sum)))
@@ -120,7 +120,7 @@ def main(
                     head, *tail = trajectory
                     value = to_string(tail)
                     if not value:
-                        value = env.reward_str(head.reward)
+                        value = env.reward_str(head.reward, next_state=None)
                     prompt = Prompt.make(head.state, head.action, value)
                     buffer.append(prompt)
                     trajectory = tail

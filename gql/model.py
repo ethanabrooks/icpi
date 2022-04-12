@@ -20,7 +20,7 @@ class Prompt:
     def make(state: int, action: int, value: str):
         return Prompt(state, action, value.lstrip())
 
-    def to_value_quantity(self, env: Env, gamma: Optional[float] = None) -> float:
+    def to_value_quantity(self, env: Env, gamma: Optional[float]) -> float:
         return env.quantify(self.to_string(env), gamma=gamma)
 
     def to_string(self, env: Env) -> str:
@@ -100,7 +100,7 @@ class Model(abc.ABC):
         success_prompts = [
             p
             for p in self.buffer
-            if p.to_value_quantity(self.env) > self.failure_threshold
+            if p.to_value_quantity(self.env, gamma=1) > self.failure_threshold
         ]
         self.rng.shuffle(success_prompts)
         return [p.to_string(self.env) for p in success_prompts][: self.prompt_size]
