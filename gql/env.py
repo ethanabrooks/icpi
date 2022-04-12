@@ -17,6 +17,11 @@ REWARDS = {
     0.0: "Failure.",
 }
 
+VALUES = [
+    "Fail:",
+    "Succeed:",
+]
+
 lengths = [len(a) + len(r) for a, r in itertools.product(ACTIONS, REWARDS.values())]
 MAX_TOKENS = max(lengths)
 
@@ -85,3 +90,7 @@ class Env(gym.Env[int, int]):
 
     def step(self, action: int) -> Tuple[int, float, bool, dict]:
         return self.iterator.send(action)
+
+    @classmethod
+    def value_str(cls, value: float) -> str:
+        return VALUES[0] if value == 0 else VALUES[1]

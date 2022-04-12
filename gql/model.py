@@ -139,9 +139,6 @@ class Q(Model):
         # breakpoint()
         return action
 
-    def learn(self, prompt: Prompt):
-        self.buffer.append(prompt)
-
     def value(self, state: int, action: Optional[int] = None) -> str:
         assert action is not None
 
@@ -182,12 +179,7 @@ class Q(Model):
             print("state/reward", state_or_reward)
             completions.extend([action, state_or_reward])
 
-        completion = " ".join(completions)
-        # print("state", original_state)
-        # print("action", original_action)
-        # print(completion)
-        # breakpoint()
-        return completion
+        return " ".join(completions)
 
 
 class Pi(Model):

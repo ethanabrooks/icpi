@@ -110,16 +110,9 @@ def main(
                     if use_pi:
                         # if reward > 0:
                         #     breakpoint()
-                        regrets.append((i, optimal - reward * gamma**t))
-                # print("$$$$$$$$$$$$$$$$$$$$$$$$$$$ Reward:", reward)
+                        regrets.append((i, optimal - reward * gamma ** t))
                 trajectory.append(step)
                 state = next_state
-
-            # if model.ready():
-            #     _last10 = list(returns) + [0] * (10 - len(returns))
-            #     _last10 = sorted(_last10, reverse=True)
-            #     # print()
-            #     print(i, "".join(["#" if r > 0 else " " for r in _last10]) + "|")
 
             trajectory = trajectory[-max_trajectory:]
             if not timed_out:
@@ -132,13 +125,8 @@ def main(
                     buffer.append(prompt)
                     trajectory = tail
 
-        df = (
-            pd.DataFrame(
-                np.array(regrets).reshape(-1, 2), columns=["episode", "regrets"]
-            )
-            # .rolling(10)
-            # .mean()
-            # .reset_index().rename(columns=dict(index="episode"))
+        df = pd.DataFrame(
+            np.array(regrets).reshape(-1, 2), columns=["episode", "regrets"]
         )
 
         alt.Chart(df).mark_line(interpolate="bundle").encode(
