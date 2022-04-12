@@ -69,6 +69,7 @@ class GPT3:
 class Model(abc.ABC):
     buffer: Deque[Prompt]
     env: Env
+    failure_threshold: float
     gpt3: GPT3
     prompt_size: int
     rng: Generator
@@ -88,17 +89,17 @@ class Model(abc.ABC):
     def sample(self):
         prompts = [p.to_string(self.env) for p in self.buffer]
         self.rng.shuffle(prompts)
-        return prompts
+        return prompts[: self.prompt_size]
 
     def sample_best(self):
-        buffer = sorted(
-            self.buffer,
-            key=lambda p: (p.to_value_quantity(self.env), self.rng.random()),
-            reverse=True,
-        )
-        prompts = [p.to_string(self.env) for p in buffer][: self.prompt_size]
-        self.rng.shuffle(prompts)
-        return prompts
+        # buffer = sorted(
+        #     self.buffer,
+        #     key=lambda p: (p.to_value_quantity(self.env), self.rng.random()),
+        #     reverse=True,
+        # )
+        success_prompts = [p for p in self.buffer if p.to_value_quantity(self.env) > self.failure_threshold]
+        self.rng.shuffle(success_prompts)
+        return [p.to_string(self.env) for p in success_prompts][: self.prompt_size]
 
 
 def reformat(completion: str) -> str:
@@ -107,6 +108,8 @@ def reformat(completion: str) -> str:
 
 @dataclass
 class Q(Model):
+    max_trajectory: int
+
     def _act(self, state: int) -> int:
         assert isinstance(self.env.action_space, Discrete)
         actions = range(self.env.action_space.n)
@@ -147,12 +150,14 @@ class Q(Model):
         new_prompt = "\n".join([*prompt, f"{state} {action}"])
         print("Q prompt:")
         print(new_prompt)
+
         completion = self.gpt3(new_prompt).lstrip()
         state_or_reward, action, *_ = completion.split(".")
         state_or_reward, action = map(reformat, [state_or_reward, action])
         print("state/reward", state_or_reward)
         print("action", action)
         completions.append(state_or_reward)
+        t = 1
 
         while state_or_reward not in REWARDS.values():
             state = state_or_reward
@@ -161,10 +166,14 @@ class Q(Model):
             new_prompt = "\n".join([*prompt, state])
             print("Q prompt:")
             print(new_prompt)
+
             # print(f"{state} {action}", end=" :: ")
             completion = self.gpt3(new_prompt).lstrip()
             action, state_or_reward, *_ = completion.split(".")
             action, state_or_reward = map(reformat, [action, state_or_reward])
+            if t == self.max_trajectory:
+                state_or_reward = REWARDS[0.0]
+            t += 1
             print("action", action)
             print("state/reward", state_or_reward)
             completions.extend([action, state_or_reward])
