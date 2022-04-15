@@ -163,7 +163,7 @@ python-versions = "*"
 
 [[package]]
 name = "dollar-lambda"
-version = "0.4.3"
+version = "1.0.0"
 description = "An argument parser for Python built from functional first principles"
 category = "main"
 optional = false
@@ -889,7 +889,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "49da63448468331e5ddb41a4f8336d2c22b353d1b004ee895c9e53985503be5e"
+content-hash = "40f58b27fb83e5fc7131a46fc55ce97879809bdef9197edd701b2c0eaf46d563"
 
 [metadata.files]
 altair = [
@@ -973,8 +973,8 @@ distlib = [
     {file = "distlib-0.3.4.zip", hash = "sha256:e4b58818180336dc9c529bfb9a0b58728ffc09ad92027a3f30b7cd91e3458579"},
 ]
 dollar-lambda = [
-    {file = "dollar-lambda-0.4.3.tar.gz", hash = "sha256:abae93b26d77776ace89a492604993de9de3dd0fec055a10da666a963983ab2a"},
-    {file = "dollar_lambda-0.4.3-py3-none-any.whl", hash = "sha256:5b0a2989b38def01f624d67062fcc7240ca96ce693c3f201b42b76007fb46a21"},
+    {file = "dollar-lambda-1.0.0.tar.gz", hash = "sha256:7a4a8a38cb8b352f290513529a6bb72b18afb8a93925bec98e53f9220f9858c5"},
+    {file = "dollar_lambda-1.0.0-py3-none-any.whl", hash = "sha256:cdbfaf8f5268a1f9cfd7dd2d0608c25a6cdebbefb8b9f1198d1444847e2d5ba4"},
 ]
 entrypoints = [
     {file = "entrypoints-0.4-py3-none-any.whl", hash = "sha256:f174b5ff827504fd3cd97cc3f8649f3693f51538c7e4bdf3ef002c8429d42f9f"},
