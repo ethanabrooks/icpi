@@ -507,7 +507,7 @@ test = ["hypothesis (>=5.5.3)", "pytest (>=6.0)", "pytest-xdist (>=1.31)"]
 
 [[package]]
 name = "pandas-stubs"
-version = "1.2.0.57"
+version = "1.2.0.58"
 description = "Type annotations for Pandas"
 category = "main"
 optional = false
@@ -706,25 +706,18 @@ use_chardet_on_py3 = ["chardet (>=3.0.2,<5)"]
 
 [[package]]
 name = "run-logger"
-version = "0.1.0"
-description = ""
+version = "0.0.3"
+description = "A utility for logging runs."
 category = "main"
 optional = false
-python-versions = "^3.8"
-develop = false
+python-versions = ">=3.8,<4.0"
 
 [package.dependencies]
-gql = "^2.0.0"
-jsonlines = "^2.0.0"
-numpy = "^1.19.2"
-PyYAML = "^5.4.1"
-redis = "^3.5.3"
-
-[package.source]
-type = "git"
-url = "https://github.com/run-tracker/run-logger.git"
-reference = "main"
-resolved_reference = "d011f15331d56530231d43ee80d61ffe9b19408d"
+gql = ">=2.0.0,<3.0.0"
+jsonlines = ">=2.0.0,<3.0.0"
+numpy = ">=1.19.2,<2.0.0"
+PyYAML = ">=5.4.1,<6.0.0"
+redis = ">=3.5.3,<4.0.0"
 
 [[package]]
 name = "rx"
@@ -896,7 +889,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "60a6c1cc8c6af4df7a5ed5e5d45f8098bba1bf98ce438e9f3fd65de451884b15"
+content-hash = "49da63448468331e5ddb41a4f8336d2c22b353d1b004ee895c9e53985503be5e"
 
 [metadata.files]
 altair = [
@@ -1156,8 +1149,8 @@ pandas = [
     {file = "pandas-1.4.2.tar.gz", hash = "sha256:92bc1fc585f1463ca827b45535957815b7deb218c549b7c18402c322c7549a12"},
 ]
 pandas-stubs = [
-    {file = "pandas-stubs-1.2.0.57.tar.gz", hash = "sha256:5b8a40cc2205fbb848b88d4ec7c01cc2ddead88954f005518e26577e339c6028"},
-    {file = "pandas_stubs-1.2.0.57-py3-none-any.whl", hash = "sha256:c0933322d6805cc7d2faa5614a5ef8d8164e95dc7b8f6b6cd2d8971cb69643b5"},
+    {file = "pandas-stubs-1.2.0.58.tar.gz", hash = "sha256:f0e0e70887f85a5895887bdf7cee34e3881d5c7f95457304e8a9287401ae4be8"},
+    {file = "pandas_stubs-1.2.0.58-py3-none-any.whl", hash = "sha256:4497e8ce506e29b202955ebc653d181833a9745076bc911c2111e09095988440"},
 ]
 parso = [
     {file = "parso-0.8.3-py2.py3-none-any.whl", hash = "sha256:c001d4636cd3aecdaf33cbb40aebb59b094be2a74c556778ef5576c175e19e75"},
@@ -1276,7 +1269,10 @@ requests = [
     {file = "requests-2.27.1-py2.py3-none-any.whl", hash = "sha256:f22fa1e554c9ddfd16e6e41ac79759e17be9e492b3587efa038054674760e72d"},
     {file = "requests-2.27.1.tar.gz", hash = "sha256:68d7c56fd5a8999887728ef304a6d12edc7be74f1cfa47714fc8b414525c9a61"},
 ]
-run-logger = []
+run-logger = [
+    {file = "run-logger-0.0.3.tar.gz", hash = "sha256:f3c93f51c5533fa2bc466f7a9242dbf02d3452205360e54f87f56832dee194d1"},
+    {file = "run_logger-0.0.3-py3-none-any.whl", hash = "sha256:252be43e5fefcaa03751b790c0e088ecf71bf4b2b9ab1c52c594f688678a20f6"},
+]
 rx = [
     {file = "Rx-1.6.1-py2.py3-none-any.whl", hash = "sha256:7357592bc7e881a95e0c2013b73326f704953301ab551fbc8133a6fadab84105"},
     {file = "Rx-1.6.1.tar.gz", hash = "sha256:13a1d8d9e252625c173dc795471e614eadfe1cf40ffc684e08b8fff0d9748c23"},
