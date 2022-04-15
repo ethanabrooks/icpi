@@ -13,7 +13,7 @@ numpy = "^1.22.3"
 better-partial = "^1.0.6"
 altair = "^4.2.0"
 typed-argument-parser = "^1.7.2"
-run-logger = {git = "https://github.com/run-tracker/run-logger.git", rev = "main"}
+run-logger = "^0.0.3"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.2.0"
