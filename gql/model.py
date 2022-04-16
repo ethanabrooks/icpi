@@ -35,20 +35,26 @@ def to_string(*_trajectory: TimeStep, env) -> str:
 
 
 def get_value(*trajectory: TimeStep, gamma: float) -> float:
-    return sum([gamma**t * ts.reward for t, ts in enumerate(trajectory)])
+    return sum([gamma ** t * ts.reward for t, ts in enumerate(trajectory)])
+
+
+def _print(*args, debug: bool, **kwargs):
+    if debug:
+        print(*args, **kwargs)
 
 
 @dataclass
 class GPT3:
     db: shelve.DbfilenameShelf
+    debug: bool = False
 
     def __call__(self, prompt, pause=True):
-        print("<", end="")
+        self.print("<", end="")
         if prompt in self.db:
             completion = cast(str, self.db[prompt])
             # print("Completion:")
             # print(value)
-            print(">", end="")
+            self.print(">", end="")
             return completion
 
         # print("Prompt:")
@@ -67,10 +73,13 @@ class GPT3:
             completion = choice.text.lstrip()
             if "." in completion:
                 self.db[prompt] = completion
-                print(">", end="")
+                self.print(">", end="")
                 # print("Completion:", completion.split("\n")[0])
                 # breakpoint()
                 return completion
+
+    def print(self, *args, **kwargs):
+        _print(*args, debug=self.debug, **kwargs)
 
 
 @dataclass
@@ -81,6 +90,7 @@ class Model(abc.ABC):
     gpt3: GPT3
     prompt_size: int
     rng: Generator
+    debug: bool
 
     def act(self, state: int) -> int:
         if self.ready():
@@ -90,6 +100,9 @@ class Model(abc.ABC):
     @abc.abstractmethod
     def _act(self, state: int) -> int:
         ...
+
+    def print(self, *args, **kwargs):
+        _print(*args, debug=self.debug, **kwargs)
 
     def ready(self) -> bool:
         return len(self.buffer) >= self.prompt_size
@@ -135,13 +148,14 @@ class Q(Model):
             ),
         )
 
-        print("Q")
-        print("state", state)
+        self.print("Q")
+        self.print("state", state)
         for a, v in zip(actions, values):
-            print("action", a)
-            print("value", v)
-        print("chosen", action)
-        # breakpoint()
+            self.print("action", a)
+            self.print("value", v)
+        self.print("chosen", action)
+        if self.debug:
+            breakpoint()
         return action
 
     def value(self, state: int, action: Optional[int] = None) -> str:
@@ -154,13 +168,13 @@ class Q(Model):
         action = self.env.action_str(action)
         trajectories = self.sample()
         new_prompt = "\n".join([*trajectories, f"{state} {action}"])
-        print("Q prompt:")
-        print(new_prompt)
+        # print("Q prompt:")
+        # print(new_prompt)
 
         state_or_reward, action, *_ = self.gpt3(new_prompt).lstrip().split(".")
         state_or_reward, action = map(reformat, [state_or_reward, action])
-        print("state/reward", state_or_reward)
-        print("action", action)
+        # print("state/reward", state_or_reward)
+        # print("action", action)
         completions.append(state_or_reward)
         t = 1
 
@@ -169,8 +183,8 @@ class Q(Model):
             trajectories = self.sample_best()
 
             new_prompt = "\n".join([*trajectories, state])
-            print("Q prompt:")
-            print(new_prompt)
+            # print("Q prompt:")
+            # print(new_prompt)
 
             # print(f"{state} {action}", end=" :: ")
             completion = self.gpt3(new_prompt).lstrip()
@@ -179,8 +193,8 @@ class Q(Model):
             if t == self.max_steps:
                 state_or_reward = REWARDS[0.0]
             t += 1
-            print("action", action)
-            print("state/reward", state_or_reward)
+            # print("action", action)
+            # print("state/reward", state_or_reward)
             completions.extend([action, state_or_reward])
 
         return " ".join(completions)
@@ -193,12 +207,13 @@ class Pi(Model):
         while action is None:
             trajectories = self.sample_best()
             prompt = "\n".join([*trajectories, state])
-            print("pi prompt:")
-            print(prompt)
+            self.print("pi prompt:")
+            self.print(prompt)
             completion = self.gpt3(prompt).lstrip()
             maybe_action, *_ = completion.split(".")
-            print("Action:", maybe_action)
-            # breakpoint()
+            self.print("Action:", maybe_action)
+            if self.debug:
+                breakpoint()
 
             try:
                 action = ACTIONS.index(maybe_action + ".")
