@@ -739,14 +739,21 @@ version = "0.0.3"
 description = "A utility for logging runs."
 category = "main"
 optional = false
-python-versions = ">=3.8,<4.0"
+python-versions = "^3.8"
+develop = false
 
 [package.dependencies]
-gql = ">=2.0.0,<3.0.0"
-jsonlines = ">=2.0.0,<3.0.0"
-numpy = ">=1.19.2,<2.0.0"
-PyYAML = ">=5.4.1,<6.0.0"
-redis = ">=3.5.3,<4.0.0"
+gql = "^2.0.0"
+jsonlines = "^2.0.0"
+numpy = "^1.19.2"
+PyYAML = "^5.4.1"
+redis = "^3.5.3"
+
+[package.source]
+type = "git"
+url = "https://github.com/run-tracker/run-logger.git"
+reference = "main"
+resolved_reference = "47be76f4177b721165b4d312eb46fffc1bd62441"
 
 [[package]]
 name = "rx"
@@ -941,7 +948,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "61e57ee2e1fc27de5bc26cb08c78c5c0e395dbe7a9ae114a89a96fd84833c8f3"
+content-hash = "6701c8809e8166be5ee46ee0517f13b6947bcc9613a036a535b224fcf50fbc68"
 
 [metadata.files]
 altair = [
@@ -1326,10 +1333,7 @@ requests = [
     {file = "requests-2.27.1-py2.py3-none-any.whl", hash = "sha256:f22fa1e554c9ddfd16e6e41ac79759e17be9e492b3587efa038054674760e72d"},
     {file = "requests-2.27.1.tar.gz", hash = "sha256:68d7c56fd5a8999887728ef304a6d12edc7be74f1cfa47714fc8b414525c9a61"},
 ]
-run-logger = [
-    {file = "run-logger-0.0.3.tar.gz", hash = "sha256:f3c93f51c5533fa2bc466f7a9242dbf02d3452205360e54f87f56832dee194d1"},
-    {file = "run_logger-0.0.3-py3-none-any.whl", hash = "sha256:252be43e5fefcaa03751b790c0e088ecf71bf4b2b9ab1c52c594f688678a20f6"},
-]
+run-logger = []
 rx = [
     {file = "Rx-1.6.1-py2.py3-none-any.whl", hash = "sha256:7357592bc7e881a95e0c2013b73326f704953301ab551fbc8133a6fadab84105"},
     {file = "Rx-1.6.1.tar.gz", hash = "sha256:13a1d8d9e252625c173dc795471e614eadfe1cf40ffc684e08b8fff0d9748c23"},
