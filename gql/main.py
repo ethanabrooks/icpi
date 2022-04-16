@@ -131,6 +131,7 @@ def main(
     name: Optional[str] = None,
     load_id: Optional[int] = None,
     sweep_id: Optional[int] = None,
+    use_logger: bool = False,
 ):
     repo = Repo(".")
     if not allow_dirty:
@@ -153,7 +154,7 @@ def main(
     visualizer_url = os.getenv("VISUALIZER_URL")
     assert visualizer_url is not None, "VISUALIZER_URL must be set"
     params, logger = run_logger.initialize(
-        graphql_endpoint=os.getenv("GRAPHQL_ENDPOINT"),
+        graphql_endpoint=os.getenv("GRAPHQL_ENDPOINT") if use_logger else None,
         config=config,
         charts=[
             line.spec(x="step", y=y, visualizer_url=visualizer_url)
