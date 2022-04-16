@@ -70,7 +70,7 @@ class GPT3:
                     completion=completion,
                     temperature=self.temperature,
                     top_p=self.top_p,
-                )
+                )["insert_completions_one"]["completion"]
                 if response != completion:
                     breakpoint()
                 self.print(">", end="")
