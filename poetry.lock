@@ -735,7 +735,7 @@ use_chardet_on_py3 = ["chardet (>=3.0.2,<5)"]
 
 [[package]]
 name = "run-logger"
-version = "0.0.3"
+version = "0.1.0"
 description = "A utility for logging runs."
 category = "main"
 optional = false
@@ -751,9 +751,9 @@ redis = "^3.5.3"
 
 [package.source]
 type = "git"
-url = "https://github.com/run-tracker/run-logger.git"
+url = "https://github.com/ethanabrooks/run-logger.git"
 reference = "main"
-resolved_reference = "47be76f4177b721165b4d312eb46fffc1bd62441"
+resolved_reference = "0be4d4e144dd54f459d2d91245730c985fd4e62d"
 
 [[package]]
 name = "rx"
@@ -794,6 +794,28 @@ pure-eval = "*"
 
 [package.extras]
 tests = ["pytest", "typeguard", "pygments", "littleutils", "cython"]
+
+[[package]]
+name = "sweep-logger"
+version = "0.1.0"
+description = ""
+category = "main"
+optional = false
+python-versions = "^3.8"
+develop = false
+
+[package.dependencies]
+gql = "^2.0.0"
+jsonlines = "^2.0.0"
+PyYAML = "^5.4.1"
+redis = "^3.5.3"
+run-logger = {git = "https://github.com/ethanabrooks/run-logger.git", rev = "main"}
+
+[package.source]
+type = "git"
+url = "https://github.com/run-tracker/sweep-logger.git"
+reference = "main"
+resolved_reference = "7e42a456a01a84a1aaf7635eabd7ed284453acd4"
 
 [[package]]
 name = "toml"
@@ -948,7 +970,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytest-
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "6701c8809e8166be5ee46ee0517f13b6947bcc9613a036a535b224fcf50fbc68"
+content-hash = "f794e998edafd06d6520ac6f7de8d8883df32c9352b659d92d9c283d15d8b2ad"
 
 [metadata.files]
 altair = [
@@ -1350,6 +1372,7 @@ stack-data = [
     {file = "stack_data-0.2.0-py3-none-any.whl", hash = "sha256:999762f9c3132308789affa03e9271bbbe947bf78311851f4d485d8402ed858e"},
     {file = "stack_data-0.2.0.tar.gz", hash = "sha256:45692d41bd633a9503a5195552df22b583caf16f0b27c4e58c98d88c8b648e12"},
 ]
+sweep-logger = []
 toml = [
     {file = "toml-0.10.2-py2.py3-none-any.whl", hash = "sha256:806143ae5bfb6a3c6e736a764057db0e6a0e05e338b5630894a5f779cabb4f9b"},
     {file = "toml-0.10.2.tar.gz", hash = "sha256:b3bda1d108d5dd99f4a20d24d9c348e91c4db7ab1b749200bded2f839ccbe68f"},

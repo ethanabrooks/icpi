@@ -18,14 +18,13 @@ services:
     build: .
     depends_on:
       - redis
+    env_file:
+      - .env
     volumes:
       - .:/config
     entrypoint:
       - create-sweep
-      - --graphql-endpoint=${GRAPHQL_ENDPOINT}
-      - --config=/config/config.yml
       - --name=${NAME}
-      - --project=gpt-rl
       - --method=${SWEEP_METHOD}
       - --remaining-runs=${MAX_RUNS}
       - redis
@@ -34,14 +33,12 @@ services:
     depends_on:
       - rank-counter
       - sweep
-    environment:
-      - GRAPHQL_ENDPOINT
-      - HOST_MACHINE
-      - VISUALIZER_URL
+    env_file:
+      - .env
     entrypoint:
       - execute-sweep
       - --graphql-endpoint=${GRAPHQL_ENDPOINT}
-      - --command=python ${SCRIPT} sweep --sweep
+      - --command=python ${SCRIPT} log sweep --sweep_id
     volumes:
       - "${PWD}/logs:/tmp/logs"
       - "${PWD}/completions:/root/completions"

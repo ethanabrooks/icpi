@@ -66,7 +66,7 @@ def log(
         config=config,
         charts=charts,
         metadata=metadata,
-        name=name,
+        name=name if sweep_id is None else None,
         load_id=load_id,
         sweep_id=sweep_id,
     )
