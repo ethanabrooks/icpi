@@ -126,13 +126,15 @@ def train(
 
 @command()
 def main(
-    config: str = "config.yaml",
+    config: str = "config.yml",
+    allow_dirty: bool = False,
     name: Optional[str] = None,
     load_id: Optional[int] = None,
     sweep_id: Optional[int] = None,
 ):
-    repo = Repo("..")
-    assert not repo.is_dirty()
+    repo = Repo(".")
+    if not allow_dirty:
+        assert not repo.is_dirty()
     metadata = dict(
         reproducibility=(
             dict(
