@@ -71,6 +71,7 @@ def train(
         use_pi = episodes % 2 == 0
         timed_out = False
         t = 0
+        r = 0
         while not done:
             value_quantities = [get_value(*t, gamma=1) for t in list(buffer)]
             value_quantities = sorted(value_quantities, reverse=True)[:n]
@@ -85,6 +86,7 @@ def train(
                 action = env.action_space.sample()
             next_state, reward, done, _ = env.step(action)
             step = TimeStep(state, action, reward, None if done else next_state)
+            r += reward
             t += 1
             T += 1
             if t >= max_steps:
@@ -92,7 +94,7 @@ def train(
             if done:
                 episodes += 1
                 if use_pi:
-                    returns = reward * gamma**t
+                    returns = r * gamma ** t
                     regrets = optimal - returns
                     log = dict(
                         episode=episodes,
