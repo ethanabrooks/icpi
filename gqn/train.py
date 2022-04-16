@@ -13,7 +13,6 @@ from run_logger import HasuraLogger
 
 def train(
     debug: bool,
-    episodes: int,
     failure_threshold: float,
     gamma: float,
     goal: int,
@@ -28,6 +27,7 @@ def train(
     states: int,
     temperature: float,
     top_p: float,
+    total_steps: int,
 ):
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
@@ -62,12 +62,13 @@ def train(
     )
 
     T = 0
-    for i in range(episodes):
+    episodes = 0
+    while T < total_steps:
         done = False
         state = env.reset()
         optimal = gamma ** (abs(env.goal - state) + 1)
         trajectory: List[TimeStep] = []
-        use_pi = i % 2 == 0
+        use_pi = episodes % 2 == 0
         timed_out = False
         t = 0
         while not done:
@@ -85,15 +86,16 @@ def train(
             next_state, reward, done, _ = env.step(action)
             step = TimeStep(state, action, reward, None if done else next_state)
             t += 1
+            T += 1
             if t >= max_steps:
                 done = timed_out = True
             if done:
-                T += t
+                episodes += 1
                 if use_pi:
-                    returns = reward * gamma ** t
+                    returns = reward * gamma**t
                     regrets = optimal - returns
                     log = dict(
-                        episode=i,
+                        episode=episodes,
                         step=T,
                         regret=regrets,
                         **{"return": returns, "run ID": logger.run_id}
