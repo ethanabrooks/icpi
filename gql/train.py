@@ -92,7 +92,10 @@ def train(
                             episode=i,
                             step=T,
                             regret=regrets,
-                            **{"return": returns},
+                            **{
+                                "return": returns,
+                                "run ID": None if logger is None else logger.run_id,
+                            }
                         )
                         pprint(log)
                         if logger is not None:
