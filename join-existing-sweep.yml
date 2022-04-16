@@ -1,0 +1,13 @@
+version: "3.8"
+
+services:
+  sweep:
+    image: redis
+    entrypoint:
+      - redis-cli
+    command:
+      - -h
+      - redis
+      - set
+      - sweep_id
+      - ${SWEEP_ID}
