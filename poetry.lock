@@ -169,7 +169,7 @@ pytypeclass = "^0.1.1"
 type = "git"
 url = "https://github.com/ethanabrooks/dollar-lambda.git"
 reference = "main"
-resolved_reference = "7cf1741965b377aaba292fe3cf77909350c8141e"
+resolved_reference = "a72311e1499965abc37a36d784f062fbb4dca6de"
 
 [[package]]
 name = "entrypoints"
