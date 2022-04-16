@@ -13,6 +13,7 @@ from run_logger import HasuraLogger
 
 
 def train(
+    debug: bool,
     failure_threshold: float,
     gamma: float,
     goal: int,
@@ -33,7 +34,7 @@ def train(
 
     buffer: Deque[List[TimeStep]] = deque()
     with shelve.open("completions/completions.pkl") as db:
-        gpt3 = GPT3(db)
+        gpt3 = GPT3(db, debug=debug)
         pi = Pi(
             buffer=buffer,
             env=env,
@@ -41,6 +42,7 @@ def train(
             gpt3=gpt3,
             prompt_size=pi_prompt_size,
             rng=rng,
+            debug=debug,
         )
         q = Q(
             buffer=buffer,
@@ -51,6 +53,7 @@ def train(
             max_steps=max_trajectory,
             prompt_size=q_prompt_size,
             rng=rng,
+            debug=debug,
         )
 
         T = 0
@@ -67,7 +70,7 @@ def train(
                 value_quantities = sorted(value_quantities, reverse=True)[:n]
                 value_sum = sum(value_quantities)
                 use_model_prob = 1 / (1 + math.exp(2 * (min_successes - value_sum)))
-                print("use_model_prob", round(use_model_prob, 3))
+                # print("use_model_prob", round(use_model_prob, 3))
                 model = pi if use_pi else q
                 use_model = (rng.random() < use_model_prob) and model.ready()
                 if use_model:
@@ -81,10 +84,6 @@ def train(
                     done = timed_out = True
                 if done:
                     T += t
-                    print("episode", i)
-                    print("state", state)
-                    print("action", action)
-                    print("reward", reward)
                     if use_pi:
                         returns = reward * gamma ** t
                         regrets = optimal - returns
