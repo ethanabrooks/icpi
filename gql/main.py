@@ -132,6 +132,7 @@ def main(
     sweep_id: Optional[int] = None,
 ):
     repo = Repo("..")
+    assert not repo.is_dirty()
     metadata = dict(
         reproducibility=(
             dict(
@@ -140,7 +141,6 @@ def main(
                 cwd=str(Path.cwd()),
                 commit=str(repo.commit()),
                 remotes=[*repo.remote().urls],
-                is_dirty=repo.is_dirty(),
             )
         ),
         hostname=socket.gethostname(),
