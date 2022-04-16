@@ -8,7 +8,6 @@ authors = ["Ethan Brooks <ethanabrooks@gmail.com>"]
 python = "^3.9"
 openai = "^0.16.0"
 gym = "^0.23.1"
-dollar-lambda = "^1.0.0"
 numpy = "^1.22.3"
 better-partial = "^1.0.6"
 altair = "^4.2.0"
@@ -16,6 +15,7 @@ typed-argument-parser = "^1.7.2"
 run-logger = "^0.0.3"
 GitPython = "^3.1.27"
 vega-charts = {git = "https://github.com/run-tracker/vega-charts.git", rev = "main"}
+dollar-lambda = {git = "https://github.com/ethanabrooks/dollar-lambda.git", rev = "main"}
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.2.0"
