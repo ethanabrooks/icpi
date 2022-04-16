@@ -14,6 +14,7 @@ better-partial = "^1.0.6"
 altair = "^4.2.0"
 typed-argument-parser = "^1.7.2"
 run-logger = "^0.0.3"
+GitPython = "^3.1.27"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.2.0"

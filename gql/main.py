@@ -1,30 +1,40 @@
 import math
 import os
 import shelve
+import socket
+import sys
+import time
 from collections import deque
-from typing import Deque, List
+from pathlib import Path
+from shlex import quote
+from typing import Deque, List, Optional
 
 import altair as alt
 import numpy as np
 import openai
 import pandas as pd
+import run_logger
+from dollar_lambda import command
 from env import Env
+from git import Repo
 from model import GPT3, Pi, Q, TimeStep, get_value
+from run_logger import HasuraLogger
 
 
-def main(
-    failure_threshold: float = 0.0,
-    gamma: float = 0.99,
-    goal: int = 4,
-    max_steps: int = 16,
-    max_trajectory: int = 8,
-    min_successes: int = 3,
-    n=10,
-    q_prompt_size: int = 10,
-    pi_prompt_size: int = 8,
-    seed: int = 3,
-    states: int = 8,
-    episodes: int = 50,
+def train(
+    failure_threshold: float,
+    gamma: float,
+    goal: int,
+    logger: Optional[HasuraLogger],
+    max_steps: int,
+    max_trajectory: int,
+    min_successes: int,
+    n,
+    q_prompt_size: int,
+    pi_prompt_size: int,
+    seed: int,
+    states: int,
+    episodes: int,
 ):
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
@@ -53,6 +63,7 @@ def main(
             rng=rng,
         )
 
+        T = 0
         for i in range(episodes):
             done = False
             state = env.reset()
@@ -79,14 +90,20 @@ def main(
                 if t >= max_steps:
                     done = timed_out = True
                 if done:
+                    T += t
                     print("episode", i)
                     print("state", state)
                     print("action", action)
                     print("reward", reward)
                     if use_pi:
-                        # if reward > 0:
-                        #     breakpoint()
-                        regrets.append((i, optimal - reward * gamma**t))
+                        returns = reward * gamma ** t
+                        regrets = optimal - returns
+                        logger.log(
+                            episode=i,
+                            steps=T,
+                            returns=returns,
+                            regrets=regrets,
+                        )
                 trajectory.append(step)
                 state = next_state
 
@@ -104,6 +121,41 @@ def main(
         alt.Chart(df).mark_line(interpolate="bundle").encode(
             x="episode", y="regrets"
         ).save(f"logs/{seed}.json")
+
+
+@command()
+def main(
+    config: str = "config.yaml",
+    name: Optional[str] = None,
+    load_id: Optional[int] = None,
+    sweep_id: Optional[int] = None,
+):
+    repo = Repo("..")
+    metadata = dict(
+        reproducibility=(
+            dict(
+                command_line=f'python {" ".join(quote(arg) for arg in sys.argv)}',
+                time=time.strftime("%c"),
+                cwd=str(Path.cwd()),
+                commit=str(repo.commit()),
+                remotes=[*repo.remote().urls],
+                is_dirty=repo.is_dirty(),
+            )
+        ),
+        hostname=socket.gethostname(),
+    )
+    if name is not None:
+        metadata.update(name=name)
+
+    params, logger = run_logger.initialize(
+        graphql_endpoint=os.getenv("GRAPHQL_ENDPOINT"),
+        config=config,
+        charts=[],  # TODO
+        metadata=metadata,
+        load_id=load_id,
+        sweep_id=sweep_id,
+    )
+    train(**params, logger=logger)
 
 
 if __name__ == "__main__":
