@@ -9,12 +9,15 @@ from typing import Optional
 import run_logger
 from dollar_lambda import CommandTree, argument
 from git import Repo
+from run_logger import HasuraLogger
+from run_logger.main import get_config_params
 from train import train
 from vega_charts import line
 
 tree = CommandTree()
 
 DEFAULT_CONFIG = "config.yml"
+GRAPHQL_ENDPOINT = os.getenv("GRAPHQL_ENDPOINT")
 
 
 @tree.command()
@@ -22,8 +25,8 @@ def run_with_config(
     config: str = DEFAULT_CONFIG,
     debug: bool = False,
 ):
-    params, logger = run_logger.initialize(config=config)
-    params.update(debug=debug)
+    logger = HasuraLogger(GRAPHQL_ENDPOINT)
+    params = dict(get_config_params(config), debug=debug)
     train(**params, logger=logger)
 
 
@@ -59,7 +62,7 @@ def log(
     ]
 
     params, logger = run_logger.initialize(
-        graphql_endpoint=os.getenv("GRAPHQL_ENDPOINT"),
+        graphql_endpoint=GRAPHQL_ENDPOINT,
         config=config,
         charts=charts,
         metadata=metadata,
