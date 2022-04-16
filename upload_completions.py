@@ -5,7 +5,7 @@ from dollar_lambda import command
 from run_logger import HasuraLogger
 from tqdm import tqdm
 
-from gql import gql
+from gqn.gpt3 import post_completion
 
 
 @command()
@@ -16,23 +16,12 @@ def main(
     logger = HasuraLogger(os.getenv("GRAPHQL_ENDPOINT"))
     with shelve.open("completions/completions.pkl") as completions:
         for k, v in tqdm(completions.items(), total=len(completions)):
-            logger.execute(
-                query=gql(
-                    """
-mutation post_completion($prompt: String!, $completion: String!, $temperature: numeric!, $top_p: numeric!, $max_tokens: Int) {
-  insert_completions_one(object: {completion: $completion, prompt: $prompt, temperature: $temperature, top_p: $top_p, max_tokens: $max_tokens}, on_conflict: {constraint: completions_pkey, update_columns: completion}) {
-    completion
-  }
-}
-"""
-                ),
-                variable_values=dict(
-                    prompt=k,
-                    completion=v,
-                    temperature=temperature,
-                    top_p=top_p,
-                    max_tokens=None,
-                ),
+            post_completion(
+                logger=logger,
+                prompt=k,
+                completion=v,
+                temperature=temperature,
+                top_p=top_p,
             )
 
 
