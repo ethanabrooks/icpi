@@ -14,12 +14,12 @@ import numpy as np
 import openai
 import pandas as pd
 import run_logger
-from charts import line
 from dollar_lambda import command
 from env import Env
 from git import Repo
 from model import GPT3, Pi, Q, TimeStep, get_value
 from run_logger import HasuraLogger
+from vega_charts import line
 
 
 def train(

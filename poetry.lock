@@ -905,7 +905,7 @@ develop = false
 type = "git"
 url = "https://github.com/run-tracker/vega-charts.git"
 reference = "main"
-resolved_reference = "ee50db71f94264850f2214345209f02f1616b27c"
+resolved_reference = "e0a739aaad6740dd4ffbe181da616a43be68fa84"
 
 [[package]]
 name = "virtualenv"
