@@ -14,6 +14,7 @@ import numpy as np
 import openai
 import pandas as pd
 import run_logger
+from charts import line
 from dollar_lambda import command
 from env import Env
 from git import Repo
@@ -100,9 +101,9 @@ def train(
                         regrets = optimal - returns
                         logger.log(
                             episode=i,
-                            steps=T,
-                            returns=returns,
-                            regrets=regrets,
+                            step=T,
+                            regret=regrets,
+                            **{"return": returns},
                         )
                 trajectory.append(step)
                 state = next_state
@@ -147,10 +148,15 @@ def main(
     if name is not None:
         metadata.update(name=name)
 
+    visualizer_url = os.getenv("VISUALIZER_URL")
+    assert visualizer_url is not None, "VISUALIZER_URL must be set"
     params, logger = run_logger.initialize(
         graphql_endpoint=os.getenv("GRAPHQL_ENDPOINT"),
         config=config,
-        charts=[],  # TODO
+        charts=[
+            line.spec(x="step", y=y, visualizer_url=visualizer_url)
+            for y in ["regret", "return"]
+        ],
         metadata=metadata,
         load_id=load_id,
         sweep_id=sweep_id,
