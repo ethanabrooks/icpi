@@ -7,7 +7,7 @@ from typing import Deque, List
 import numpy as np
 import openai
 from env import Env
-from model import GPT3, Pi, Q, TimeStep, get_value
+from model import GPT3, Pi, Q, TimeStep
 from run_logger import HasuraLogger
 
 
@@ -20,8 +20,6 @@ def train(
     logger: HasuraLogger,
     max_steps: int,
     max_trajectory: int,
-    min_successes: int,
-    n: int,
     q_prompt_size: int,
     pi_prompt_size: int,
     seed: int,
@@ -76,17 +74,21 @@ def train(
         t = 0
         r = 0
         while not done:
-            value_quantities = [get_value(*t, gamma=1) for t in list(buffer)]
-            value_quantities = sorted(value_quantities, reverse=True)[:n]
-            value_sum = sum(value_quantities)
-            use_model_prob = 1 / (1 + math.exp(2 * (min_successes - value_sum)))
-            # print("use_model_prob", round(use_model_prob, 3))
+            good_prompts = pi.get_good()
             if evaluate:
                 model = pi
                 use_model = True
             else:
                 model = q
-                use_model = (rng.random() < use_model_prob) and model.ready()
+                if len(good_prompts) > 1:
+                    use_model_prob = 1 / (
+                        1 + math.exp(-2 * math.log(len(good_prompts) - 1))
+                    )
+                    print("use_model_prob", use_model_prob)
+                    use_model = (rng.random() < use_model_prob) and model.ready()
+                else:
+                    use_model = False
+
             if use_model:
                 action = model.act(state)
             else:
