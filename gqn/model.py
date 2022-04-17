@@ -77,15 +77,16 @@ class Model(abc.ABC):
         trajectories = sorted(
             self.get_good(), key=lambda t: get_value(*t, gamma=self.gamma), reverse=True
         )
-        prompts = dict()
+        unique = dict()
+        prompts = []
 
         for trajectory in trajectories:
-            if len(prompts) == self.prompt_size:
+            if len(unique) == self.prompt_size:
                 break
             prompt = to_string(*trajectory, env=self.env)
-            prompts[prompt] = None
+            unique[prompt] = None
+            prompts.append(prompt)
 
-        prompts = list(prompts)
         self.rng.shuffle(prompts)
         return prompts
 
