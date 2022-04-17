@@ -8,7 +8,7 @@ from typing import Deque, List
 import numpy as np
 import openai
 from env import Env
-from model import GPT3, Pi, Q, TimeStep
+from model import GPT3, Pi, Q, TimeStep, to_string
 from run_logger import HasuraLogger
 
 
@@ -23,6 +23,7 @@ def train(
     max_trajectory: int,
     q_prompt_size: int,
     pi_prompt_size: int,
+    prob_scale: float,
     seed: int,
     states: int,
     temperature: float,
@@ -76,7 +77,7 @@ def train(
         t = 0
         r = 0
         while not done:
-            good_prompts = pi.get_good()
+            good_prompts = {to_string(*t, env=env) for t in pi.get_good()}
             if evaluate:
                 model = pi
                 use_model = True
@@ -84,7 +85,7 @@ def train(
                 model = q
                 if len(good_prompts) > 1:
                     use_model_prob = 1 / (
-                        1 + math.exp(-2 * math.log(len(good_prompts) - 1))
+                        1 + math.exp(-prob_scale * math.log(len(good_prompts) - 1))
                     )
                     print("use_model_prob", use_model_prob)
                     use_model = (rng.random() < use_model_prob) and model.ready()
