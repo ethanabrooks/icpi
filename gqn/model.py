@@ -102,10 +102,17 @@ class Q(Model):
     def _act(self, state: int) -> int:
         assert isinstance(self.env.action_space, Discrete)
         actions = range(self.env.action_space.n)
+        trajectories = self.sample()
+        best_trajectories = self.sample_best()
 
         def get_values():
             for a in actions:
-                yield self.value(state, action=a)
+                yield self.value(
+                    state,
+                    action=a,
+                    trajectories=trajectories,
+                    best_trajectories=best_trajectories,
+                )
 
         values = list(get_values())
         action_values = list(zip(actions, values))
@@ -128,15 +135,19 @@ class Q(Model):
             breakpoint()
         return action
 
-    def value(self, state: int, action: Optional[int] = None) -> str:
-        assert action is not None
-
+    def value(
+        self,
+        state: int,
+        action: int,
+        trajectories: "list[str]",
+        best_trajectories: "list[str]",
+    ) -> str:
         # original_state = state
         # original_action = action
         completions = []
         state = self.env.state_str(state)
         action = self.env.action_str(action)
-        trajectories = self.sample()
+        self.rng.shuffle(trajectories)
         new_prompt = "\n".join([*trajectories, f"{state} {action}"])
         # print("Q prompt:")
         # print(new_prompt)
@@ -150,9 +161,8 @@ class Q(Model):
 
         while state_or_reward not in REWARDS.values():
             state = state_or_reward
-            trajectories = self.sample_best()
-
-            new_prompt = "\n".join([*trajectories, state])
+            self.rng.shuffle(best_trajectories)
+            new_prompt = "\n".join([*best_trajectories, state])
             # print("Q prompt:")
             # print(new_prompt)
 
