@@ -105,19 +105,22 @@ def train(
                 done = timed_out = True
             if done:
                 episodes += 1
-                if evaluate:
-                    returns = r * gamma ** t
-                    regrets = optimal - returns
-                    log = dict(
-                        episode=train_episodes,
-                        regret=regrets,
-                        step=T,
-                        time=time.time() - start_time,
-                        **{"return": returns, "run ID": logger.run_id}
-                    )
-                    pprint(log)
-                    if logger.run_id is not None:
-                        logger.log(**log)
+                returns = r * gamma ** t
+                regrets = optimal - returns
+                prefix = "eval" if evaluate else "train"
+                log = dict(
+                    episode=train_episodes,
+                    step=T,
+                    time=time.time() - start_time,
+                    **{
+                        prefix + " regret": regrets,
+                        prefix + " return": returns,
+                        "run ID": logger.run_id,
+                    }
+                )
+                pprint(log)
+                if logger.run_id is not None:
+                    logger.log(**log)
                 else:  # not evaluate
                     train_episodes += 1
             trajectory.append(step)
