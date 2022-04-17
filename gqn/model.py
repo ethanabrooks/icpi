@@ -41,6 +41,7 @@ class Model(abc.ABC):
     buffer: Deque[List[TimeStep]]
     env: Env
     failure_threshold: float
+    gamma: float
     gpt3: GPT3
     prompt_size: int
     rng: Generator
@@ -55,6 +56,11 @@ class Model(abc.ABC):
     def _act(self, state: int) -> int:
         ...
 
+    def get_good(self):
+        return [
+            t for t in self.buffer if get_value(*t, gamma=1) > self.failure_threshold
+        ]
+
     def print(self, *args, **kwargs):
         if self.debug:
             print(*args, **kwargs)
@@ -68,11 +74,20 @@ class Model(abc.ABC):
         return prompts[: self.prompt_size]
 
     def sample_best(self):
-        trajectories = [
-            t for t in self.buffer if get_value(*t, gamma=1) > self.failure_threshold
-        ]
-        self.rng.shuffle(trajectories)
-        return [to_string(*t, env=self.env) for t in trajectories][: self.prompt_size]
+        trajectories = sorted(
+            self.get_good(), key=lambda t: get_value(*t, gamma=self.gamma), reverse=True
+        )
+        prompts = dict()
+
+        for trajectory in trajectories:
+            if len(prompts) == self.prompt_size:
+                break
+            prompt = to_string(*trajectory, env=self.env)
+            prompts[prompt] = None
+
+        prompts = list(prompts)
+        self.rng.shuffle(prompts)
+        return prompts
 
 
 def reformat(completion: str) -> str:
@@ -81,7 +96,6 @@ def reformat(completion: str) -> str:
 
 @dataclass
 class Q(Model):
-    gamma: float
     max_steps: int
 
     def _act(self, state: int) -> int:
@@ -177,7 +191,4 @@ class Pi(Model):
         return action
 
     def ready(self) -> bool:
-        trajectories = [
-            t for t in self.buffer if get_value(*t, gamma=1) > self.failure_threshold
-        ]
-        return len(trajectories) > 0
+        return len(self.get_good()) > 0

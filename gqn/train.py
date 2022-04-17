@@ -44,6 +44,7 @@ def train(
         buffer=buffer,
         env=env,
         failure_threshold=failure_threshold,
+        gamma=gamma,
         gpt3=gpt3,
         prompt_size=pi_prompt_size,
         rng=rng,
