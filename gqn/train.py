@@ -1,5 +1,6 @@
 import math
 import os
+import time
 from collections import deque
 from pprint import pprint
 from typing import Deque, List
@@ -63,6 +64,7 @@ def train(
 
     T = 0
     episodes = 0
+    start_time = time.time()
     while T < total_steps:
         done = False
         state = env.reset()
@@ -98,8 +100,9 @@ def train(
                     regrets = optimal - returns
                     log = dict(
                         episode=episodes,
-                        step=T,
                         regret=regrets,
+                        step=T,
+                        hours=(time.time() - start_time) / 3600,
                         **{"return": returns, "run ID": logger.run_id}
                     )
                     pprint(log)
