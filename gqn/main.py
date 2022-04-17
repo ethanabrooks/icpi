@@ -1,4 +1,3 @@
-import itertools
 import os
 import socket
 import sys
@@ -60,8 +59,8 @@ def log(
     visualizer_url = os.getenv("VISUALIZER_URL")
     assert visualizer_url is not None, "VISUALIZER_URL must be set"
     charts = [
-        line.spec(x="step", y=f"{a} {b}", visualizer_url=visualizer_url)
-        for a, b in itertools.product(["train", "eval"], ["regret", "return"])
+        line.spec(x="step", y=y, visualizer_url=visualizer_url)
+        for y in ["regret", "return"]
     ]
 
     params, logger = run_logger.initialize(

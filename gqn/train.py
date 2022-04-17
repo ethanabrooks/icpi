@@ -8,13 +8,12 @@ from typing import Deque, List
 import numpy as np
 import openai
 from env import Env
-from model import GPT3, Pi, Q, TimeStep, to_string
+from model import GPT3, Pi, Q, TimeStep
 from run_logger import HasuraLogger
 
 
 def train(
     debug: bool,
-    eval_frequency: int,
     failure_threshold: float,
     gamma: float,
     goal: int,
@@ -65,32 +64,27 @@ def train(
 
     T = 0
     episodes = 0
-    train_episodes = 0
     start_time = time.time()
     while T < total_steps:
         done = False
         state = env.reset()
         optimal = gamma ** (abs(env.goal - state) + 1)
         trajectory: List[TimeStep] = []
-        evaluate = episodes % eval_frequency == 0
+        use_pi = episodes % 2 == 0
         timed_out = False
         t = 0
         r = 0
         while not done:
-            good_prompts = {to_string(*t, env=env) for t in pi.get_good()}
-            if evaluate:
-                model = pi
-                use_model = True
+            best_trajectories = pi.sample_best()
+            model = pi if use_pi else q
+            if len(best_trajectories) > 1:
+                use_model_prob = 1 / (
+                    1 + math.exp(-prob_scale * math.log(len(best_trajectories) - 1))
+                )
+                print("use_model_prob", use_model_prob)
+                use_model = (rng.random() < use_model_prob) and model.ready()
             else:
-                model = q
-                if len(good_prompts) > 1:
-                    use_model_prob = 1 / (
-                        1 + math.exp(-prob_scale * math.log(len(good_prompts) - 1))
-                    )
-                    print("use_model_prob", use_model_prob)
-                    use_model = (rng.random() < use_model_prob) and model.ready()
-                else:
-                    use_model = False
+                use_model = False
 
             if use_model:
                 action = model.act(state)
@@ -100,38 +94,33 @@ def train(
             step = TimeStep(state, action, reward, None if done else next_state)
             r += reward
             t += 1
-            if not evaluate:
-                T += 1
+            T += 1
             if t >= max_steps:
                 done = timed_out = True
             if done:
                 episodes += 1
                 returns = r * gamma ** t
                 regrets = optimal - returns
-                prefix = "eval" if evaluate else "train"
                 log = dict(
-                    episode=train_episodes,
+                    episode=episodes,
                     step=T,
                     time=time.time() - start_time,
                     **{
-                        prefix + " regret": regrets,
-                        prefix + " return": returns,
+                        "regret": regrets,
+                        "return": returns,
                         "run ID": logger.run_id,
                     }
                 )
                 pprint(log)
                 if logger.run_id is not None:
                     logger.log(**log)
-                else:  # not evaluate
-                    train_episodes += 1
             trajectory.append(step)
             state = next_state
 
-        if not evaluate:
-            trajectory = trajectory[-max_trajectory:]
-            if not timed_out:
-                while trajectory:
-                    buffer.append(trajectory)
-                    head, *trajectory = trajectory
+        trajectory = trajectory[-max_trajectory:]
+        if not timed_out:
+            while trajectory:
+                buffer.append(trajectory)
+                head, *trajectory = trajectory
 
     print("done!")
