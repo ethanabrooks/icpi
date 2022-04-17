@@ -39,14 +39,14 @@ class GPT3:
     debug: bool = False
 
     def __call__(self, prompt, pause=True):
-        self.print("<", end="")
+        print("<", end="")
 
         completions = self.get_completions(prompt)
         if completions:
             completion, *_ = completions
             # print("Completion:")
             # print(value)
-            self.print(">", end="")
+            print(">", end="")
             return completion["completion"]
 
         # print("Prompt:")
@@ -73,7 +73,7 @@ class GPT3:
                 )["insert_completions_one"]["completion"]
                 if response != completion:
                     breakpoint()
-                self.print(">", end="")
+                print(">", end="")
                 # print("Completion:", completion.split("\n")[0])
                 # breakpoint()
                 return completion
