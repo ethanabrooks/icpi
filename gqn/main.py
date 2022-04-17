@@ -22,12 +22,15 @@ GRAPHQL_ENDPOINT = os.getenv("GRAPHQL_ENDPOINT")
 
 
 @tree.command()
-def run_with_config(
+def no_logging(
     config: str = DEFAULT_CONFIG,
     debug: bool = False,
+    load_id: Optional[int] = None,
 ):
     logger = HasuraLogger(GRAPHQL_ENDPOINT)
     params = dict(get_config_params(config), debug=debug)
+    if load_id is not None:
+        params.update(run_logger.get_load_params(load_id=load_id, logger=logger))
     train(**params, logger=logger)
 
 
@@ -36,7 +39,6 @@ def log(
     name: str,
     allow_dirty: bool = False,
     config: str = DEFAULT_CONFIG,
-    load_id: Optional[int] = None,
     sweep_id: Optional[int] = None,
 ):
     repo = Repo(".")
@@ -68,7 +70,7 @@ def log(
         charts=charts,
         metadata=metadata,
         name=name if sweep_id is None else None,
-        load_id=load_id,
+        load_id=None,
         sweep_id=sweep_id,
     )
     train(**params, debug=False, logger=logger)
