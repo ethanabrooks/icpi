@@ -13,6 +13,7 @@ from run_logger import HasuraLogger
 
 def train(
     debug: bool,
+    eval_frequency: int,
     failure_threshold: float,
     gamma: float,
     goal: int,
@@ -64,12 +65,13 @@ def train(
 
     T = 0
     episodes = 0
+    train_episodes = 0
     while T < total_steps:
         done = False
         state = env.reset()
         optimal = gamma ** (abs(env.goal - state) + 1)
         trajectory: List[TimeStep] = []
-        use_pi = episodes % 2 == 0
+        evaluate = episodes % eval_frequency == 0
         timed_out = False
         t = 0
         r = 0
@@ -79,8 +81,12 @@ def train(
             value_sum = sum(value_quantities)
             use_model_prob = 1 / (1 + math.exp(2 * (min_successes - value_sum)))
             # print("use_model_prob", round(use_model_prob, 3))
-            model = pi if use_pi else q
-            use_model = (rng.random() < use_model_prob) and model.ready()
+            if evaluate:
+                model = pi
+                use_model = True
+            else:
+                model = q
+                use_model = (rng.random() < use_model_prob) and model.ready()
             if use_model:
                 action = model.act(state)
             else:
@@ -89,16 +95,17 @@ def train(
             step = TimeStep(state, action, reward, None if done else next_state)
             r += reward
             t += 1
-            T += 1
+            if not evaluate:
+                T += 1
             if t >= max_steps:
                 done = timed_out = True
             if done:
                 episodes += 1
-                if use_pi:
+                if evaluate:
                     returns = r * gamma ** t
                     regrets = optimal - returns
                     log = dict(
-                        episode=episodes,
+                        episode=train_episodes,
                         step=T,
                         regret=regrets,
                         **{"return": returns, "run ID": logger.run_id}
@@ -106,13 +113,16 @@ def train(
                     pprint(log)
                     if logger.run_id is not None:
                         logger.log(**log)
+                else:  # not evaluate
+                    train_episodes += 1
             trajectory.append(step)
             state = next_state
 
-        trajectory = trajectory[-max_trajectory:]
-        if not timed_out:
-            while trajectory:
-                buffer.append(trajectory)
-                head, *trajectory = trajectory
+        if not evaluate:
+            trajectory = trajectory[-max_trajectory:]
+            if not timed_out:
+                while trajectory:
+                    buffer.append(trajectory)
+                    head, *trajectory = trajectory
 
     print("done!")
