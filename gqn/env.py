@@ -62,7 +62,7 @@ class Env(gym.Env[int, int]):
     def quantify(cls, value: str, gamma: Optional[float]) -> float:
         success = value.endswith(cls.success_str())
         value = gamma ** value.count(".")
-        return value if success else (gamma - 1) * value
+        return value if success else 0
 
     def render(self, mode="human"):
         pass

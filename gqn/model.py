@@ -1,4 +1,5 @@
 import abc
+import math
 from dataclasses import dataclass
 from typing import Deque, List, Optional
 
@@ -41,19 +42,33 @@ class Model(abc.ABC):
     buffer: Deque[List[TimeStep]]
     env: Env
     failure_threshold: float
+    gamma: float
     gpt3: GPT3
     prompt_size: int
     rng: Generator
     debug: bool
 
-    def act(self, state: int) -> int:
+    def act(
+        self,
+        state: int,
+        best_trajectories: "list[str]",
+    ) -> int:
         if self.ready():
-            return self._act(state)
+            return self._act(state, best_trajectories=best_trajectories)
         return self.env.action_space.sample()
 
     @abc.abstractmethod
-    def _act(self, state: int) -> int:
+    def _act(
+        self,
+        state: int,
+        best_trajectories: "list[str]",
+    ) -> int:
         ...
+
+    def get_good(self):
+        return [
+            t for t in self.buffer if get_value(*t, gamma=1) > self.failure_threshold
+        ]
 
     def print(self, *args, **kwargs):
         if self.debug:
@@ -68,11 +83,53 @@ class Model(abc.ABC):
         return prompts[: self.prompt_size]
 
     def sample_best(self):
-        trajectories = [
-            t for t in self.buffer if get_value(*t, gamma=1) > self.failure_threshold
-        ]
-        self.rng.shuffle(trajectories)
-        return [to_string(*t, env=self.env) for t in trajectories][: self.prompt_size]
+        trajectories = sorted(
+            self.get_good(), key=lambda t: get_value(*t, gamma=self.gamma), reverse=True
+        )
+        if len(trajectories) > self.prompt_size:
+            advantages = [
+                (to_string(*t, env=self.env), -1e5)
+                for t in trajectories[: self.prompt_size]
+            ]
+
+            for trajectory in trajectories:
+                worst_prompt, worst_adv = min(advantages, key=lambda x: x[1])
+                prompt_list = [p for p, _ in advantages]
+                self.rng.shuffle(prompt_list)
+                first_state, *_ = trajectory
+                prompt = "\n".join(
+                    [*prompt_list, self.env.state_str(first_state.state)]
+                )
+                rollout = self.gpt3(prompt).lstrip().split(".")
+                first_episode = []
+                for word in rollout:
+                    word = word.lstrip() + "."
+                    first_episode.append(word)
+                    if word in REWARDS.values():
+                        break
+                value = self.env.quantify(" ".join(first_episode), gamma=self.gamma)
+                monte_carlo = get_value(*trajectory, gamma=self.gamma)
+                adv = squash(value, self.gamma) - squash(monte_carlo, self.gamma)
+                if (adv, self.rng.random()) > (worst_adv, self.rng.random()):
+                    advantages.remove((worst_prompt, worst_adv))
+                    advantages.append((to_string(*trajectory, env=self.env), adv))
+
+            prompt_list = [p for p, _ in advantages][: self.prompt_size]
+        else:
+            prompt_list = [to_string(*t, env=self.env) for t in trajectories]
+        self.rng.shuffle(prompt_list)
+        return prompt_list
+
+
+def squash(discounted_return: float, gamma: float) -> float:
+    if discounted_return > 0:
+        log_return = 4 + math.log(discounted_return, gamma)
+        return max(log_return, 0)
+    elif discounted_return < 0:
+        log_return = -4 - math.log(-discounted_return, gamma)
+        return min(log_return, 0)
+    else:
+        return 0
 
 
 def reformat(completion: str) -> str:
@@ -81,16 +138,23 @@ def reformat(completion: str) -> str:
 
 @dataclass
 class Q(Model):
-    gamma: float
     max_steps: int
 
-    def _act(self, state: int) -> int:
+    def _act(
+        self,
+        state: int,
+        best_trajectories: "list[str]",
+    ) -> int:
         assert isinstance(self.env.action_space, Discrete)
         actions = range(self.env.action_space.n)
 
         def get_values():
             for a in actions:
-                yield self.value(state, action=a)
+                yield self.value(
+                    state,
+                    action=a,
+                    best_trajectories=best_trajectories,
+                )
 
         values = list(get_values())
         action_values = list(zip(actions, values))
@@ -113,16 +177,19 @@ class Q(Model):
             breakpoint()
         return action
 
-    def value(self, state: int, action: Optional[int] = None) -> str:
-        assert action is not None
-
+    def value(
+        self,
+        state: int,
+        action: int,
+        best_trajectories: "list[str]",
+    ) -> str:
         # original_state = state
         # original_action = action
         completions = []
         state = self.env.state_str(state)
         action = self.env.action_str(action)
-        trajectories = self.sample()
-        new_prompt = "\n".join([*trajectories, f"{state} {action}"])
+        random_trajectories = self.sample()
+        new_prompt = "\n".join([*random_trajectories, f"{state} {action}"])
         # print("Q prompt:")
         # print(new_prompt)
 
@@ -135,9 +202,8 @@ class Q(Model):
 
         while state_or_reward not in REWARDS.values():
             state = state_or_reward
-            trajectories = self.sample_best()
-
-            new_prompt = "\n".join([*trajectories, state])
+            self.rng.shuffle(best_trajectories)
+            new_prompt = "\n".join([*best_trajectories, state])
             # print("Q prompt:")
             # print(new_prompt)
 
@@ -156,12 +222,15 @@ class Q(Model):
 
 
 class Pi(Model):
-    def _act(self, state: int) -> int:
+    def _act(
+        self,
+        state: int,
+        best_trajectories: "list[str]",
+    ) -> int:
         state = self.env.state_str(state)
         action = None
         while action is None:
-            trajectories = self.sample_best()
-            prompt = "\n".join([*trajectories, state])
+            prompt = "\n".join([*best_trajectories, state])
             self.print("pi prompt:")
             self.print(prompt)
             completion = self.gpt3(prompt).lstrip()
@@ -173,7 +242,7 @@ class Pi(Model):
             try:
                 action = ACTIONS.index(maybe_action + ".")
             except ValueError:
-                pass
+                best_trajectories = self.sample_best()
         return action
 
     def ready(self) -> bool:

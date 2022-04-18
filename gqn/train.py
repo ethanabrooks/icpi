@@ -44,6 +44,7 @@ def train(
         buffer=buffer,
         env=env,
         failure_threshold=failure_threshold,
+        gamma=gamma,
         gpt3=gpt3,
         prompt_size=pi_prompt_size,
         rng=rng,
@@ -71,6 +72,7 @@ def train(
         trajectory: List[TimeStep] = []
         use_pi = episodes % 2 == 0
         timed_out = False
+        best_trajectories = pi.sample_best()
         t = 0
         r = 0
         while not done:
@@ -80,7 +82,7 @@ def train(
             model = pi if use_pi else q
             use_model = (rng.random() < use_model_prob) and model.ready()
             if use_model:
-                action = model.act(state)
+                action = model.act(state, best_trajectories=best_trajectories)
             else:
                 action = env.action_space.sample()
             next_state, reward, done, _ = env.step(action)
@@ -93,7 +95,7 @@ def train(
             if done:
                 episodes += 1
                 if use_pi:
-                    returns = r * gamma**t
+                    returns = r * gamma ** t
                     regrets = optimal - returns
                     log = dict(
                         episode=episodes,
