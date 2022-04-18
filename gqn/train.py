@@ -102,7 +102,7 @@ def train(
                         episode=episodes,
                         regret=regrets,
                         step=T,
-                        time=time.time() - start_time,
+                        time=(time.time() - start_time) / 3600,
                         **{"return": returns, "run ID": logger.run_id}
                     )
                     pprint(log)

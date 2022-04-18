@@ -59,8 +59,9 @@ def log(
     visualizer_url = os.getenv("VISUALIZER_URL")
     assert visualizer_url is not None, "VISUALIZER_URL must be set"
     charts = [
-        line.spec(x="step", y=y, visualizer_url=visualizer_url)
+        line.spec(x=x, y=y, visualizer_url=visualizer_url)
         for y in ["regret", "return"]
+        for x in ["step", "hours"]
     ]
 
     params, logger = run_logger.initialize(
