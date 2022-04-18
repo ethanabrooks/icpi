@@ -35,6 +35,7 @@ class Env(gym.Env[int, int]):
     def __post_init__(self):
         self.random = np.random.default_rng(self.random_seed)
         self.action_space = gym.spaces.Discrete(3, seed=self.random_seed)
+        self.observation_space = gym.spaces.Discrete(self.n)
 
     @staticmethod
     def success_str():

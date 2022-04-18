@@ -14,6 +14,7 @@ from run_logger import HasuraLogger
 
 def train(
     debug: bool,
+    delta: float,
     failure_threshold: float,
     gamma: float,
     goal: int,
@@ -42,8 +43,10 @@ def train(
     )
     pi = Pi(
         buffer=buffer,
+        delta=delta,
         env=env,
         failure_threshold=failure_threshold,
+        gamma=gamma,
         gpt3=gpt3,
         prompt_size=pi_prompt_size,
         rng=rng,
@@ -51,6 +54,7 @@ def train(
     )
     q = Q(
         buffer=buffer,
+        delta=delta,
         env=env,
         failure_threshold=failure_threshold,
         gamma=gamma,
