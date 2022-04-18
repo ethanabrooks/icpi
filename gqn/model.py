@@ -2,9 +2,11 @@ import abc
 from dataclasses import dataclass
 from typing import Deque, List, Optional
 
+import numpy as np
 from env import ACTIONS, REWARDS, Env
 from gpt3 import GPT3
 from gym.spaces import Discrete
+from numpy.linalg import norm
 from numpy.random import Generator
 
 
@@ -36,11 +38,28 @@ def get_value(*trajectory: TimeStep, gamma: float) -> float:
     return sum([gamma ** t * ts.reward for t, ts in enumerate(trajectory)])
 
 
+def successor_representation(
+    *trajectory: TimeStep, gamma: float, num_states: int
+) -> np.ndarray:
+    representation = np.zeros(num_states)
+    for t, ts in enumerate(trajectory):
+        one_hot = np.zeros(num_states)
+        one_hot[ts.state] = 1
+        representation += gamma ** t * one_hot
+    return representation
+
+
+def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
+    return np.dot(a, b) / (norm(a) * norm(b))
+
+
 @dataclass
 class Model(abc.ABC):
     buffer: Deque[List[TimeStep]]
     env: Env
+    delta: float
     failure_threshold: float
+    gamma: float
     gpt3: GPT3
     prompt_size: int
     rng: Generator
@@ -55,6 +74,11 @@ class Model(abc.ABC):
     def _act(self, state: int) -> int:
         ...
 
+    def get_good(self):
+        return [
+            t for t in self.buffer if get_value(*t, gamma=1) > self.failure_threshold
+        ]
+
     def print(self, *args, **kwargs):
         if self.debug:
             print(*args, **kwargs)
@@ -68,11 +92,30 @@ class Model(abc.ABC):
         return prompts[: self.prompt_size]
 
     def sample_best(self):
-        trajectories = [
-            t for t in self.buffer if get_value(*t, gamma=1) > self.failure_threshold
-        ]
-        self.rng.shuffle(trajectories)
-        return [to_string(*t, env=self.env) for t in trajectories][: self.prompt_size]
+        trajectories = sorted(
+            self.get_good(), key=lambda t: get_value(*t, gamma=self.gamma), reverse=True
+        )
+        unique = dict()
+
+        for trajectory in trajectories:
+            if len(unique) == self.prompt_size:
+                break
+
+            rep1 = successor_representation(
+                *trajectory, gamma=self.gamma, num_states=self.env.observation_space.n
+            )
+            different = True
+            for rep2 in unique.values():
+                if cosine_similarity(rep1, rep2) > self.delta:
+                    different = False
+                    break
+            if different:
+                prompt = to_string(*trajectory, env=self.env)
+                unique[prompt] = rep1
+
+        prompts = list(unique)
+        self.rng.shuffle(prompts)
+        return prompts
 
 
 def reformat(completion: str) -> str:
