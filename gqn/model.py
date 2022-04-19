@@ -50,7 +50,7 @@ def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
 class Model(abc.ABC):
     buffer: Deque[List[TimeStep]]
     env: Env
-    debug: bool
+    debug: int
     delta: float
     failure_threshold: float
     gamma: float
@@ -74,7 +74,7 @@ class Model(abc.ABC):
         ]
 
     def print(self, *args, **kwargs):
-        if self.debug:
+        if self.debug >= 1:
             print(*args, **kwargs)
 
     def ready(self) -> bool:
@@ -150,7 +150,7 @@ class Q(Model):
             self.print("action", a)
             self.print("value", v)
         self.print("chosen", action)
-        if self.debug:
+        if self.debug >= 2:
             breakpoint()
         return action
 
@@ -164,13 +164,13 @@ class Q(Model):
         action = self.env.action_str(action)
         prompts = self.sample()
         new_prompt = "\n".join([*prompts, f"{state} {action}"])
-        # print("Q prompt:")
-        # print(new_prompt)
+        self.print("Q prompt:")
+        self.print(new_prompt)
 
         state_or_reward, action, *_ = self.gpt3(new_prompt).lstrip().split(".")
         state_or_reward, action = map(reformat, [state_or_reward, action])
-        # print("state/reward", state_or_reward)
-        # print("action", action)
+        self.print("state/reward", state_or_reward)
+        self.print("action", action)
         completions.append(state_or_reward)
         t = 1
 
@@ -179,10 +179,9 @@ class Q(Model):
             prompts = self.sample_best()
 
             new_prompt = "\n".join([*prompts, state])
-            # print("Q prompt:")
-            # print(new_prompt)
+            self.print("Q prompt:")
+            self.print(new_prompt)
 
-            # print(f"{state} {action}", end=" :: ")
             completion = self.gpt3(new_prompt).lstrip()
             action, state_or_reward, *_ = completion.split(".")
             action, state_or_reward = map(reformat, [action, state_or_reward])
@@ -191,8 +190,8 @@ class Q(Model):
                     self.env.time_out_str()
                 )  # TODO: can we eliminate this?
             t += 1
-            # print("action", action)
-            # print("state/reward", state_or_reward)
+            self.print("action", action)
+            self.print("state/reward", state_or_reward)
             completions.extend([action, state_or_reward])
 
         return " ".join(completions)
@@ -213,7 +212,7 @@ class Pi(Model):
             completion = self.gpt3(prompt).lstrip()
             maybe_action, *_ = completion.split(".")
             self.print("Action:", maybe_action)
-            if self.debug:
+            if self.debug >= 2:
                 breakpoint()
 
             action = self.env.action(maybe_action + ".")

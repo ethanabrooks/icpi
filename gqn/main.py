@@ -23,7 +23,7 @@ GRAPHQL_ENDPOINT = os.getenv("GRAPHQL_ENDPOINT")
 @tree.command()
 def no_logging(
     config: str = DEFAULT_CONFIG,
-    debug: bool = False,
+    debug: int = 0,
     load_id: Optional[int] = None,
 ):
     logger = HasuraLogger(GRAPHQL_ENDPOINT)
@@ -73,7 +73,7 @@ def log(
         load_id=None,
         sweep_id=sweep_id,
     )
-    train(**params, debug=False, logger=logger)
+    train(**params, debug=0, logger=logger)
 
 
 if __name__ == "__main__":
