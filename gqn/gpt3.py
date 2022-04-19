@@ -2,7 +2,7 @@ import sys
 from dataclasses import dataclass
 
 import openai
-from env import MAX_TOKENS
+from chain import MAX_TOKENS
 from run_logger import HasuraLogger
 
 from gql import gql
