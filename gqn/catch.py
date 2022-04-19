@@ -169,8 +169,8 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
         assert isinstance(obs, np.ndarray)
         paddle_pos = obs[-1].argmax()
         ball_idx = obs[:-1].argmax()
-        ball_pos = np.unravel_index(ball_idx, obs[:-1].shape)
-        return f"paddle: {paddle_pos}, ball: {ball_pos}."
+        _, ball_pos = np.unravel_index(ball_idx, obs[:-1].shape)
+        return f"{ball_pos},{paddle_pos}."
 
     def reset(self):
         assert isinstance(self.env, Catch)
