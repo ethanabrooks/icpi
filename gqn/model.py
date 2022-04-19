@@ -1,21 +1,23 @@
 import abc
 from dataclasses import dataclass
-from typing import Deque, List, Optional
+from typing import Deque, Generic, List
 
 import numpy as np
 from base_env import Env
 from gpt3 import GPT3
+from gym.core import ActType, ObsType
 from gym.spaces import Discrete
 from numpy.linalg import norm
 from numpy.random import Generator
 
 
 @dataclass
-class TimeStep:
-    state: int
-    action: int
+class TimeStep(Generic[ObsType, ActType]):
+    state: ObsType
+    action: ActType
     reward: float
-    next_state: Optional[int]
+    done: bool
+    next_state: ObsType
 
 
 def to_string(*_trajectory: TimeStep, env) -> str:
@@ -23,8 +25,10 @@ def to_string(*_trajectory: TimeStep, env) -> str:
     if not _trajectory:
         return ""
     head, *tail = _trajectory
-    if head.next_state is None:
-        reward_str = env.reward_str(head.reward, next_state=None)
+    if head.done:
+        reward_str = env.reward_str(
+            head.reward, done=head.done, next_state=head.next_state
+        )
     else:
         reward_str = ""
 
@@ -158,8 +162,8 @@ class Q(Model):
         completions = []
         state = self.env.state_str(state)
         action = self.env.action_str(action)
-        trajectories = self.sample()
-        new_prompt = "\n".join([*trajectories, f"{state} {action}"])
+        prompts = self.sample()
+        new_prompt = "\n".join([*prompts, f"{state} {action}"])
         # print("Q prompt:")
         # print(new_prompt)
 
@@ -172,9 +176,9 @@ class Q(Model):
 
         while not self.env.done(state_or_reward):
             state = state_or_reward
-            trajectories = self.sample_best()
+            prompts = self.sample_best()
 
-            new_prompt = "\n".join([*trajectories, state])
+            new_prompt = "\n".join([*prompts, state])
             # print("Q prompt:")
             # print(new_prompt)
 
@@ -202,8 +206,8 @@ class Pi(Model):
         while action is None:
             if t > self.max_steps:
                 return self.env.action_space.sample()
-            trajectories = self.sample_best()
-            prompt = "\n".join([*trajectories, state])
+            prompts = self.sample_best()
+            prompt = "\n".join([*prompts, state])
             self.print("pi prompt:")
             self.print(prompt)
             completion = self.gpt3(prompt).lstrip()

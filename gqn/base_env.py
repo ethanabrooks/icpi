@@ -33,11 +33,8 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
         ...
 
     @abc.abstractmethod
-    def _reward_str(self, reward: float) -> "str":
+    def reward_str(self, reward: float, done: bool, next_state: ObsType) -> "str":
         ...
-
-    def reward_str(self, reward: float, next_state: Optional[str]) -> str:
-        return self._reward_str(reward) if next_state is None else ""
 
     @abc.abstractmethod
     def state_str(self, state: ObsType) -> str:

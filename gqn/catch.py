@@ -62,7 +62,6 @@ class Catch(base.Environment):
         self._ball_y = None
         self._paddle_x = None
         self._paddle_y = None
-        self._reset_next_step = True
         self._total_regret = 0.0
         self.bsuite_num_episodes = sweep.NUM_EPISODES
 
@@ -71,7 +70,6 @@ class Catch(base.Environment):
 
     def _reset(self) -> dm_env.TimeStep:
         """Returns the first `TimeStep` of a new episode."""
-        self._reset_next_step = False
         self._ball_x = self._rng.randint(self._columns)
         self._ball_y = 0
         self._paddle_x = self._columns // 2
@@ -81,9 +79,6 @@ class Catch(base.Environment):
 
     def _step(self, action: int) -> dm_env.TimeStep:
         """Updates the environment according to the action."""
-        if self._reset_next_step:
-            return self.reset()
-
         # Move the paddle.
         dx = _ACTIONS[action]
         self._paddle_x = np.clip(self._paddle_x + dx, 0, self._columns - 1)
@@ -94,7 +89,6 @@ class Catch(base.Environment):
         # Check for termination.
         if self._ball_y == self._paddle_y:
             reward = 1.0 if self._paddle_x == self._ball_x else -1.0
-            self._reset_next_step = True
             self._total_regret += 1.0 - reward
             return dm_env.termination(reward=reward, observation=self._observation())
 
@@ -128,8 +122,8 @@ class Catch(base.Environment):
 
 
 REWARDS = {
-    1.0: "Success.",
-    -1.0: "Failure.",
+    1.0: "Success",
+    -1.0: "Failure",
 }
 
 
@@ -150,30 +144,36 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
 
     @classmethod
     def time_out_str(cls) -> str:
-        return REWARDS[-1.0]
+        return f"Out of time ({REWARDS[-1.0]})."
 
     @classmethod
     def done(cls, state_or_reward: str) -> bool:
-        return state_or_reward in REWARDS.values()
+        return any(r in state_or_reward for r in REWARDS.values())
+
+    def longest_reward(self) -> str:
+        return max(
+            [self.reward_str(r, done=True, next_state=self.reset()) for r in REWARDS],
+            key=len,
+        )
 
     @classmethod
-    def longest_reward(cls) -> str:
-        return max(REWARDS.values(), key=len)
+    def quantify(cls, prompt: str, gamma: Optional[float]) -> float:
+        success = prompt.endswith(f"({REWARDS[1.0]}).")
+        prompt = gamma ** prompt.count(".")
+        return prompt if success else (gamma - 1) * prompt
 
-    @classmethod
-    def quantify(cls, value: str, gamma: Optional[float]) -> float:
-        success = value.endswith(REWARDS[1.0])
-        value = gamma ** value.count(".")
-        return value if success else (gamma - 1) * value
-
-    def _reward_str(self, reward: float) -> "str":
-        return REWARDS[reward]
+    def reward_str(self, reward: float, done: bool, next_state: np.ndarray) -> "str":
+        next_state_str = self.state_str(next_state)[:-1]  # remove '.'
+        return next_state_str + f" ({REWARDS[reward]})." if done else "."
 
     def state_str(self, obs: np.ndarray) -> str:
         assert isinstance(obs, np.ndarray)
         paddle_pos = obs[-1].argmax()
-        ball_idx = obs[:-1].argmax()
-        _, ball_pos = np.unravel_index(ball_idx, obs[:-1].shape)
+        if np.all(obs[:-1] == 0.0):
+            ball_pos = paddle_pos
+        else:
+            ball_idx = obs[:-1].argmax()
+            _, ball_pos = np.unravel_index(ball_idx, obs[:-1].shape)
         return f"{ball_pos},{paddle_pos}."
 
     def reset(self):

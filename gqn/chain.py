@@ -76,8 +76,8 @@ class Chain(base_env.Env[int, int]):
         s, _, _, _ = next(self.iterator)
         return s
 
-    def _reward_str(self, reward: float) -> "str":
-        return REWARDS[reward]
+    def reward_str(self, reward: float, done: bool, next_state: int) -> "str":
+        return REWARDS[reward] if done else ""
 
     def state_str(self, state: int) -> str:
         return f"{state}."

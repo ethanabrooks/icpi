@@ -97,8 +97,7 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
         value = gamma ** value.count(".")
         return value if success else (gamma - 1) * value
 
-    @staticmethod
-    def _reward_str(reward: float) -> "str":
+    def reward_str(self, reward: float, done: bool, next_state: str) -> "str":
         return f"Reward: {reward:.2f}."
 
     def state_str(self, obs: np.ndarray) -> str:

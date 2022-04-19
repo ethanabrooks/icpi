@@ -52,7 +52,6 @@ class GPT3:
         # print("Prompt:")
         # print(prompt)
         # breakpoint()
-        #
         while True:
             # print("Prompt:", prompt.split("\n")[-1])
             sys.stdout.flush()
