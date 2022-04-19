@@ -6,6 +6,11 @@ import gym
 import gym.spaces
 import numpy as np
 
+REWARDS = {
+    1.0: "Success.",
+    0.0: "Failure.",
+}
+
 
 @dataclass
 class Chain(base_env.Env[int, int]):
@@ -18,8 +23,7 @@ class Chain(base_env.Env[int, int]):
         self.action_space = gym.spaces.Discrete(3, seed=self.random_seed)
         self.observation_space = gym.spaces.Discrete(self.n)
 
-    @staticmethod
-    def actions():
+    def actions(self):
         return [
             "Left.",
             "Try goal.",
@@ -28,11 +32,11 @@ class Chain(base_env.Env[int, int]):
 
     @classmethod
     def time_out_str(cls) -> str:
-        return cls.rewards()[0.0]
+        return REWARDS[0.0]
 
     @classmethod
     def done(cls, state_or_reward: str) -> bool:
-        return state_or_reward in cls.rewards().values()
+        return state_or_reward in REWARDS.values()
 
     def generator(self) -> Generator[Tuple[int, float, bool, dict], int, None]:
         state = self.random.choice(self.n)
@@ -49,8 +53,12 @@ class Chain(base_env.Env[int, int]):
             state = int(state)
 
     @classmethod
+    def longest_reward(cls) -> str:
+        return max(REWARDS.values(), key=len)
+
+    @classmethod
     def quantify(cls, value: str, gamma: Optional[float]) -> float:
-        success = value.endswith(cls.rewards()[1.0])
+        success = value.endswith(REWARDS[1.0])
         value = gamma ** value.count(".")
         return value if success else (gamma - 1) * value
 
@@ -68,15 +76,10 @@ class Chain(base_env.Env[int, int]):
         s, _, _, _ = next(self.iterator)
         return s
 
-    @staticmethod
-    def rewards() -> "dict[float, str]":
-        return {
-            1.0: "Success.",
-            0.0: "Failure.",
-        }
+    def _reward_str(self, reward: float) -> "str":
+        return REWARDS[reward]
 
-    @staticmethod
-    def state_str(state: int) -> str:
+    def state_str(self, state: int) -> str:
         return f"{state}."
 
     def step(self, action: int) -> Tuple[int, float, bool, dict]:

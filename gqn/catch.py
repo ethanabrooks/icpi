@@ -127,6 +127,12 @@ class Catch(base.Environment):
         return dict(total_regret=self._total_regret)
 
 
+REWARDS = {
+    1.0: "Success.",
+    -1.0: "Failure.",
+}
+
+
 class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
     def __init__(self, env: Catch):
         super().__init__(env)
@@ -135,8 +141,7 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
             np.ones_like(env.observation_spec().shape), seed=env.random_seed
         )
 
-    @staticmethod
-    def actions() -> "list[str]":
+    def actions(self) -> "list[str]":
         return [
             "Left.",
             "Stay.",
@@ -145,27 +150,27 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
 
     @classmethod
     def time_out_str(cls) -> str:
-        return cls.rewards()[-1.0]
+        return REWARDS[-1.0]
 
     @classmethod
     def done(cls, state_or_reward: str) -> bool:
-        return state_or_reward in cls.rewards().values()
+        return state_or_reward in REWARDS.values()
+
+    @classmethod
+    def longest_reward(cls) -> str:
+        return max(REWARDS.values(), key=len)
 
     @classmethod
     def quantify(cls, value: str, gamma: Optional[float]) -> float:
-        success = value.endswith(cls.rewards()[1.0])
+        success = value.endswith(REWARDS[1.0])
         value = gamma ** value.count(".")
         return value if success else (gamma - 1) * value
 
     @staticmethod
-    def rewards() -> "dict[float, str]":
-        return {
-            1.0: "Success.",
-            -1.0: "Failure.",
-        }
+    def _reward_str(reward: float) -> "str":
+        return REWARDS[reward]
 
-    @staticmethod
-    def state_str(obs: np.ndarray) -> str:
+    def state_str(self, obs: np.ndarray) -> str:
         assert isinstance(obs, np.ndarray)
         paddle_pos = obs[-1].argmax()
         ball_idx = obs[:-1].argmax()

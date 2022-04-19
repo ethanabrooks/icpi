@@ -1,4 +1,3 @@
-import itertools
 import math
 import os
 import time
@@ -43,10 +42,7 @@ def train(
 
     buffer: Deque[List[TimeStep]] = deque()
 
-    tokens = [
-        len(a) + len(r)
-        for a, r in itertools.product(env.actions(), env.rewards().values())
-    ]
+    tokens = [len(a) + len(env.longest_reward()) for a in env.actions()]
     gpt3 = GPT3(
         debug=debug,
         logger=logger,

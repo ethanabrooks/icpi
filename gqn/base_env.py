@@ -7,52 +7,47 @@ from gym.core import ActType, ObsType
 
 
 class Env(gym.Env[ObsType, ActType], abc.ABC):
-    @classmethod
-    def action(cls, action_str: str) -> Optional[ActType]:
+    def action(self, action_str: str) -> Optional[ActType]:
         try:
-            return cls.actions().index(action_str)
+            return self.actions().index(action_str)
         except ValueError:
             return None
 
-    @staticmethod
     @abc.abstractmethod
-    def actions() -> "list[str]":
+    def actions(self) -> "list[str]":
         ...
 
-    @classmethod
-    def action_str(cls, action: ActType) -> str:
-        return cls.actions()[action]
+    def action_str(self, action: ActType) -> str:
+        return self.actions()[action]
 
-    @staticmethod
     @abc.abstractmethod
-    def time_out_str() -> str:
+    def done(self, state_or_reward: str) -> bool:
         ...
 
-    @staticmethod
     @abc.abstractmethod
-    def done(state_or_reward: str) -> bool:
+    def longest_reward(self):
         ...
 
-    @classmethod
     @abc.abstractmethod
-    def quantify(cls, value: str, gamma: Optional[float]) -> float:
+    def quantify(self, value: str, gamma: Optional[float]) -> float:
         ...
 
-    @staticmethod
     @abc.abstractmethod
-    def rewards() -> "dict[float, str]":
+    def _reward_str(self, reward: float) -> "str":
         ...
 
-    @classmethod
-    def reward_str(cls, reward: float, next_state: Optional[str]) -> str:
-        return cls.rewards()[reward] if next_state is None else ""
+    def reward_str(self, reward: float, next_state: Optional[str]) -> str:
+        return self._reward_str(reward) if next_state is None else ""
 
-    @staticmethod
     @abc.abstractmethod
-    def state_str(state: ObsType) -> str:
+    def state_str(self, state: ObsType) -> str:
         ...
 
     @staticmethod
     @abc.abstractmethod
     def successor_feature(state: ObsType) -> np.ndarray:
+        ...
+
+    @abc.abstractmethod
+    def time_out_str(self) -> str:
         ...
