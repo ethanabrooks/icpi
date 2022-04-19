@@ -2,6 +2,7 @@ import itertools
 from dataclasses import dataclass
 from typing import Generator, Optional, Tuple
 
+import base_env
 import gym
 import gym.spaces
 import numpy as np
@@ -27,7 +28,7 @@ MAX_TOKENS = max(lengths)
 
 
 @dataclass
-class Env(gym.Env[int, int]):
+class Env(base_env.Env[int, int]):
     n: int
     goal: int
     random_seed: int
@@ -38,12 +39,23 @@ class Env(gym.Env[int, int]):
         self.observation_space = gym.spaces.Discrete(self.n)
 
     @staticmethod
-    def success_str():
-        return REWARDS[1.0]
+    def action(action_str: str) -> Optional[int]:
+        try:
+            return ACTIONS.index(action_str)
+        except ValueError:
+            return None
 
     @staticmethod
     def action_str(action: int) -> str:
         return ACTIONS[action]
+
+    @staticmethod
+    def default_reward_str() -> str:
+        return REWARDS[0.0]
+
+    @staticmethod
+    def done(state_or_reward: str) -> bool:
+        return state_or_reward in REWARDS.values()
 
     def generator(self) -> Generator[Tuple[int, float, bool, dict], int, None]:
         state = self.random.choice(self.n)
@@ -89,6 +101,10 @@ class Env(gym.Env[int, int]):
 
     def step(self, action: int) -> Tuple[int, float, bool, dict]:
         return self.iterator.send(action)
+
+    @staticmethod
+    def success_str():
+        return REWARDS[1.0]
 
     @classmethod
     def value_str(cls, value: float) -> str:
