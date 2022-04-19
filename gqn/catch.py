@@ -166,8 +166,7 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
         value = gamma ** value.count(".")
         return value if success else (gamma - 1) * value
 
-    @staticmethod
-    def _reward_str(reward: float) -> "str":
+    def _reward_str(self, reward: float) -> "str":
         return REWARDS[reward]
 
     def state_str(self, obs: np.ndarray) -> str:
@@ -192,4 +191,4 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
         )
 
     def successor_feature(self, obs: np.ndarray) -> np.ndarray:
-        return obs.flatten()
+        return obs[-1] + obs[:-1].sum(axis=0)
