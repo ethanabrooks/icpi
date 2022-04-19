@@ -151,10 +151,7 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
         return any(r in state_or_reward for r in REWARDS.values())
 
     def longest_reward(self) -> str:
-        return max(
-            [self.reward_str(r, done=True, next_state=self.reset()) for r in REWARDS],
-            key=len,
-        )
+        return "1,2 (4 to go) (Success)."  # TODO
 
     @classmethod
     def quantify(cls, prompt: str, gamma: Optional[float]) -> float:
@@ -171,10 +168,14 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
         paddle_pos = obs[-1].argmax()
         if np.all(obs[:-1] == 0.0):
             ball_pos = paddle_pos
+            height = 0
         else:
             ball_idx = obs[:-1].argmax()
-            _, ball_pos = np.unravel_index(ball_idx, obs[:-1].shape)
-        return f"{ball_pos},{paddle_pos}."
+            height, ball_pos = np.unravel_index(ball_idx, obs[:-1].shape)
+            height = len(obs) - height - 1
+        return f"{paddle_pos},{ball_pos}" + (
+            f" ({height} to go)." if height > 0 else "."
+        )
 
     def reset(self):
         assert isinstance(self.env, Catch)
