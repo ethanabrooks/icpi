@@ -34,13 +34,20 @@ from bsuite.experiments.umbrella_length import sweep
 from dm_env import specs
 from gym.spaces import Discrete, MultiDiscrete
 
+ACTIVITIES = [
+    "Email.",
+    "Bathroom.",
+    "Smoke break.",
+    "Instagram.",
+    "Paper airplane.",
+    "Flask.",
+]
+
 
 class Umbrella(base.Environment):
     """Umbrella Chain environment."""
 
-    def __init__(
-        self, chain_length: int, n_distractor: int = 0, seed: Optional[int] = None
-    ):
+    def __init__(self, chain_length: int, seed: Optional[int] = None):
         """Builds the umbrella chain environment.
 
         Args:
@@ -52,7 +59,7 @@ class Umbrella(base.Environment):
         self.random_seed = seed
         self.chain_length = chain_length
         self._rng = np.random.RandomState(seed)
-        self.n_distractor = n_distractor
+        self.n_distractor = len(ACTIVITIES)
         self._timestep = 0
         self._need_umbrella = self._rng.binomial(1, 0.5)
         self._has_umbrella = 0
@@ -150,14 +157,7 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
         elif timestep == self.env.chain_length:
             return "Took umbrella." if has_umbrella else "Left umbrella."
         else:
-            return [
-                "Email.",
-                "Bathroom.",
-                "Smoke break.",
-                "Instagram.",
-                "Paper airplane.",
-                "Flask.",
-            ][activity]
+            return ACTIVITIES[activity]
 
     def reset(self):
         assert isinstance(self.env, Umbrella)

@@ -9,11 +9,13 @@ import bandit
 import catch
 import numpy as np
 import openai
+import umbrella
 from bandit import Bandit
 from catch import Catch
 from chain import Chain
 from model import GPT3, Pi, Q, TimeStep
 from run_logger import HasuraLogger
+from umbrella import Umbrella
 
 
 def train(
@@ -41,6 +43,8 @@ def train(
         env = catch.Wrapper(Catch(rows=5, columns=4, seed=seed))
     elif env_id == "chain":
         env = Chain(random_seed=seed)
+    elif env_id == "umbrella":
+        env = umbrella.Wrapper(Umbrella(chain_length=3, seed=seed))
     else:
         raise RuntimeError()
 
