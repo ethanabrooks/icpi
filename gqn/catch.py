@@ -191,4 +191,4 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
         )
 
     def successor_feature(self, obs: np.ndarray) -> np.ndarray:
-        return obs[-1] + obs[:-1].sum(axis=0)
+        return obs.flatten()
