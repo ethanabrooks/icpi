@@ -79,9 +79,7 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
     def __init__(self, env: Bandit):
         super().__init__(env)
         self.action_space = Discrete(3, seed=env.random_seed)
-        self.observation_space = Discrete(
-            np.ones_like(env.observation_spec().shape), seed=env.random_seed
-        )
+        self.observation_space = Discrete(1)
 
     def actions(self) -> "list[str]":
         assert isinstance(self.env, Bandit)

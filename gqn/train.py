@@ -61,6 +61,7 @@ def train(
         failure_threshold=failure_threshold,
         gamma=gamma,
         gpt3=gpt3,
+        max_steps=max_trajectory,
         prompt_size=pi_prompt_size,
         rng=rng,
         debug=debug,
