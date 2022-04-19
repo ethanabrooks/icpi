@@ -5,9 +5,9 @@ from collections import deque
 from pprint import pprint
 from typing import Deque, List
 
+import chain
 import numpy as np
 import openai
-from env import Env
 from model import GPT3, Pi, Q, TimeStep
 from run_logger import HasuraLogger
 
@@ -15,6 +15,7 @@ from run_logger import HasuraLogger
 def train(
     debug: bool,
     delta: float,
+    env_id: str,
     failure_threshold: float,
     gamma: float,
     goal: int,
@@ -32,7 +33,10 @@ def train(
 ):
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
-    env = Env(states, goal, seed)
+    if env_id == "chain":
+        env = chain.Env(states, goal, seed)
+    else:
+        raise RuntimeError()
 
     buffer: Deque[List[TimeStep]] = deque()
     gpt3 = GPT3(

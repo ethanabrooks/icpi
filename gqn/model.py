@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Deque, List, Optional
 
 import numpy as np
-from env import ACTIONS, REWARDS, Env
+from base_env import Env
 from gpt3 import GPT3
 from gym.spaces import Discrete
 from numpy.linalg import norm
@@ -124,7 +124,6 @@ def reformat(completion: str) -> str:
 
 @dataclass
 class Q(Model):
-    gamma: float
     max_steps: int
 
     def _act(self, state: int) -> int:
@@ -176,7 +175,7 @@ class Q(Model):
         completions.append(state_or_reward)
         t = 1
 
-        while state_or_reward not in REWARDS.values():
+        while not self.env.done(state_or_reward):
             state = state_or_reward
             trajectories = self.sample_best()
 
@@ -189,7 +188,9 @@ class Q(Model):
             action, state_or_reward, *_ = completion.split(".")
             action, state_or_reward = map(reformat, [action, state_or_reward])
             if t == self.max_steps:
-                state_or_reward = REWARDS[0.0]
+                state_or_reward = (
+                    self.env.default_reward_str()
+                )  # TODO: can we eliminate this?
             t += 1
             # print("action", action)
             # print("state/reward", state_or_reward)
@@ -213,10 +214,8 @@ class Pi(Model):
             if self.debug:
                 breakpoint()
 
-            try:
-                action = ACTIONS.index(maybe_action + ".")
-            except ValueError:
-                pass
+            action = self.env.action(maybe_action + ".")
+
         return action
 
     def ready(self) -> bool:
