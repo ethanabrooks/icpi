@@ -38,17 +38,6 @@ def get_value(*trajectory: TimeStep, gamma: float) -> float:
     return sum([gamma ** t * ts.reward for t, ts in enumerate(trajectory)])
 
 
-def successor_representation(
-    *trajectory: TimeStep, gamma: float, num_states: int
-) -> np.ndarray:
-    representation = np.zeros(num_states)
-    for t, ts in enumerate(trajectory):
-        one_hot = np.zeros(num_states)
-        one_hot[ts.state] = 1
-        representation += gamma ** t * one_hot
-    return representation
-
-
 def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
     return np.dot(a, b) / (norm(a) * norm(b))
 
@@ -101,9 +90,16 @@ class Model(abc.ABC):
             if len(unique) == self.prompt_size:
                 break
 
-            rep1 = successor_representation(
-                *trajectory, gamma=self.gamma, num_states=self.env.observation_space.n
-            )
+            def successor_representation(
+                *trajectory: TimeStep, gamma: float
+            ) -> np.ndarray:
+                representation = 0
+                for t, ts in enumerate(trajectory):
+                    representation += gamma ** t * self.env.successor_feature(ts.state)
+                assert isinstance(representation, np.ndarray)
+                return representation
+
+            rep1 = successor_representation(*trajectory, gamma=self.gamma)
             different = True
             for rep2 in unique.values():
                 if cosine_similarity(rep1, rep2) > self.delta:
@@ -126,7 +122,7 @@ def reformat(completion: str) -> str:
 class Q(Model):
     max_steps: int
 
-    def _act(self, state: int) -> int:
+    def _act(self, state) -> int:
         assert isinstance(self.env.action_space, Discrete)
         actions = range(self.env.action_space.n)
 
@@ -155,7 +151,7 @@ class Q(Model):
             breakpoint()
         return action
 
-    def value(self, state: int, action: Optional[int] = None) -> str:
+    def value(self, state, action: int = None) -> str:
         assert action is not None
 
         # original_state = state
@@ -189,7 +185,7 @@ class Q(Model):
             action, state_or_reward = map(reformat, [action, state_or_reward])
             if t == self.max_steps:
                 state_or_reward = (
-                    self.env.default_reward_str()
+                    self.env.time_out_str()
                 )  # TODO: can we eliminate this?
             t += 1
             # print("action", action)
@@ -200,7 +196,7 @@ class Q(Model):
 
 
 class Pi(Model):
-    def _act(self, state: int) -> int:
+    def _act(self, state) -> int:
         state = self.env.state_str(state)
         action = None
         while action is None:

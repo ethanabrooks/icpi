@@ -1,3 +1,4 @@
+import itertools
 import math
 import os
 import time
@@ -5,9 +6,11 @@ from collections import deque
 from pprint import pprint
 from typing import Deque, List
 
-import chain
+import catch
 import numpy as np
 import openai
+from catch import Catch
+from chain import Chain
 from model import GPT3, Pi, Q, TimeStep
 from run_logger import HasuraLogger
 
@@ -18,7 +21,6 @@ def train(
     env_id: str,
     failure_threshold: float,
     gamma: float,
-    goal: int,
     logger: HasuraLogger,
     max_steps: int,
     max_trajectory: int,
@@ -26,7 +28,6 @@ def train(
     q_prompt_size: int,
     pi_prompt_size: int,
     seed: int,
-    states: int,
     temperature: float,
     top_p: float,
     total_steps: int,
@@ -34,14 +35,22 @@ def train(
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
     if env_id == "chain":
-        env = chain.Env(states, goal, seed)
+        env = Chain(random_seed=seed)
+    elif env_id == "catch":
+        env = catch.Wrapper(Catch(rows=3, columns=2, seed=seed))
     else:
         raise RuntimeError()
 
     buffer: Deque[List[TimeStep]] = deque()
+
+    tokens = [
+        len(a) + len(r)
+        for a, r in itertools.product(env.actions(), env.rewards().values())
+    ]
     gpt3 = GPT3(
         debug=debug,
         logger=logger,
+        max_tokens=max(tokens),
         temperature=temperature,
         top_p=top_p,
     )
@@ -75,7 +84,10 @@ def train(
     while T < total_steps:
         done = False
         state = env.reset()
-        optimal = gamma ** (abs(env.goal - state) + 1)
+        try:
+            optimal = gamma ** (abs(env.goal - state) + 1)
+        except AttributeError:
+            optimal = None
         trajectory: List[TimeStep] = []
         use_pi = episodes % 2 == 0
         timed_out = False
@@ -91,7 +103,7 @@ def train(
                 action = model.act(state)
             else:
                 action = env.action_space.sample()
-            next_state, reward, done, _ = env.step(action)
+            next_state, reward, done, info = env.step(action)
             step = TimeStep(state, action, reward, None if done else next_state)
             r += reward
             t += 1
@@ -102,7 +114,12 @@ def train(
                 episodes += 1
                 if use_pi:
                     returns = r * gamma ** t
-                    regrets = optimal - returns
+                    try:
+                        regrets = info["total_regret"]
+                    except KeyError:
+                        if optimal is None:
+                            raise RuntimeError("No regret information")
+                        regrets = optimal - returns
                     log = dict(
                         episode=episodes,
                         regret=regrets,

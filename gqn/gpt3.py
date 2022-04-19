@@ -2,7 +2,6 @@ import sys
 from dataclasses import dataclass
 
 import openai
-from chain import MAX_TOKENS
 from run_logger import HasuraLogger
 
 from gql import gql
@@ -34,6 +33,7 @@ completion
 @dataclass
 class GPT3:
     logger: HasuraLogger
+    max_tokens: int
     temperature: float
     top_p: float
     debug: bool = False
@@ -60,7 +60,7 @@ class GPT3:
                 engine="text-davinci-002",
                 prompt=prompt,
                 temperature=0.1,
-                max_tokens=len(prompt) + MAX_TOKENS + 1,
+                max_tokens=len(prompt) + self.max_tokens + 1,
             ).choices
             completion = choice.text.lstrip()
             if "." in completion:

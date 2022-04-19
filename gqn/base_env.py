@@ -2,23 +2,30 @@ import abc
 from typing import Optional
 
 import gym
+import numpy as np
 from gym.core import ActType, ObsType
 
 
 class Env(gym.Env[ObsType, ActType], abc.ABC):
-    @staticmethod
-    @abc.abstractmethod
-    def action(action_str: str) -> int:
-        ...
+    @classmethod
+    def action(cls, action_str: str) -> Optional[ActType]:
+        try:
+            return cls.actions().index(action_str)
+        except ValueError:
+            return None
 
     @staticmethod
     @abc.abstractmethod
-    def action_str(action: int) -> str:
+    def actions() -> "list[str]":
         ...
+
+    @classmethod
+    def action_str(cls, action: ActType) -> str:
+        return cls.actions()[action]
 
     @staticmethod
     @abc.abstractmethod
-    def default_reward_str() -> str:
+    def time_out_str() -> str:
         ...
 
     @staticmethod
@@ -31,22 +38,21 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     def quantify(cls, value: str, gamma: Optional[float]) -> float:
         ...
 
-    @classmethod
+    @staticmethod
     @abc.abstractmethod
+    def rewards() -> "dict[float, str]":
+        ...
+
+    @classmethod
     def reward_str(cls, reward: float, next_state: Optional[str]) -> str:
+        return cls.rewards()[reward] if next_state is None else ""
+
+    @staticmethod
+    @abc.abstractmethod
+    def state_str(state: ObsType) -> str:
         ...
 
     @staticmethod
     @abc.abstractmethod
-    def state_str(state: int) -> str:
-        ...
-
-    @staticmethod
-    @abc.abstractmethod
-    def success_str() -> str:
-        ...
-
-    @classmethod
-    @abc.abstractmethod
-    def value_str(cls, value: float) -> str:
+    def successor_feature(state: ObsType) -> np.ndarray:
         ...
