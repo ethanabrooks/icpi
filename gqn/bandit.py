@@ -17,7 +17,6 @@
 Observation is a single pixel of 0 - this is an independent arm bandit problem!
 Rewards are [0, 0.1, .. 1] assigned randomly to 11 arms and deterministic
 """
-
 from typing import Optional, Tuple
 
 import base_env
@@ -86,7 +85,7 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
         return [f"Action: {i}." for i in range(self.env.action_spec().num_values)]
 
     def done(self, state_or_reward: str) -> bool:
-        return state_or_reward in self.rewards().values()
+        return True
 
     def longest_reward(self) -> str:
         assert isinstance(self.env, Bandit)
