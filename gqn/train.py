@@ -5,9 +5,11 @@ from collections import deque
 from pprint import pprint
 from typing import Deque, List
 
+import bandit
 import catch
 import numpy as np
 import openai
+from bandit import Bandit
 from catch import Catch
 from chain import Chain
 from model import GPT3, Pi, Q, TimeStep
@@ -33,10 +35,12 @@ def train(
 ):
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
-    if env_id == "chain":
-        env = Chain(random_seed=seed)
+    if env_id == "bandit":
+        env = bandit.Wrapper(Bandit(num_actions=3, mapping_seed=seed))
     elif env_id == "catch":
         env = catch.Wrapper(Catch(rows=5, columns=4, seed=seed))
+    elif env_id == "chain":
+        env = Chain(random_seed=seed)
     else:
         raise RuntimeError()
 
