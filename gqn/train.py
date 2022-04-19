@@ -91,6 +91,7 @@ def train(
         trajectory: List[TimeStep] = []
         use_pi = episodes % 2 == 0
         timed_out = False
+        cumulative_regrets = 0
         t = 0
         r = 0
         while not done:
@@ -115,7 +116,9 @@ def train(
                 if use_pi:
                     returns = r * gamma ** t
                     try:
-                        regrets = info["total_regret"]
+                        new_cumulative_regrets = info["total_regret"]
+                        regrets = new_cumulative_regrets - cumulative_regrets
+                        cumulative_regrets = new_cumulative_regrets
                     except KeyError:
                         if optimal is None:
                             raise RuntimeError("No regret information")
