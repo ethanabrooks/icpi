@@ -45,7 +45,7 @@ class Bandit(base.Environment):
         action_mask = self._rng.choice(
             range(self._num_actions), size=self._num_actions, replace=False
         )
-        self.rewards = np.linspace(0, 1, self._num_actions)[action_mask]
+        self.means = np.linspace(0, 1, self._num_actions)[action_mask]
 
         self._total_regret = 0.0
         self._optimal_return = 1.0
@@ -59,7 +59,7 @@ class Bandit(base.Environment):
         return dm_env.restart(observation)
 
     def _step(self, action: int) -> dm_env.TimeStep:
-        reward = self.rewards[action]
+        reward = self._rng.normal(self.means[action], 1)
         self._total_regret += self._optimal_return - reward
         observation = self._get_observation()
         return dm_env.termination(reward=reward, observation=observation)
@@ -89,7 +89,7 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
 
     def longest_reward(self) -> str:
         assert isinstance(self.env, Bandit)
-        return max(map(str, self.env.rewards), key=len)
+        return max(map(str, self.env.means), key=len)
 
     @classmethod
     def quantify(cls, value: str, gamma: Optional[float]) -> float:
@@ -123,4 +123,4 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
 
     def time_out_str(self) -> str:
         assert isinstance(self.env, Bandit)
-        return self._reward_str(min(self.env.rewards))
+        return self._reward_str(min(self.env.means))
