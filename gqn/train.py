@@ -37,7 +37,7 @@ def train(
     if env_id == "chain":
         env = Chain(random_seed=seed)
     elif env_id == "catch":
-        env = catch.Wrapper(Catch(rows=3, columns=2, seed=seed))
+        env = catch.Wrapper(Catch(rows=4, columns=3, seed=seed))
     else:
         raise RuntimeError()
 
