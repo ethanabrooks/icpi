@@ -66,6 +66,7 @@ class Catch(base.Environment):
         self._paddle_x = None
         self._paddle_y = None
         self._total_regret = 0.0
+        self._regret = 0.0
         self.bsuite_num_episodes = sweep.NUM_EPISODES
 
     def render(self, mode="human"):
@@ -91,8 +92,9 @@ class Catch(base.Environment):
 
         # Check for termination.
         if self._ball_y == self._paddle_y:
-            reward = 1.0 if self._paddle_x == self._ball_x else -1.0
+            reward = 1.0 if self._paddle_x == self._ball_x else 0
             self._total_regret += 1.0 - reward
+            self._regret = 1.0 - reward
             return dm_env.termination(reward=reward, observation=self._observation())
 
         return dm_env.transition(reward=0.0, observation=self._observation())
@@ -121,12 +123,12 @@ class Catch(base.Environment):
         return self._board.copy()
 
     def bsuite_info(self):
-        return dict(total_regret=self._total_regret)
+        return dict(total_regret=self._total_regret, regret=self._regret)
 
 
 REWARDS = {
     1.0: "Success",
-    -1.0: "Failure",
+    0.0: "Failure",
 }
 
 
@@ -147,7 +149,7 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
 
     @classmethod
     def time_out_str(cls) -> str:
-        return f"Out of time ({REWARDS[-1.0]})."
+        return f"Out of time ({REWARDS[0.0]})."
 
     @classmethod
     def done(cls, state_or_reward: str) -> bool:

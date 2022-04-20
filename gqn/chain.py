@@ -16,6 +16,7 @@ REWARDS = {
 class Chain(base_env.Env[int, int]):
     random_seed: int
     n: int = 8
+    gamma: float = 0.99
     goal: int = 4
 
     def __post_init__(self):
@@ -39,11 +40,14 @@ class Chain(base_env.Env[int, int]):
         return state_or_reward in REWARDS.values()
 
     def generator(self) -> Generator[Tuple[int, float, bool, dict], int, None]:
-        state = self.random.choice(self.n)
+        start_state = state = self.random.choice(self.n)
         reward = 0
         done = False
         info = {}
         while True:
+            if done:
+                optimal = self.gamma ** abs(start_state - self.goal)
+                info.update(regret=optimal - (reward * optimal))
             action = yield state, reward, done, info
             state += action - 1
             state = np.clip(state, 0, self.n - 1)

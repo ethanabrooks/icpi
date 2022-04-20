@@ -84,15 +84,10 @@ def train(
 
     T = 0
     episodes = 0
-    cumulative_regrets = 0
     start_time = time.time()
     while T < total_steps:
         done = False
         state = env.reset()
-        try:
-            optimal = gamma ** (abs(env.goal - state) + 1)
-        except AttributeError:
-            optimal = None
         trajectory: List[TimeStep] = []
         use_pi = episodes % 2 == 0
         timed_out = False
@@ -119,17 +114,10 @@ def train(
                 episodes += 1
                 if use_pi:
                     returns = r * gamma ** t
-                    try:
-                        new_cumulative_regrets = info["total_regret"]
-                        regrets = new_cumulative_regrets - cumulative_regrets
-                        cumulative_regrets = new_cumulative_regrets
-                    except KeyError:
-                        if optimal is None:
-                            raise RuntimeError("No regret information")
-                        regrets = optimal - returns
+                    regret = info["regret"]
                     log = dict(
                         episode=episodes,
-                        regret=regrets,
+                        regret=regret,
                         step=T,
                         hours=(time.time() - start_time) / 3600,
                         **{"return": returns, "run ID": logger.run_id}
