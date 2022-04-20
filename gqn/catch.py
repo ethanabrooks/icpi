@@ -127,8 +127,8 @@ class Catch(base.Environment):
 
 
 REWARDS = {
-    1.0: "Success",
-    0.0: "Failure",
+    1.0: "caught the ball",
+    0.0: "missed the ball",
 }
 
 
@@ -142,14 +142,14 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
 
     def actions(self) -> "list[str]":
         return [
-            "Left.",
-            "Stay.",
-            "Right.",
+            "Move left.",
+            "Do nothing.",
+            "Move right.",
         ]
 
     @classmethod
     def time_out_str(cls) -> str:
-        return f"Out of time ({REWARDS[0.0]})."
+        return "missed the ball"
 
     @classmethod
     def done(cls, state_or_reward: str) -> bool:
@@ -165,27 +165,34 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
         return prompt if success else (gamma - 1) * prompt
 
     def reward_str(self, reward: float, done: bool, next_state: np.ndarray) -> "str":
-        next_state_str = self.state_str(next_state)[:-1]  # remove '.'
+        next_state_str = self.state_str(next_state)
         return next_state_str + f" ({REWARDS[reward]})." if done else "."
 
     def state_str(self, obs: np.ndarray) -> str:
         assert isinstance(obs, np.ndarray)
         bottom = obs[-1]
         if np.all(obs[:-1] == 0.0):
-            height = 0
             if np.any(bottom == (BALL_CODE + PADDLE_CODE)):
                 paddle_pos = ball_pos = np.argmax(bottom)
             else:
                 paddle_pos = (bottom == PADDLE_CODE).argmax()
                 ball_pos = (bottom == BALL_CODE).argmax()
+            part2 = ""
         else:
             paddle_pos = (bottom == PADDLE_CODE).argmax()
             ball_idx = (obs[:-1] == 1.0).argmax()
             height, ball_pos = np.unravel_index(ball_idx, obs[:-1].shape)
             height = len(obs) - height - 1
-        return f"{paddle_pos},{ball_pos}" + (
-            f" ({height} to go)." if height > 0 else "."
-        )
+            part2 = f" ({height} seconds to impact)."
+        diff = abs(ball_pos - paddle_pos)
+        if paddle_pos < ball_pos:
+            part1 = f"{diff} left of the ball"
+        elif paddle_pos > ball_pos:
+            part1 = f"{diff} right of the ball"
+        else:
+            assert paddle_pos == ball_pos
+            part1 = "Under the ball"
+        return part1 + part2
 
     def reset(self):
         assert isinstance(self.env, Catch)
