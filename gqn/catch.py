@@ -28,6 +28,9 @@ from gym.spaces import Discrete, MultiDiscrete
 
 _ACTIONS = (-1, 0, 1)  # Left, no-op, right.
 
+BALL_CODE = 1.0
+PADDLE_CODE = 2.0
+
 
 class Catch(base.Environment):
     """A Catch environment built on the dm_env.Environment class.
@@ -112,8 +115,8 @@ class Catch(base.Environment):
 
     def _observation(self) -> np.ndarray:
         self._board.fill(0.0)
-        self._board[self._ball_y, self._ball_x] = 1.0
-        self._board[self._paddle_y, self._paddle_x] = 1.0
+        self._board[self._ball_y, self._ball_x] = BALL_CODE
+        self._board[self._paddle_y, self._paddle_x] += PADDLE_CODE
 
         return self._board.copy()
 
@@ -165,12 +168,17 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
 
     def state_str(self, obs: np.ndarray) -> str:
         assert isinstance(obs, np.ndarray)
-        paddle_pos = obs[-1].argmax()
+        bottom = obs[-1]
         if np.all(obs[:-1] == 0.0):
-            ball_pos = paddle_pos
             height = 0
+            if np.any(bottom == (BALL_CODE + PADDLE_CODE)):
+                paddle_pos = ball_pos = np.argmax(bottom)
+            else:
+                paddle_pos = (bottom == PADDLE_CODE).argmax()
+                ball_pos = (bottom == BALL_CODE).argmax()
         else:
-            ball_idx = obs[:-1].argmax()
+            paddle_pos = (bottom == PADDLE_CODE).argmax()
+            ball_idx = (obs[:-1] == 1.0).argmax()
             height, ball_pos = np.unravel_index(ball_idx, obs[:-1].shape)
             height = len(obs) - height - 1
         return f"{paddle_pos},{ball_pos}" + (
