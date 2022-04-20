@@ -1,4 +1,5 @@
 import sys
+import time
 from dataclasses import dataclass
 
 import openai
@@ -54,12 +55,17 @@ class GPT3:
         while True:
             # print("Prompt:", prompt.split("\n")[-1])
             sys.stdout.flush()
-            choice, *_ = openai.Completion.create(
-                engine="text-davinci-002",
-                prompt=prompt,
-                temperature=0.1,
-                stop=["\n"],
-            ).choices
+            try:
+                choice, *_ = openai.Completion.create(
+                    engine="text-davinci-002",
+                    prompt=prompt,
+                    temperature=0.1,
+                    stop=["\n"],
+                ).choices
+            except openai.error.RateLimitError as e:
+                print(e)
+                time.sleep(1)
+                continue
             completion = choice.text.lstrip()
             if "." in completion:
                 response = post_completion(
