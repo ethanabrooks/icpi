@@ -113,7 +113,7 @@ def train(
                 done = timed_out = True
             if done:
                 episodes += 1
-                if use_pi:
+                if not use_pi:
                     returns = r * gamma ** t
                     regret = info["regret"]
                     log = dict(
