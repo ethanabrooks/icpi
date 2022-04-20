@@ -160,39 +160,40 @@ class Q(Model):
         # original_state = state
         # original_action = action
         completions = []
-        state = self.env.state_str(state)
+        t = 0
         action = self.env.action_str(action)
-        prompts = self.sample()
-        new_prompt = "\n".join([*prompts, f"{state} {action}"])
-        self.print("Q prompt:")
-        self.print(new_prompt)
+        state = self.env.state_str(state)
 
-        state_or_reward, action, *_ = self.gpt3(new_prompt).lstrip().split(".")
-        state_or_reward, action = map(reformat, [state_or_reward, action])
-        self.print("state/reward", state_or_reward)
-        self.print("action", action)
-        completions.append(state_or_reward)
-        t = 1
-
-        while not self.env.done(state_or_reward):
-            state = state_or_reward
-            prompts = self.sample_best()
-
-            new_prompt = "\n".join([*prompts, state])
-            self.print("Q prompt:")
-            self.print(new_prompt)
-
-            completion = self.gpt3(new_prompt).lstrip()
-            action, state_or_reward, *_ = completion.split(".")
-            action, state_or_reward = map(reformat, [action, state_or_reward])
+        while True:
             if t == self.max_steps:
                 state_or_reward = (
                     self.env.time_out_str()
                 )  # TODO: can we eliminate this?
+            else:
+                prompts = self.sample()
+                new_prompt = "\n".join([*prompts, f"{state} {action}"])
+                self.print("Q prompt:")
+                self.print(new_prompt)
+
+                state_or_reward, *_ = self.gpt3(new_prompt).lstrip().split(".")
+                state_or_reward = reformat(state_or_reward)
+            self.print("state/reward", state_or_reward)
+            self.print("action", action)
+            completions.append(state_or_reward)
+            if self.env.done(state_or_reward):
+                break
+            state = state_or_reward
+            prompts = self.sample_best()
+            new_prompt = "\n".join([*prompts, state])
+            self.print("Q prompt:")
+            self.print(new_prompt)
+
+            action, *_ = self.gpt3(new_prompt).lstrip().split(".")
+            action = reformat(action)
             t += 1
             self.print("action", action)
             self.print("state/reward", state_or_reward)
-            completions.extend([action, state_or_reward])
+            completions.append(action)
 
         return " ".join(completions)
 
