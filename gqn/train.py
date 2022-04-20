@@ -85,6 +85,7 @@ def train(
 
     T = 0
     episodes = 0
+    cumulative_regrets = 0
     start_time = time.time()
     while T < total_steps:
         done = False
@@ -96,7 +97,6 @@ def train(
         trajectory: List[TimeStep] = []
         use_pi = episodes % 2 == 0
         timed_out = False
-        cumulative_regrets = 0
         t = 0
         r = 0
         while not done:
