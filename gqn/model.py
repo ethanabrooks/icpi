@@ -150,7 +150,7 @@ class Q(Model):
             self.print("action", a)
             self.print("value", v)
         self.print("chosen", action)
-        if self.debug >= 2:
+        if self.debug >= 3:
             breakpoint()
         return action
 
@@ -172,27 +172,31 @@ class Q(Model):
             else:
                 prompts = self.sample()
                 new_prompt = "\n".join([*prompts, f"{state} {action}"])
-                self.print("Q prompt:")
-                self.print(new_prompt)
+                if self.debug >= 2:
+                    self.print("Q prompt:")
+                    self.print(new_prompt)
 
                 state_or_reward, *_ = self.gpt3(new_prompt).lstrip().split(".")
                 state_or_reward = reformat(state_or_reward)
-            self.print("state/reward", state_or_reward)
-            self.print("action", action)
+            if self.debug >= 2:
+                self.print("state/reward", state_or_reward)
+                self.print("action", action)
             completions.append(state_or_reward)
             if self.env.done(state_or_reward):
                 break
             state = state_or_reward
             prompts = self.sample_best()
             new_prompt = "\n".join([*prompts, state])
-            self.print("Q prompt:")
-            self.print(new_prompt)
+            if self.debug >= 2:
+                self.print("Q prompt:")
+                self.print(new_prompt)
 
             action, *_ = self.gpt3(new_prompt).lstrip().split(".")
             action = reformat(action)
             t += 1
-            self.print("action", action)
-            self.print("state/reward", state_or_reward)
+            if self.debug >= 2:
+                self.print("action", action)
+                self.print("state/reward", state_or_reward)
             completions.append(action)
 
         return " ".join(completions)
@@ -213,7 +217,7 @@ class Pi(Model):
             completion = self.gpt3(prompt).lstrip()
             maybe_action, *_ = completion.split(".")
             self.print("Action:", maybe_action)
-            if self.debug >= 2:
+            if self.debug >= 3:
                 breakpoint()
 
             action = self.env.action(maybe_action + ".")
