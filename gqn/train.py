@@ -118,9 +118,10 @@ def train(
                     regret = info["regret"]
                     log = dict(
                         episode=episodes,
+                        hours=(time.time() - start_time) / 3600,
                         regret=regret,
                         step=T,
-                        hours=(time.time() - start_time) / 3600,
+                        use_model_prob=use_model_prob,
                         **{"return": returns, "run ID": logger.run_id}
                     )
                     pprint(log)
