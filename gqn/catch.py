@@ -155,6 +155,23 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
     def done(cls, state_or_reward: str) -> bool:
         return any(r in state_or_reward for r in REWARDS.values())
 
+    @staticmethod
+    def get_coordinates(obs):
+        bottom = obs[-1]
+        if np.all(obs[:-1] == 0.0):
+            height = 0
+            if np.any(bottom == (BALL_CODE + PADDLE_CODE)):
+                paddle_pos = ball_pos = np.argmax(bottom)
+            else:
+                paddle_pos = (bottom == PADDLE_CODE).argmax()
+                ball_pos = (bottom == BALL_CODE).argmax()
+        else:
+            paddle_pos = (bottom == PADDLE_CODE).argmax()
+            ball_idx = (obs[:-1] == 1.0).argmax()
+            height, ball_pos = np.unravel_index(ball_idx, obs[:-1].shape)
+            height = len(obs) - height - 1
+        return height, ball_pos, paddle_pos
+
     def longest_reward(self) -> str:
         return "1,2 (4 to go) (Success)."  # TODO
 
@@ -170,19 +187,7 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
 
     def state_str(self, obs: np.ndarray) -> str:
         assert isinstance(obs, np.ndarray)
-        bottom = obs[-1]
-        if np.all(obs[:-1] == 0.0):
-            height = 0
-            if np.any(bottom == (BALL_CODE + PADDLE_CODE)):
-                paddle_pos = ball_pos = np.argmax(bottom)
-            else:
-                paddle_pos = (bottom == PADDLE_CODE).argmax()
-                ball_pos = (bottom == BALL_CODE).argmax()
-        else:
-            paddle_pos = (bottom == PADDLE_CODE).argmax()
-            ball_idx = (obs[:-1] == 1.0).argmax()
-            height, ball_pos = np.unravel_index(ball_idx, obs[:-1].shape)
-            height = len(obs) - height - 1
+        height, ball_pos, paddle_pos = self.get_coordinates(obs)
         return f"{paddle_pos},{ball_pos}" + (
             f" ({height} to go)." if height > 0 else "."
         )
@@ -202,4 +207,8 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
         )
 
     def successor_feature(self, obs: np.ndarray) -> np.ndarray:
-        return obs.flatten()
+        _, ball_pos, _ = self.get_coordinates(obs)
+        _, d = obs.shape
+        one_hot = np.zeros(d)
+        one_hot[ball_pos] = 1
+        return one_hot

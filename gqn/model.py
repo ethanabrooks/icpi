@@ -90,8 +90,10 @@ class Model(abc.ABC):
             self.get_good(), key=lambda t: get_value(*t, gamma=self.gamma), reverse=True
         )
         unique = dict()
+        not_unique = dict()
 
         for trajectory in trajectories:
+            prompt = to_string(*trajectory, env=self.env)
             if len(unique) == self.prompt_size:
                 break
 
@@ -109,12 +111,13 @@ class Model(abc.ABC):
             for rep2 in unique.values():
                 if cosine_similarity(rep1, rep2) > self.delta:
                     different = False
+                    not_unique[prompt] = rep1
                     break
             if different:
-                prompt = to_string(*trajectory, env=self.env)
                 unique[prompt] = rep1
 
         prompts = list(unique)
+        prompts += list(not_unique)[: self.prompt_size - len(prompts)]
         self.rng.shuffle(prompts)
         return prompts
 
