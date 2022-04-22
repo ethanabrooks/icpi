@@ -62,8 +62,9 @@ class GPT3:
                     engine="text-davinci-002",
                     prompt=prompt,
                     temperature=0.1,
-                    max_tokens=len(prompt) + self.max_tokens + 1,
+                    max_tokens=int(round((len(prompt) + self.max_tokens) / 4)),
                 ).choices
+
             except openai.error.RateLimitError:
                 time.sleep(1)
                 continue
