@@ -15,12 +15,13 @@
 # ============================================================================
 """Catch reinforcement learning environment."""
 
-from typing import Optional, Tuple
+from typing import Optional, Tuple, cast
 
 import base_env
 import dm_env
 import gym
 import numpy as np
+from base_env import TimeStep
 from bsuite.environments import base
 from bsuite.experiments.catch import sweep
 from dm_env import specs
@@ -134,7 +135,7 @@ REWARDS = {
 
 class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
     def __init__(self, env: Catch):
-        super().__init__(env)
+        super().__init__(cast(gym.Env, env))
         self.action_space = Discrete(3, seed=env.random_seed)
         self.observation_space = MultiDiscrete(
             np.ones_like(env.observation_spec().shape), seed=env.random_seed
@@ -154,9 +155,6 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
     @classmethod
     def done(cls, state_or_reward: str) -> bool:
         return any(r in state_or_reward for r in REWARDS.values())
-
-    def longest_reward(self) -> str:
-        return "1,2 (4 to go) (Success)."  # TODO
 
     @classmethod
     def quantify(cls, prompt: str, gamma: Optional[float]) -> float:
@@ -203,3 +201,11 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
 
     def successor_feature(self, obs: np.ndarray) -> np.ndarray:
         return obs.flatten()
+
+    def ts_to_string(self, ts: TimeStep) -> str:
+        description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"
+        if ts.done:
+            description += (
+                f" {self.state_str(ts.next_state)[:-1]} ({REWARDS[ts.reward]})."
+            )
+        return description

@@ -1,9 +1,19 @@
 import abc
-from typing import Optional
+from dataclasses import dataclass
+from typing import Generic, Optional
 
 import gym
 import numpy as np
 from gym.core import ActType, ObsType
+
+
+@dataclass
+class TimeStep(Generic[ObsType, ActType]):
+    state: ObsType
+    action: ActType
+    reward: float
+    done: bool
+    next_state: ObsType
 
 
 class Env(gym.Env[ObsType, ActType], abc.ABC):
@@ -29,10 +39,6 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
         ...
 
     @abc.abstractmethod
-    def reward_str(self, reward: float, done: bool, next_state: ObsType) -> "str":
-        ...
-
-    @abc.abstractmethod
     def state_str(self, state: ObsType) -> str:
         ...
 
@@ -43,4 +49,8 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
 
     @abc.abstractmethod
     def time_out_str(self) -> str:
+        ...
+
+    @abc.abstractmethod
+    def ts_to_string(self, ts: TimeStep) -> str:
         ...

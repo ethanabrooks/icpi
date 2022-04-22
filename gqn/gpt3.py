@@ -50,7 +50,7 @@ class GPT3:
 
         self.print("Prompt:")
         self.print(prompt)
-        if self.debug >= 4:
+        if self.debug >= 6:
             breakpoint()
         while True:
             # print("Prompt:", prompt.split("\n")[-1])
@@ -78,7 +78,7 @@ class GPT3:
                     breakpoint()
                 print(">", end="")
                 self.print("Completion:", completion.split("\n")[0])
-                if self.debug >= 4:
+                if self.debug >= 5:
                     breakpoint()
                 return completion
 
@@ -100,5 +100,5 @@ query get_completion($prompt: String!, $temperature: numeric!, $top_p: numeric!)
         )["completions"]
 
     def print(self, *args, **kwargs):
-        if self.debug >= 3:
+        if self.debug >= 5:
             print(*args, **kwargs)

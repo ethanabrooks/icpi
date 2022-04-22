@@ -11,9 +11,10 @@ import numpy as np
 import openai
 import umbrella
 from bandit import Bandit
+from base_env import TimeStep
 from catch import Catch
 from chain import Chain
-from model import GPT3, Pi, Q, TimeStep
+from model import GPT3, Pi, Q
 from run_logger import HasuraLogger
 from umbrella import Umbrella
 

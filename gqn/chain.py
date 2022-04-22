@@ -57,10 +57,6 @@ class Chain(base_env.Env[int, int]):
             state = int(state)
 
     @classmethod
-    def longest_reward(cls) -> str:
-        return max(REWARDS.values(), key=len)
-
-    @classmethod
     def quantify(cls, value: str, gamma: Optional[float]) -> float:
         success = value.endswith(REWARDS[1.0])
         value = gamma ** value.count(".")
@@ -80,9 +76,6 @@ class Chain(base_env.Env[int, int]):
         s, _, _, _ = next(self.iterator)
         return s
 
-    def reward_str(self, reward: float, done: bool, next_state: int) -> "str":
-        return REWARDS[reward] if done else ""
-
     def state_str(self, state: int) -> str:
         return f"{state}."
 
@@ -93,3 +86,10 @@ class Chain(base_env.Env[int, int]):
         one_hot = np.zeros(self.n)
         one_hot[state] = 1
         return one_hot
+
+    def ts_to_string(self, ts: base_env.TimeStep) -> str:
+        if ts.done:
+            reward_str = " " + REWARDS[ts.reward]
+        else:
+            reward_str = ""
+        return f"{self.state_str(ts.state)} {self.action_str(ts.action)}{reward_str}"

@@ -1,41 +1,17 @@
 import abc
 from dataclasses import dataclass
-from typing import Deque, Generic, List
+from typing import Deque, List
 
 import numpy as np
-from base_env import Env
+from base_env import Env, TimeStep
 from gpt3 import GPT3
-from gym.core import ActType, ObsType
 from gym.spaces import Discrete
 from numpy.linalg import norm
 from numpy.random import Generator
 
 
-@dataclass
-class TimeStep(Generic[ObsType, ActType]):
-    state: ObsType
-    action: ActType
-    reward: float
-    done: bool
-    next_state: ObsType
-
-
 def to_string(*_trajectory: TimeStep, env) -> str:
-
-    if not _trajectory:
-        return ""
-    head, *tail = _trajectory
-    if head.done:
-        reward_str = env.reward_str(
-            head.reward, done=head.done, next_state=head.next_state
-        )
-    else:
-        reward_str = ""
-
-    tail_trajectory = to_string(*tail, env=env)
-    sep = " " if tail_trajectory and reward_str else ""
-    value = f"{reward_str}{sep}{tail_trajectory}"
-    return f"{env.state_str(head.state)} {env.action_str(head.action)} {value}"
+    return " ".join([env.ts_to_string(ts) for ts in _trajectory])
 
 
 def get_value(*trajectory: TimeStep, gamma: float) -> float:
@@ -72,10 +48,6 @@ class Model(abc.ABC):
         return [
             t for t in self.buffer if get_value(*t, gamma=1) > self.failure_threshold
         ]
-
-    def print(self, *args, **kwargs):
-        if self.debug >= 1:
-            print(*args, **kwargs)
 
     def ready(self) -> bool:
         return len(self.buffer) >= self.prompt_size
@@ -144,12 +116,13 @@ class Q(Model):
             ),
         )
 
-        self.print("Q")
-        self.print("state", state)
-        for a, v in zip(actions, values):
-            self.print("action", a)
-            self.print("value", v)
-        self.print("chosen", action)
+        if self.debug >= 1:
+            print("Q")
+            print("state", state)
+            for a, v in zip(actions, values):
+                print("action", a)
+                print("value", v)
+            print("chosen", action)
         if self.debug >= 3:
             breakpoint()
         return action
@@ -173,14 +146,15 @@ class Q(Model):
                 prompts = self.sample()
                 new_prompt = "\n".join([*prompts, f"{state} {action}"])
                 if self.debug >= 2:
-                    self.print("Q prompt:")
-                    self.print(new_prompt)
+                    print("Q prompt:")
+                    print(new_prompt)
 
                 state_or_reward, *_ = self.gpt3(new_prompt).lstrip().split(".")
                 state_or_reward = reformat(state_or_reward)
             if self.debug >= 2:
-                self.print("state/reward", state_or_reward)
-                self.print("action", action)
+                print("state/reward", state_or_reward)
+            if self.debug >= 4:
+                breakpoint()
             completions.append(state_or_reward)
             if self.env.done(state_or_reward):
                 break
@@ -188,15 +162,16 @@ class Q(Model):
             prompts = self.sample_best()
             new_prompt = "\n".join([*prompts, state])
             if self.debug >= 2:
-                self.print("Q prompt:")
-                self.print(new_prompt)
+                print("Q prompt:")
+                print(new_prompt)
 
             action, *_ = self.gpt3(new_prompt).lstrip().split(".")
             action = reformat(action)
             t += 1
             if self.debug >= 2:
-                self.print("action", action)
-                self.print("state/reward", state_or_reward)
+                print("action", action)
+            if self.debug >= 4:
+                breakpoint()
             completions.append(action)
 
         return " ".join(completions)
@@ -212,11 +187,13 @@ class Pi(Model):
                 return self.env.action_space.sample()
             prompts = self.sample_best()
             prompt = "\n".join([*prompts, state])
-            self.print("pi prompt:")
-            self.print(prompt)
+            if self.debug >= 1:
+                print("pi prompt:")
+                print(prompt)
             completion = self.gpt3(prompt).lstrip()
             maybe_action, *_ = completion.split(".")
-            self.print("Action:", maybe_action)
+            if self.debug >= 1:
+                print("Action:", maybe_action)
             if self.debug >= 3:
                 breakpoint()
 
