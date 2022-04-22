@@ -14,8 +14,8 @@ def post_completion(
     return logger.execute(
         query=gql(
             """
-mutation post_completion($prompt: String!, $completion: String!, $temperature: numeric!, $top_p: numeric!, $max_tokens: Int) {
-insert_completions_one(object: {completion: $completion, prompt: $prompt, temperature: $temperature, top_p: $top_p, max_tokens: $max_tokens}, on_conflict: {constraint: completions_pkey, update_columns: completion}) {
+mutation post_completion($prompt: String!, $completion: String!, $temperature: numeric!, $top_p: numeric!) {
+insert_completions_one(object: {completion: $completion, prompt: $prompt, temperature: $temperature, top_p: $top_p}, on_conflict: {constraint: completions_pkey, update_columns: completion}) {
 completion
 }
 }
@@ -26,7 +26,6 @@ completion
             completion=completion,
             temperature=temperature,
             top_p=top_p,
-            max_tokens=None,
         ),
     )
 
@@ -35,7 +34,6 @@ completion
 class GPT3:
     debug: int
     logger: HasuraLogger
-    max_tokens: int
     temperature: float
     top_p: float
 
@@ -62,7 +60,7 @@ class GPT3:
                     engine="text-davinci-002",
                     prompt=prompt,
                     temperature=0.1,
-                    max_tokens=len(prompt) + self.max_tokens + 1,
+                    stop=["\n"],
                 ).choices
             except openai.error.RateLimitError:
                 time.sleep(1)
@@ -91,7 +89,6 @@ class GPT3:
 query get_completion($prompt: String!, $temperature: numeric!, $top_p: numeric!) {
   completions(where: {prompt: {_eq: $prompt}, temperature: {_eq: $temperature}, top_p: {_eq: $top_p}}) {
     completion
-    max_tokens
   }
 }"""
             ),

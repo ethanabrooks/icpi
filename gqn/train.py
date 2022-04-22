@@ -50,11 +50,9 @@ def train(
 
     buffer: Deque[List[TimeStep]] = deque()
 
-    tokens = [len(a) + len(env.longest_reward()) for a in env.actions()]
     gpt3 = GPT3(
         debug=debug,
         logger=logger,
-        max_tokens=max(tokens),
         temperature=temperature,
         top_p=top_p,
     )

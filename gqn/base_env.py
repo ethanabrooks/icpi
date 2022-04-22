@@ -25,10 +25,6 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
         ...
 
     @abc.abstractmethod
-    def longest_reward(self):
-        ...
-
-    @abc.abstractmethod
     def quantify(self, value: str, gamma: Optional[float]) -> float:
         ...
 
