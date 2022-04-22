@@ -131,17 +131,18 @@ class Q(Model):
         assert action is not None
 
         # original_state = state
-        # original_action = action
-        completions = []
         t = 0
         action = self.env.action_str(action)
         state = self.env.state_str(state)
+        completions = [state, action]
 
         while True:
             if t == self.max_steps:
                 state_or_reward = (
                     self.env.time_out_str()
                 )  # TODO: can we eliminate this?
+                completions.append(state_or_reward)
+                break
             else:
                 prompts = self.sample()
                 new_prompt = "\n".join([*prompts, f"{state} {action}"])
