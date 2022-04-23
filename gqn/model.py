@@ -81,15 +81,15 @@ class Model(abc.ABC):
 
             rep1 = successor_representation(*trajectory, gamma=self.gamma)
             different = True
-            for rep2 in unique.values():
+            for (rep2, _) in unique.values():
                 if cosine_similarity(rep1, rep2) > self.delta:
                     different = False
                     break
             if different:
                 prompt = to_string(*trajectory, env=self.env)
-                unique[prompt] = rep1
+                unique[prompt] = (rep1, trajectory)
 
-        prompts = list(unique)
+        prompts = [(k, v1, v2) for k, (v1, v2) in unique.items()]
         self.rng.shuffle(prompts)
         return prompts
 
@@ -175,7 +175,7 @@ class Q(Model):
             if self.env.done(state_or_reward):
                 break
             state_str = state_or_reward
-            prompts = self.sample_best()
+            prompts, _, _ = zip(*self.sample_best())
             new_prompt = "\n".join([*prompts, state_str])
             if self.debug >= 2:
                 print("Q prompt:")
@@ -201,7 +201,7 @@ class Pi(Model):
         while action is None:
             if t > self.max_steps:
                 return self.env.action_space.sample()
-            prompts = self.sample_best()
+            prompts, _, _ = zip(*self.sample_best())
             prompt = "\n".join([*prompts, state])
             if self.debug >= 1:
                 print("pi prompt:")

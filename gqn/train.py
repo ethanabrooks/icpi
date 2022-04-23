@@ -57,6 +57,7 @@ def train(
         temperature=temperature,
         top_p=top_p,
     )
+
     pi = Pi(
         buffer=buffer,
         delta=delta,
