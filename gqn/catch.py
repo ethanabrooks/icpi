@@ -61,7 +61,6 @@ class Catch(base.Environment):
         self._rows = rows
         self._columns = columns
         self._rng = np.random.RandomState(seed)
-        self._board = np.zeros((rows, columns), dtype=np.float32)
         self._ball_x = None
         self._ball_y = None
         self._paddle_x = None
@@ -103,11 +102,11 @@ class Catch(base.Environment):
     def observation_spec(self) -> specs.BoundedArray:
         """Returns the observation spec."""
         return specs.BoundedArray(
-            shape=self._board.shape,
-            dtype=self._board.dtype,
-            name="board",
+            dtype=np.int,
             minimum=0,
-            maximum=1,
+            maximum=max(self._rows, self._columns),
+            name="observation",
+            shape=(3,),
         )
 
     def action_spec(self) -> specs.DiscreteArray:
@@ -117,11 +116,7 @@ class Catch(base.Environment):
         )
 
     def _observation(self) -> np.ndarray:
-        self._board.fill(0.0)
-        self._board[self._ball_y, self._ball_x] = BALL_CODE
-        self._board[self._paddle_y, self._paddle_x] += PADDLE_CODE
-
-        return self._board.copy()
+        return np.array([self._paddle_x, self._ball_x, self._paddle_y - self._ball_y])
 
     def bsuite_info(self):
         return dict(total_regret=self._total_regret, regret=self._regret)
@@ -168,22 +163,13 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
 
     def state_str(self, obs: np.ndarray) -> str:
         assert isinstance(obs, np.ndarray)
-        bottom = obs[-1]
-        if np.all(obs[:-1] == 0.0):
-            height = 0
-            if np.any(bottom == (BALL_CODE + PADDLE_CODE)):
-                paddle_pos = ball_pos = np.argmax(bottom)
-            else:
-                paddle_pos = (bottom == PADDLE_CODE).argmax()
-                ball_pos = (bottom == BALL_CODE).argmax()
-        else:
-            paddle_pos = (bottom == PADDLE_CODE).argmax()
-            ball_idx = (obs[:-1] == 1.0).argmax()
-            height, ball_pos = np.unravel_index(ball_idx, obs[:-1].shape)
-            height = len(obs) - height - 1
-        return f"{paddle_pos},{ball_pos}" + (
-            f" ({height} to go)." if height > 0 else "."
-        )
+        paddle_x, ball_x, ball_y = obs
+        assert isinstance(self.env, Catch)
+        height = ball_y
+        part1 = f"{paddle_x},{ball_x}"
+        if height == 0:
+            return part1
+        return f"{part1} ({height} to go)."
 
     def reset(self):
         assert isinstance(self.env, Catch)
@@ -205,7 +191,5 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
     def ts_to_string(self, ts: TimeStep) -> str:
         description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"
         if ts.done:
-            description += (
-                f" {self.state_str(ts.next_state)[:-1]} ({REWARDS[ts.reward]})."
-            )
+            description += f" {self.state_str(ts.next_state)} ({REWARDS[ts.reward]})."
         return description
