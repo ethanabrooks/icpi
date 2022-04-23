@@ -1,5 +1,8 @@
 import abc
+import pickle
+from copy import deepcopy
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Deque, List
 
 import numpy as np
@@ -132,6 +135,20 @@ class Q(Model):
         action_str = self.env.action_str(action)
         state_str = self.env.state_str(state)
         completions = [state_str, action_str]
+        env = deepcopy(self.env)
+
+        path = Path("hard-transitions.pkl")
+        if path.exists():
+            with path.open("rb") as f:
+                hard_transitions = pickle.load(f)
+        else:
+            hard_transitions = []
+        path = Path("hard-actions.pkl")
+        if path.exists():
+            with path.open("rb") as f:
+                hard_actions = pickle.load(f)
+        else:
+            hard_actions = []
 
         while True:
             if t == self.max_steps:
