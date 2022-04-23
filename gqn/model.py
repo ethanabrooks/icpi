@@ -53,7 +53,7 @@ class Model(abc.ABC):
         return len(self.buffer) >= self.prompt_size
 
     def sample(self):
-        prompts = [to_string(*t, env=self.env) for t in self.buffer]
+        prompts = list(self.buffer)
         self.rng.shuffle(prompts)
         return prompts[: self.prompt_size]
 
@@ -141,7 +141,8 @@ class Q(Model):
                 completions.append(state_or_reward)
                 break
             else:
-                prompts = self.sample()
+                trajectories = self.sample()
+                prompts = [to_string(*t, env=self.env) for t in trajectories]
                 new_prompt = "\n".join([*prompts, f"{state_str} {action_str}"])
                 if self.debug >= 2:
                     print("Q prompt:")
