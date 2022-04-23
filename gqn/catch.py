@@ -157,10 +157,6 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
         prompt = gamma ** prompt.count(".")
         return prompt if success else (gamma - 1) * prompt
 
-    def reward_str(self, reward: float, done: bool, next_state: np.ndarray) -> "str":
-        next_state_str = self.state_str(next_state)[:-1]  # remove '.'
-        return next_state_str + f" ({REWARDS[reward]})." if done else "."
-
     def state_str(self, obs: np.ndarray) -> str:
         assert isinstance(obs, np.ndarray)
         paddle_x, ball_x, ball_y = obs
