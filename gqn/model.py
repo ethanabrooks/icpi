@@ -167,6 +167,10 @@ class Q(Model):
 
                 state_or_reward, *_ = self.gpt3(new_prompt).lstrip().split(".")
                 state_or_reward = reformat(state_or_reward)
+                state = env.env._observation()
+                next_state, reward, done, _ = env.step(env.action(action_str))
+                actual_state_or_reward = next_state
+
             if self.debug >= 2:
                 print("state/reward", state_or_reward)
             if self.debug >= 4:
