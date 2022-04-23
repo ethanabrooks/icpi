@@ -127,14 +127,11 @@ class Q(Model):
             breakpoint()
         return action
 
-    def value(self, state, action: int = None) -> str:
-        assert action is not None
-
-        # original_state = state
+    def value(self, state, action: int) -> str:
         t = 0
-        action = self.env.action_str(action)
-        state = self.env.state_str(state)
-        completions = [state, action]
+        action_str = self.env.action_str(action)
+        state_str = self.env.state_str(state)
+        completions = [state_str, action_str]
 
         while True:
             if t == self.max_steps:
@@ -145,7 +142,7 @@ class Q(Model):
                 break
             else:
                 prompts = self.sample()
-                new_prompt = "\n".join([*prompts, f"{state} {action}"])
+                new_prompt = "\n".join([*prompts, f"{state_str} {action_str}"])
                 if self.debug >= 2:
                     print("Q prompt:")
                     print(new_prompt)
@@ -159,21 +156,21 @@ class Q(Model):
             completions.append(state_or_reward)
             if self.env.done(state_or_reward):
                 break
-            state = state_or_reward
+            state_str = state_or_reward
             prompts = self.sample_best()
-            new_prompt = "\n".join([*prompts, state])
+            new_prompt = "\n".join([*prompts, state_str])
             if self.debug >= 2:
                 print("Q prompt:")
                 print(new_prompt)
 
-            action, *_ = self.gpt3(new_prompt).lstrip().split(".")
-            action = reformat(action)
+            action_str, *_ = self.gpt3(new_prompt).lstrip().split(".")
+            action_str = reformat(action_str)
             t += 1
             if self.debug >= 2:
-                print("action", action)
+                print("action", action_str)
             if self.debug >= 4:
                 breakpoint()
-            completions.append(action)
+            completions.append(action_str)
 
         return " ".join(completions)
 
