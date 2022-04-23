@@ -137,13 +137,13 @@ class Q(Model):
         completions = [state_str, action_str]
         env = deepcopy(self.env)
 
-        path = Path("hard-transitions.pkl")
+        path = Path("logs/hard-transitions.pkl")
         if path.exists():
             with path.open("rb") as f:
                 hard_transitions = pickle.load(f)
         else:
             hard_transitions = []
-        path = Path("hard-actions.pkl")
+        path = Path("logs/hard-actions.pkl")
         if path.exists():
             with path.open("rb") as f:
                 hard_actions = pickle.load(f)
@@ -190,10 +190,15 @@ class Q(Model):
                     )
                 )
                 *_, true_state_or_reward, _ = transition_string.split(".")
-                if not done or state_or_reward != transition_string + ".":
+                tru_state_or_reward = true_state_or_reward.lstrip() + "."
+                if not done or state_or_reward != tru_state_or_reward:
+                    # print(state_or_reward, "||", tru_state_or_reward)
+                    # breakpoint()
                     hard_transitions.append((trajectories, actual_state_or_reward))
                 break
             elif env.state_str(next_state) != state_or_reward:
+                # print(state_or_reward, "||", env.state_str(next_state))
+                # breakpoint()
                 hard_transitions.append((trajectories, actual_state_or_reward))
             state_str = state_or_reward
             prompts, _, _ = zip(*self.sample_best())
@@ -202,8 +207,21 @@ class Q(Model):
                 print("Q prompt:")
                 print(new_prompt)
 
+            good_actions = []
+            for _action in env.actions():
+                _env = deepcopy(env)
+                next_state, _, _, _ = _env.step(_env.action(_action))
+                paddle_x, ball_x, ball_y = next_state
+                hopeless = abs(ball_x - paddle_x) > ball_y
+                if not hopeless:
+                    # print(state, "||", _action, "||", next_state)
+                    # breakpoint()
+                    good_actions.append(_action)
+
             action_str, *_ = self.gpt3(new_prompt).lstrip().split(".")
             action_str = reformat(action_str)
+            if good_actions and action_str not in good_actions:
+                hard_actions.append((trajectories, good_actions))
             t += 1
             if self.debug >= 2:
                 print("action", action_str)
@@ -211,6 +229,10 @@ class Q(Model):
                 breakpoint()
             completions.append(action_str)
 
+        with Path("logs/hard-transitions.pkl").open("wb") as f:
+            pickle.dump(hard_transitions, f)
+        with Path("logs/hard-actions.pkl").open("wb") as f:
+            pickle.dump(hard_actions, f)
         return " ".join(completions)
 
 
