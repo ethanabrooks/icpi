@@ -177,7 +177,24 @@ class Q(Model):
                 breakpoint()
             completions.append(state_or_reward)
             if self.env.done(state_or_reward):
+                # good_trajectories = [t for t in trajectories if t[-1].reward == 1.0]
+                # bad_trajectories = [t for t in trajectories if t[-1].reward == 0.0]
+                # if len(good_trajectories) == len(bad_trajectories):
+                transition_string = env.ts_to_string(
+                    TimeStep(
+                        state=state,
+                        action=env.action(action_str),
+                        reward=reward,
+                        done=done,
+                        next_state=next_state,
+                    )
+                )
+                *_, true_state_or_reward, _ = transition_string.split(".")
+                if not done or state_or_reward != transition_string + ".":
+                    hard_transitions.append((trajectories, actual_state_or_reward))
                 break
+            elif env.state_str(next_state) != state_or_reward:
+                hard_transitions.append((trajectories, actual_state_or_reward))
             state_str = state_or_reward
             prompts, _, _ = zip(*self.sample_best())
             new_prompt = "\n".join([*prompts, state_str])
