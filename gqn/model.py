@@ -1,10 +1,11 @@
 import abc
 from dataclasses import dataclass
-from typing import Deque, List, Optional
+from typing import Deque, Generic, List
 
 import numpy as np
 from base_env import Env, TimeStep
 from gpt3 import GPT3
+from gym.core import ActType, ObsType
 from gym.spaces import Discrete
 from numpy.linalg import norm
 from numpy.random import Generator
@@ -23,7 +24,7 @@ def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
 
 
 @dataclass
-class Model(abc.ABC):
+class Model(abc.ABC, Generic[ObsType, ActType]):
     buffer: Deque[List[TimeStep]]
     env: Env
     delta: float
@@ -34,13 +35,13 @@ class Model(abc.ABC):
     rng: Generator
     debug: bool
 
-    def act(self, state: int) -> int:
+    def act(self, state: ObsType) -> ActType:
         if self.ready():
             return self._act(state)
         return self.env.action_space.sample()
 
     @abc.abstractmethod
-    def _act(self, state: int) -> int:
+    def _act(self, state: ObsType) -> ActType:
         ...
 
     def get_good(self):
@@ -99,10 +100,10 @@ def reformat(completion: str) -> str:
 
 
 @dataclass
-class Q(Model):
+class Q(Model[ObsType, ActType]):
     max_steps: int
 
-    def _act(self, state: int) -> int:
+    def _act(self, state: ObsType) -> ActType:
         assert isinstance(self.env.action_space, Discrete)
         actions = range(self.env.action_space.n)
 
@@ -131,9 +132,7 @@ class Q(Model):
             breakpoint()
         return action
 
-    def value(self, state: int, action: Optional[int] = None) -> str:
-        assert action is not None
-
+    def value(self, state: ObsType, action: ActType) -> str:
         # original_state = state
         # original_action = action
         completions = []
@@ -175,8 +174,8 @@ class Q(Model):
         return " ".join(completions)
 
 
-class Pi(Model):
-    def _act(self, state: int) -> int:
+class Pi(Model[ObsType, ActType]):
+    def _act(self, state: ObsType) -> ActType:
         state = self.env.state_str(state)
         action = None
         while action is None:
