@@ -24,7 +24,10 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
             return None
 
     def action_str(self, action: ActType) -> str:
-        return self.actions()[action]
+        try:
+            return self.actions()[action]
+        except IndexError:
+            breakpoint()
 
     @abc.abstractmethod
     def actions(self) -> "list[str]":
