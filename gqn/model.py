@@ -156,52 +156,50 @@ class Q(Model[ObsType, ActType]):
         return action
 
     def value(self, state: ObsType, action: ActType) -> str:
-        # original_state = state
-        # original_action = action
-        completions = []
-        state = self.env.state_str(state)
-        action = self.env.action_str(action)
-        trajectories = self.sample()
-        new_prompt = "\n".join([*trajectories, f"{state} {action}"])
-        if self.debug >= 2:
-            print("Q prompt:")
-            print(new_prompt)
-        if self.debug >= 4:
-            breakpoint()
+        t = 0
+        state_str = self.env.state_str(state)
+        action_str = self.env.action_str(action)
+        completions = [state_str, action_str]
 
-        state_or_reward, action, *_ = self.gpt3(new_prompt).lstrip().split(".")
-        state_or_reward, action = map(reformat, [state_or_reward, action])
-        if self.debug >= 2:
-            print("state/reward", state_or_reward)
-            print("action", action)
-        if self.debug >= 4:
-            breakpoint()
-        completions.append(state_or_reward)
-        t = 1
+        while True:
+            if t == self.max_steps:
+                break
+            else:
+                prompts = self.sample()
+                new_prompt = "\n".join([*prompts, f"{state_str} {action_str}"])
+                if self.debug >= 2:
+                    print("Q prompt:")
+                    print(new_prompt)
+                if self.debug >= 4:
+                    breakpoint()
 
-        while not self.env.done(state_or_reward):
-            state = state_or_reward
-            trajectories = self.sample_best()
-
-            new_prompt = "\n".join([*trajectories, state])
+                state_or_reward, *_ = self.gpt3(new_prompt).lstrip().split(".")
+                state_or_reward = reformat(state_or_reward)
+            if self.debug >= 2:
+                print("state/reward", state_or_reward)
+            if self.debug >= 4:
+                breakpoint()
+            completions.append(state_or_reward)
+            if self.env.done(state_or_reward):
+                break
+            state_str = state_or_reward
+            prompts = self.sample_best()
+            new_prompt = "\n".join([*prompts, state_str])
             if self.debug >= 2:
                 print("Q prompt:")
                 print(new_prompt)
             if self.debug >= 4:
                 breakpoint()
 
-            completion = self.gpt3(new_prompt).lstrip()
-            action, state_or_reward, *_ = completion.split(".")
-            action, state_or_reward = map(reformat, [action, state_or_reward])
-            if t == self.max_steps:
-                break
+            action_str, *_ = self.gpt3(new_prompt).lstrip().split(".")
+            action_str = reformat(action_str)
             t += 1
 
             if self.debug >= 2:
-                print("action", action)
+                print("action", action_str)
             if self.debug >= 4:
                 breakpoint()
-            completions.extend([action, state_or_reward])
+            completions.append(action_str)
 
         return " ".join(completions)
 
