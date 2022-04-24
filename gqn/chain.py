@@ -31,10 +31,6 @@ class Chain(base_env.Env[int, int]):
             "Right.",
         ]
 
-    @staticmethod
-    def default_reward_str() -> str:
-        return REWARDS[0.0]
-
     def done(self, state_or_reward: str) -> bool:
         return state_or_reward in REWARDS.values()
 
@@ -86,6 +82,10 @@ class Chain(base_env.Env[int, int]):
         one_hot = np.zeros(self.n)
         one_hot[state] = 1
         return one_hot
+
+    @staticmethod
+    def time_out_str() -> str:
+        return REWARDS[0.0]
 
     def ts_to_string(self, ts: base_env.TimeStep) -> str:
         if ts.done:

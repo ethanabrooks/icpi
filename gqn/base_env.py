@@ -30,11 +30,6 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     def actions(self) -> "list[str]":
         ...
 
-    @staticmethod
-    @abc.abstractmethod
-    def default_reward_str() -> str:
-        ...
-
     @abc.abstractmethod
     def done(self, state_or_reward: str) -> bool:
         ...
@@ -50,6 +45,11 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
         ...
 
     def successor_feature(self, state: int) -> np.ndarray:
+        ...
+
+    @staticmethod
+    @abc.abstractmethod
+    def time_out_str() -> str:
         ...
 
     def ts_to_string(self, ts: TimeStep) -> str:
