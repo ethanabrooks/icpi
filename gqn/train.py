@@ -3,7 +3,7 @@ import os
 import time
 from collections import deque
 from pprint import pprint
-from typing import Deque, List
+from typing import Deque, List, Optional
 
 import chain
 import numpy as np
@@ -19,6 +19,7 @@ def train(
     failure_threshold: float,
     gamma: float,
     goal: int,
+    log_probs: Optional[int],
     logger: HasuraLogger,
     max_steps: int,
     max_trajectory: int,
@@ -41,6 +42,7 @@ def train(
     buffer: Deque[List[TimeStep]] = deque()
     gpt3 = GPT3(
         debug=debug,
+        log_probs=log_probs,
         logger=logger,
         temperature=temperature,
         top_p=top_p,

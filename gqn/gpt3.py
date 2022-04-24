@@ -1,6 +1,7 @@
 import sys
 import time
 from dataclasses import dataclass
+from typing import Optional
 
 import openai
 from run_logger import HasuraLogger
@@ -34,10 +35,14 @@ completion
 class GPT3:
     debug: int
     logger: HasuraLogger
+    log_probs: Optional[int]
     temperature: float
     top_p: float
 
-    def __call__(self, prompt, pause=True):
+    def __call__(self, prompt):
+        return self.get_full_completion(prompt)["completion"]
+
+    def get_full_completion(self, prompt):
         print("<", end="")
 
         completions = self.get_completions(prompt)
@@ -46,7 +51,7 @@ class GPT3:
             # print("Completion:")
             # print(value)
             print(">", end="")
-            return completion["completion"]
+            return completion
 
         self.print("Prompt:")
         self.print(prompt)
@@ -59,6 +64,7 @@ class GPT3:
                 choice, *_ = openai.Completion.create(
                     engine="text-davinci-002",
                     prompt=prompt,
+                    logprobs=self.log_probs,
                     temperature=0.1,
                     stop=["\n"],
                 ).choices
@@ -81,7 +87,11 @@ class GPT3:
                 self.print("Completion:", completion.split("\n")[0])
                 if self.debug >= 5:
                     breakpoint()
-                return completion
+                return dict(
+                    prompt=prompt,
+                    completion=completion,
+                    log_probs=choice.logprobs.top_logprobs,
+                )
 
     def get_completions(self, prompt):
         return self.logger.execute(
