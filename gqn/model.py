@@ -18,17 +18,6 @@ def get_value(*trajectory: TimeStep, gamma: float) -> float:
     return sum([gamma ** t * ts.reward for t, ts in enumerate(trajectory)])
 
 
-def successor_representation(
-    *trajectory: TimeStep, gamma: float, num_states: int
-) -> np.ndarray:
-    representation = np.zeros(num_states)
-    for t, ts in enumerate(trajectory):
-        one_hot = np.zeros(num_states)
-        one_hot[ts.state] = 1
-        representation += gamma ** t * one_hot
-    return representation
-
-
 def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
     return np.dot(a, b) / (norm(a) * norm(b))
 
@@ -81,9 +70,16 @@ class Model(abc.ABC):
             if len(unique) == self.prompt_size:
                 break
 
-            rep1 = successor_representation(
-                *trajectory, gamma=self.gamma, num_states=self.env.observation_space.n
-            )
+            def successor_representation(
+                *trajectory: TimeStep, gamma: float
+            ) -> np.ndarray:
+                representation = 0
+                for t, ts in enumerate(trajectory):
+                    representation += gamma ** t * self.env.successor_feature(ts.state)
+                assert isinstance(representation, np.ndarray)
+                return representation
+
+            rep1 = successor_representation(*trajectory, gamma=self.gamma)
             different = True
             for rep2 in unique.values():
                 if cosine_similarity(rep1, rep2) > self.delta:
