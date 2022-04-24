@@ -38,11 +38,9 @@ class Chain(base_env.Env[int, int]):
         start_state = state = self.random.choice(self.n)
         reward = 0
         done = False
-        info = {}
+        optimal = self.gamma ** abs(start_state - self.goal)
         while True:
-            if done:
-                optimal = self.gamma ** abs(start_state - self.goal)
-                info.update(regret=optimal - (reward * optimal))
+            info = dict(optimal=optimal)
             action = yield state, reward, done, info
             state += action - 1
             state = np.clip(state, 0, self.n - 1)

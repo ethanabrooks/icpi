@@ -76,7 +76,6 @@ def train(
     while T < total_steps:
         done = False
         state = env.reset()
-        optimal = gamma ** (abs(env.goal - state) + 1)
         trajectory: List[TimeStep] = []
         use_pi = episodes % 2 == 0
         timed_out = False
@@ -92,9 +91,9 @@ def train(
                 action = model.act(state)
             else:
                 action = env.action_space.sample()
-            next_state, reward, done, _ = env.step(action)
+            next_state, reward, done, info = env.step(action)
             step = TimeStep(state, action, reward, done, next_state)
-            r += reward
+            r += gamma ** t * reward
             t += 1
             T += 1
             if t >= max_steps:
@@ -102,15 +101,14 @@ def train(
             if done:
                 episodes += 1
                 if use_pi:
-                    returns = r * gamma ** t
-                    regrets = optimal - returns
+                    regret = info["optimal"] - r
                     log = dict(
                         episode=episodes,
                         hours=(time.time() - start_time) / 3600,
-                        regret=regrets,
+                        regret=regret,
                         step=T,
                         use_model_prob=use_model_prob,
-                        **{"return": returns, "run ID": logger.run_id}
+                        **{"return": r, "run ID": logger.run_id}
                     )
                     pprint(log)
                     if logger.run_id is not None:
