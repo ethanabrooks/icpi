@@ -1,0 +1,249 @@
+"""
+Classic cart-pole system implemented by Rich Sutton et al.
+Copied from http://incompleteideas.net/sutton/book/code/pole.c
+permalink: https://perma.cc/C9ZM-652R
+"""
+import math
+from typing import Optional, Union
+
+import gym
+import numpy as np
+from base_env import Env, TimeStep
+from gym import logger, spaces
+
+
+class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
+    """
+    ### Description
+
+    This environment corresponds to the version of the cart-pole problem
+    described by Barto, Sutton, and Anderson in ["Neuronlike Adaptive Elements That Can Solve Difficult Learning Control Problem"](https://ieeexplore.ieee.org/document/6313077).
+    A pole is attached by an un-actuated joint to a cart, which moves along a
+    frictionless track. The pendulum is placed upright on the cart and the goal is to balance the pole by applying forces in the left and right direction on the cart.
+
+    ### Action Space
+
+    The action is a `ndarray` with shape `(1,)` which can take values `{0, 1}` indicating the direction of the fixed force the cart is pushed with.
+
+    | Num | Action                 |
+    |-----|------------------------|
+    | 0   | Push cart to the left  |
+    | 1   | Push cart to the right |
+
+    **Note**: The velocity that is reduced or increased by the applied force is not fixed and it depends on the angle the pole is pointing. The center of gravity of the pole varies the amount of energy needed to move the cart underneath it
+
+    ### Observation Space
+
+    The observation is a `ndarray` with shape `(4,)` with the values corresponding to the following positions and velocities:
+
+    | Num | Observation           | Min                  | Max                |
+    |-----|-----------------------|----------------------|--------------------|
+    | 0   | Cart Position         | -4.8                 | 4.8                |
+    | 1   | Cart Velocity         | -Inf                 | Inf                |
+    | 2   | Pole Angle            | ~ -0.418 rad (-24°)  | ~ 0.418 rad (24°)  |
+    | 3   | Pole Angular Velocity | -Inf                 | Inf                |
+
+    **Note:** While the ranges above denote the possible values for observation space of each element, it is not reflective of the allowed values of the state space in an unterminated episode. Particularly:
+    -  The cart x-position (index 0) can be take values between `(-4.8, 4.8)`, but the episode terminates if the cart leaves the `(-2.4, 2.4)` range.
+    -  The pole angle can be observed between  `(-.418, .418)` radians (or **±24°**), but the episode terminates if the pole angle is not in the range `(-.2095, .2095)` (or **±12°**)
+
+    ### Rewards
+
+    Since the goal is to keep the pole upright for as long as possible, a reward of `+1` for every step taken, including the termination step, is allotted. The threshold for rewards is 475 for v1.
+
+    ### Starting State
+
+    All observations are assigned a uniformly random value in `(-0.05, 0.05)`
+
+    ### Episode Termination
+
+    The episode terminates if any one of the following occurs:
+    1. Pole Angle is greater than ±12°
+    2. Cart Position is greater than ±2.4 (center of the cart reaches the edge of the display)
+    3. Episode length is greater than 500 (200 for v0)
+
+    ### Arguments
+
+    ```
+    gym.make('CartPole-v1')
+    ```
+
+    No additional arguments are currently supported.
+    """
+
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 50}
+
+    def __init__(self, gamma: float, max_episode_steps: int):
+        self.max_episode_steps = max_episode_steps
+        self.gravity = 9.8
+        self.masscart = 1.0
+        self.masspole = 0.1
+        self.total_mass = self.masspole + self.masscart
+        self.length = 0.5  # actually half the pole's length
+        self.polemass_length = self.masspole * self.length
+        self.force_mag = 10.0
+        self.tau = 0.08  # seconds between state updates
+        self.kinematics_integrator = "euler"
+
+        # Angle at which to fail the episode
+        self.theta_threshold_radians = 12 * 2 * math.pi / 360
+        self.x_threshold = 2.4
+        self._optimal = gamma ** max_episode_steps
+
+        # Angle limit set to 2 * theta_threshold_radians so failing observation
+        # is still within bounds.
+        high = np.array(
+            [
+                self.x_threshold * 2,
+                np.finfo(np.float32).max,
+                self.theta_threshold_radians * 2,
+                np.finfo(np.float32).max,
+            ],
+            dtype=np.float32,
+        )
+
+        self.action_space = spaces.Discrete(2)
+        self.observation_space = spaces.Box(-high, high, dtype=np.float32)
+
+        self.screen = None
+        self.clock = None
+        self.isopen = True
+        self.state = None
+        self.timestep = 0
+
+        self.steps_beyond_done = None
+
+    def step(self, action):
+        err_msg = f"{action!r} ({type(action)}) invalid"
+        assert self.action_space.contains(action), err_msg
+        assert self.state is not None, "Call reset before using step method."
+        x, x_dot, theta, theta_dot = self.state
+        force = self.force_mag if action == 1 else -self.force_mag
+        costheta = math.cos(theta)
+        sintheta = math.sin(theta)
+
+        # For the interested reader:
+        # https://coneural.org/florian/papers/05_cart_pole.pdf
+        temp = (
+            force + self.polemass_length * theta_dot ** 2 * sintheta
+        ) / self.total_mass
+        thetaacc = (self.gravity * sintheta - costheta * temp) / (
+            self.length * (4.0 / 3.0 - self.masspole * costheta ** 2 / self.total_mass)
+        )
+        xacc = temp - self.polemass_length * thetaacc * costheta / self.total_mass
+
+        if self.kinematics_integrator == "euler":
+            x = x + self.tau * x_dot
+            x_dot = x_dot + self.tau * xacc
+            theta = theta + self.tau * theta_dot
+            theta_dot = theta_dot + self.tau * thetaacc
+        else:  # semi-implicit euler
+            x_dot = x_dot + self.tau * xacc
+            x = x + self.tau * x_dot
+            theta_dot = theta_dot + self.tau * thetaacc
+            theta = theta + self.tau * theta_dot
+
+        self.state = (x, x_dot, theta, theta_dot)
+
+        done = bool(
+            x < -self.x_threshold
+            or x > self.x_threshold
+            or theta < -self.theta_threshold_radians
+            or theta > self.theta_threshold_radians
+        )
+
+        if self.timestep == self.max_episode_steps - 1:
+            reward = 1.0
+            done = True
+        else:
+            reward = 0.0
+
+        if self.steps_beyond_done is None:
+            # Pole just fell!
+            self.steps_beyond_done = 0
+        else:
+            if self.steps_beyond_done == 0:
+                logger.warn(
+                    "You are calling 'step()' even though this "
+                    "environment has already returned done = True. You "
+                    "should always call 'reset()' once you receive 'done = "
+                    "True' -- any further steps are undefined behavior."
+                )
+            self.steps_beyond_done += 1
+
+        self.timestep += 1
+        return (
+            np.array(self.state, dtype=np.float32),
+            reward,
+            done,
+            dict(optimal=self._optimal),
+        )
+
+    def reset(
+        self,
+        *,
+        seed: Optional[int] = None,
+        return_info: bool = False,
+        options: Optional[dict] = None,
+    ):
+        super().reset(seed=seed)
+        self.timestep = 0
+        self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
+        self.steps_beyond_done = None
+        if not return_info:
+            return np.array(self.state, dtype=np.float32)
+        else:
+            return np.array(self.state, dtype=np.float32), {}
+
+    def render(self, mode="human"):
+        pass
+
+    def close(self):
+        pass
+
+
+REWARDS = {0.0: "Failure.", 1.0: "Success."}
+
+
+class Wrapper(gym.Wrapper, Env[np.ndarray, int]):
+    def actions(self) -> "list[str]":
+        return ["Left.", "Right."]
+
+    def done(self, state_or_reward: str) -> bool:
+        return any([r in state_or_reward for r in REWARDS.values()])
+
+    @classmethod
+    def quantify(cls, value: str, gamma: Optional[float]) -> float:
+        success = value.endswith(REWARDS[1.0])
+        value = gamma ** value.count(".")
+        return value if success else (gamma - 1) * value
+
+    def state_str(self, obs: np.ndarray) -> str:
+        a, b, c, d = obs
+        return f"x: {a:.2f}, ẋ: {b:.2f}, a: {c:.2f}, ȧ: {d:.2f}."
+
+    def successor_feature(self, obs: np.ndarray) -> np.ndarray:
+        return obs.flatten()
+
+    def ts_to_string(self, ts: TimeStep) -> str:
+        description = f"{self.state_str(ts.state)} {self.actions()[ts.action]}"
+        if ts.done:
+            description += f" {REWARDS[ts.reward]}"
+        return description
+
+    def time_out_str(self) -> str:
+        return REWARDS[0.0]
+
+
+if __name__ == "__main__":
+    env = Wrapper(CartPoleEnv(max_episode_steps=5))
+    t = True
+    while True:
+        if t:
+            env.reset()
+        a = env.action_space.sample()
+        s, r, t, i = env.step(a)
+        string = env.ts_to_string(TimeStep(s, a, r, t, s))
+        print(string)
+        if t:
+            breakpoint()
