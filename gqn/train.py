@@ -5,9 +5,11 @@ from collections import deque
 from pprint import pprint
 from typing import Deque, List, Optional
 
+import catch
 import chain
 import numpy as np
 import openai
+from catch import Catch
 from model import GPT3, Pi, Q, TimeStep
 from run_logger import HasuraLogger
 
@@ -32,7 +34,9 @@ def train(
 ):
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
-    if env_id == "chain":
+    if env_id == "catch":
+        env = catch.Wrapper(Catch(columns=4, gamma=gamma, rows=5, seed=seed))
+    elif env_id == "chain":
         env = chain.Chain(gamma=gamma, goal=4, n=8, random_seed=seed)
     else:
         raise RuntimeError()
@@ -93,7 +97,7 @@ def train(
                 action = env.action_space.sample()
             next_state, reward, done, info = env.step(action)
             step = TimeStep(state, action, reward, done, next_state)
-            r += gamma**t * reward
+            r += gamma ** t * reward
             t += 1
             T += 1
             if t >= max_steps:
