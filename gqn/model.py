@@ -168,7 +168,7 @@ class Q(Model[ObsType, ActType]):
             action, state_or_reward = map(reformat, [action, state_or_reward])
             if t == self.max_steps:
                 state_or_reward = (
-                    self.env.default_reward_str()
+                    self.env.time_out_str()
                 )  # TODO: can we eliminate this?
             t += 1
 
