@@ -18,7 +18,6 @@ def train(
     env_id: str,
     failure_threshold: float,
     gamma: float,
-    goal: int,
     log_probs: Optional[int],
     logger: HasuraLogger,
     max_steps: int,
@@ -27,7 +26,6 @@ def train(
     q_prompt_size: int,
     pi_prompt_size: int,
     seed: int,
-    states: int,
     temperature: float,
     top_p: float,
     total_steps: int,
@@ -35,7 +33,7 @@ def train(
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
     if env_id == "chain":
-        env = chain.Chain(n=states, gamma=gamma, goal=goal, random_seed=seed)
+        env = chain.Chain(gamma=gamma, goal=4, n=8, random_seed=seed)
     else:
         raise RuntimeError()
 
@@ -95,7 +93,7 @@ def train(
                 action = env.action_space.sample()
             next_state, reward, done, info = env.step(action)
             step = TimeStep(state, action, reward, done, next_state)
-            r += gamma ** t * reward
+            r += gamma**t * reward
             t += 1
             T += 1
             if t >= max_steps:
