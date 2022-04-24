@@ -5,10 +5,12 @@ from collections import deque
 from pprint import pprint
 from typing import Deque, List, Optional
 
+import bandit
 import catch
 import chain
 import numpy as np
 import openai
+from bandit import Bandit
 from catch import Catch
 from model import GPT3, Pi, Q, TimeStep
 from run_logger import HasuraLogger
@@ -34,7 +36,9 @@ def train(
 ):
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
-    if env_id == "catch":
+    if env_id == "bandit":
+        env = bandit.Wrapper(Bandit(mapping_seed=seed, num_actions=3))
+    elif env_id == "catch":
         env = catch.Wrapper(Catch(columns=4, gamma=gamma, rows=5, seed=seed))
     elif env_id == "chain":
         env = chain.Chain(gamma=gamma, goal=4, n=8, random_seed=seed)
