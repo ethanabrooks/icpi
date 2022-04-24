@@ -1,4 +1,3 @@
-import itertools
 from dataclasses import dataclass
 from typing import Generator, Optional, Tuple
 
@@ -7,28 +6,15 @@ import gym
 import gym.spaces
 import numpy as np
 
-ACTIONS = [
-    "Left.",
-    "Try goal.",
-    "Right.",
-]
-
 REWARDS = {
     1.0: "Success.",
     0.0: "Failure.",
 }
 
-VALUES = [
-    "Fail:",
-    "Succeed:",
-]
-
-lengths = [len(a) + len(r) for a, r in itertools.product(ACTIONS, REWARDS.values())]
-MAX_TOKENS = max(lengths)
-
 
 @dataclass
-class Env(gym.Env[int, int]):
+class Chain(base_env.Env[int, int]):
+    gamma: float
     goal: int
     n: int
     random_seed: int
@@ -38,31 +24,29 @@ class Env(gym.Env[int, int]):
         self.action_space = gym.spaces.Discrete(3, seed=self.random_seed)
         self.observation_space = gym.spaces.Discrete(self.n)
 
-    @staticmethod
-    def action(action_str: str) -> Optional[int]:
-        try:
-            return ACTIONS.index(action_str)
-        except ValueError:
-            return None
-
-    @staticmethod
-    def action_str(action: int) -> str:
-        return ACTIONS[action]
+    def actions(self):
+        return [
+            "Left.",
+            "Try goal.",
+            "Right.",
+        ]
 
     @staticmethod
     def default_reward_str() -> str:
         return REWARDS[0.0]
 
-    @staticmethod
-    def done(state_or_reward: str) -> bool:
+    def done(self, state_or_reward: str) -> bool:
         return state_or_reward in REWARDS.values()
 
     def generator(self) -> Generator[Tuple[int, float, bool, dict], int, None]:
-        state = self.random.choice(self.n)
+        start_state = state = self.random.choice(self.n)
         reward = 0
         done = False
         info = {}
         while True:
+            if done:
+                optimal = self.gamma ** abs(start_state - self.goal)
+                info.update(regret=optimal - (reward * optimal))
             action = yield state, reward, done, info
             state += action - 1
             state = np.clip(state, 0, self.n - 1)
@@ -73,7 +57,7 @@ class Env(gym.Env[int, int]):
 
     @classmethod
     def quantify(cls, value: str, gamma: Optional[float]) -> float:
-        success = value.endswith(cls.success_str())
+        success = value.endswith(REWARDS[1.0])
         value = gamma ** value.count(".")
         return value if success else (gamma - 1) * value
 
@@ -91,10 +75,6 @@ class Env(gym.Env[int, int]):
         s, _, _, _ = next(self.iterator)
         return s
 
-    @classmethod
-    def reward_str(cls, reward: float, next_state: Optional[str]) -> str:
-        return REWARDS[reward] if next_state is None else ""
-
     @staticmethod
     def state_str(state: int) -> str:
         return f"{state}."
@@ -102,10 +82,9 @@ class Env(gym.Env[int, int]):
     def step(self, action: int) -> Tuple[int, float, bool, dict]:
         return self.iterator.send(action)
 
-    @staticmethod
-    def success_str():
-        return REWARDS[1.0]
-
-    @classmethod
-    def value_str(cls, value: float) -> str:
-        return VALUES[0] if value == 0 else VALUES[1]
+    def ts_to_string(self, ts: base_env.TimeStep) -> str:
+        if ts.done:
+            reward_str = " " + REWARDS[ts.reward]
+        else:
+            reward_str = ""
+        return f"{self.state_str(ts.state)} {self.action_str(ts.action)}{reward_str}"

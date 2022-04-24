@@ -3,35 +3,15 @@ from dataclasses import dataclass
 from typing import Deque, List, Optional
 
 import numpy as np
-from base_env import Env
+from base_env import Env, TimeStep
 from gpt3 import GPT3
 from gym.spaces import Discrete
 from numpy.linalg import norm
 from numpy.random import Generator
 
 
-@dataclass
-class TimeStep:
-    state: int
-    action: int
-    reward: float
-    next_state: Optional[int]
-
-
 def to_string(*_trajectory: TimeStep, env) -> str:
-
-    if not _trajectory:
-        return ""
-    head, *tail = _trajectory
-    if head.next_state is None:
-        reward_str = env.reward_str(head.reward, next_state=None)
-    else:
-        reward_str = ""
-
-    tail_trajectory = to_string(*tail, env=env)
-    sep = " " if tail_trajectory and reward_str else ""
-    value = f"{reward_str}{sep}{tail_trajectory}"
-    return f"{env.state_str(head.state)} {env.action_str(head.action)} {value}"
+    return " ".join([env.ts_to_string(ts) for ts in _trajectory])
 
 
 def get_value(*trajectory: TimeStep, gamma: float) -> float:

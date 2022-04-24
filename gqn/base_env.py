@@ -1,19 +1,32 @@
 import abc
-from typing import Optional
+from dataclasses import dataclass
+from typing import Generic, Optional
 
 import gym
 from gym.core import ActType, ObsType
 
 
-class Env(gym.Env[ObsType, ActType], abc.ABC):
-    @staticmethod
-    @abc.abstractmethod
-    def action(action_str: str) -> int:
-        ...
+@dataclass
+class TimeStep(Generic[ObsType, ActType]):
+    state: ObsType
+    action: ActType
+    reward: float
+    done: bool
+    next_state: ObsType
 
-    @staticmethod
+
+class Env(gym.Env[ObsType, ActType], abc.ABC):
+    def action(self, action_str: str) -> Optional[ActType]:
+        try:
+            return self.actions().index(action_str)
+        except ValueError:
+            return None
+
+    def action_str(self, action: ActType) -> str:
+        return self.actions()[action]
+
     @abc.abstractmethod
-    def action_str(action: int) -> str:
+    def actions(self) -> "list[str]":
         ...
 
     @staticmethod
@@ -21,9 +34,8 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     def default_reward_str() -> str:
         ...
 
-    @staticmethod
     @abc.abstractmethod
-    def done(state_or_reward: str) -> bool:
+    def done(self, state_or_reward: str) -> bool:
         ...
 
     @classmethod
@@ -31,22 +43,10 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     def quantify(cls, value: str, gamma: Optional[float]) -> float:
         ...
 
-    @classmethod
-    @abc.abstractmethod
-    def reward_str(cls, reward: float, next_state: Optional[str]) -> str:
-        ...
-
     @staticmethod
     @abc.abstractmethod
-    def state_str(state: int) -> str:
+    def state_str(state: ObsType) -> str:
         ...
 
-    @staticmethod
-    @abc.abstractmethod
-    def success_str() -> str:
-        ...
-
-    @classmethod
-    @abc.abstractmethod
-    def value_str(cls, value: float) -> str:
+    def ts_to_string(self, ts: TimeStep) -> str:
         ...

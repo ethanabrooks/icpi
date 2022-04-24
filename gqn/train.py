@@ -34,7 +34,7 @@ def train(
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
     if env_id == "chain":
-        env = chain.Env(states, goal, seed)
+        env = chain.Chain(n=states, gamma=gamma, goal=goal, random_seed=seed)
     else:
         raise RuntimeError()
 
@@ -92,7 +92,7 @@ def train(
             else:
                 action = env.action_space.sample()
             next_state, reward, done, _ = env.step(action)
-            step = TimeStep(state, action, reward, None if done else next_state)
+            step = TimeStep(state, action, reward, done, next_state)
             r += reward
             t += 1
             T += 1
