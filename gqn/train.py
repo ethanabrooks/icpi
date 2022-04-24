@@ -13,7 +13,7 @@ from run_logger import HasuraLogger
 
 
 def train(
-    debug: bool,
+    debug: int,
     delta: float,
     env_id: str,
     failure_threshold: float,

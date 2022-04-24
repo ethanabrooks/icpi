@@ -32,10 +32,10 @@ completion
 
 @dataclass
 class GPT3:
+    debug: int
     logger: HasuraLogger
     temperature: float
     top_p: float
-    debug: bool = False
 
     def __call__(self, prompt, pause=True):
         print("<", end="")
@@ -48,10 +48,10 @@ class GPT3:
             print(">", end="")
             return completion["completion"]
 
-        # print("Prompt:")
-        # print(prompt)
-        # breakpoint()
-        #
+        self.print("Prompt:")
+        self.print(prompt)
+        if self.debug >= 6:
+            breakpoint()
         while True:
             # print("Prompt:", prompt.split("\n")[-1])
             sys.stdout.flush()
@@ -78,8 +78,9 @@ class GPT3:
                 if response != completion:
                     breakpoint()
                 print(">", end="")
-                # print("Completion:", completion.split("\n")[0])
-                # breakpoint()
+                self.print("Completion:", completion.split("\n")[0])
+                if self.debug >= 5:
+                    breakpoint()
                 return completion
 
     def get_completions(self, prompt):
@@ -100,5 +101,5 @@ query get_completion($prompt: String!, $temperature: numeric!, $top_p: numeric!)
         )["completions"]
 
     def print(self, *args, **kwargs):
-        if self.debug:
+        if self.debug >= 5:
             print(*args, **kwargs)
