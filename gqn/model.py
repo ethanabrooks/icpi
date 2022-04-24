@@ -31,6 +31,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     failure_threshold: float
     gamma: float
     gpt3: GPT3
+    max_steps: int
     prompt_size: int
     rng: Generator
     debug: bool
@@ -101,8 +102,6 @@ def reformat(completion: str) -> str:
 
 @dataclass
 class Q(Model[ObsType, ActType]):
-    max_steps: int
-
     def _act(self, state: ObsType) -> ActType:
         assert isinstance(self.env.action_space, Discrete)
         actions = range(self.env.action_space.n)
@@ -178,7 +177,10 @@ class Pi(Model[ObsType, ActType]):
     def _act(self, state: ObsType) -> ActType:
         state = self.env.state_str(state)
         action = None
+        t = 0
         while action is None:
+            if t > self.max_steps:
+                return self.env.action_space.sample()
             trajectories = self.sample_best()
             prompt = "\n".join([*trajectories, state])
             self.print("pi prompt:")
@@ -190,6 +192,7 @@ class Pi(Model[ObsType, ActType]):
                 breakpoint()
 
             action = self.env.action(maybe_action + ".")
+            t += 1
 
         return action
 
