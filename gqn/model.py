@@ -18,7 +18,7 @@ def to_string(*_trajectory: TimeStep, env) -> str:
 
 
 def get_value(*trajectory: TimeStep, gamma: float) -> float:
-    return sum([gamma ** t * ts.reward for t, ts in enumerate(trajectory)])
+    return sum([gamma**t * ts.reward for t, ts in enumerate(trajectory)])
 
 
 def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
@@ -75,7 +75,7 @@ class Model(abc.ABC):
             ) -> np.ndarray:
                 representation = 0
                 for t, ts in enumerate(trajectory):
-                    representation += gamma ** t * self.env.successor_feature(ts.state)
+                    representation += gamma**t * self.env.successor_feature(ts.state)
                 assert isinstance(representation, np.ndarray)
                 return representation
 
@@ -150,6 +150,9 @@ class Q(Model):
         else:
             hard_actions = []
 
+        recorded_transition = False
+        recorded_action = False
+
         while True:
             if t == self.max_steps:
                 state_or_reward = (
@@ -169,6 +172,14 @@ class Q(Model):
                 state_or_reward = reformat(state_or_reward)
                 state = env.env._observation()
                 next_state, reward, done, _ = env.step(env.action(action_str))
+                last_step = TimeStep(
+                    state=state,
+                    action=env.action(action_str),
+                    reward=reward,
+                    done=done,
+                    next_state=next_state,
+                )
+
                 actual_state_or_reward = next_state
 
             if self.debug >= 2:
@@ -176,30 +187,16 @@ class Q(Model):
             if self.debug >= 4:
                 breakpoint()
             completions.append(state_or_reward)
-            if self.env.done(state_or_reward):
-                # good_trajectories = [t for t in trajectories if t[-1].reward == 1.0]
-                # bad_trajectories = [t for t in trajectories if t[-1].reward == 0.0]
-                # if len(good_trajectories) == len(bad_trajectories):
-                transition_string = env.ts_to_string(
-                    TimeStep(
-                        state=state,
-                        action=env.action(action_str),
-                        reward=reward,
-                        done=done,
-                        next_state=next_state,
-                    )
-                )
-                *_, true_state_or_reward, _ = transition_string.split(".")
-                tru_state_or_reward = true_state_or_reward.lstrip() + "."
-                if not done or state_or_reward != tru_state_or_reward:
-                    # print(state_or_reward, "||", tru_state_or_reward)
-                    # breakpoint()
-                    hard_transitions.append((trajectories, actual_state_or_reward))
-                break
-            elif env.state_str(next_state) != state_or_reward:
+            if (
+                self.env.done(state_or_reward) != done
+                or env.state_str(next_state) != state_or_reward
+            ) and not recorded_transition:
                 # print(state_or_reward, "||", env.state_str(next_state))
                 # breakpoint()
-                hard_transitions.append((trajectories, actual_state_or_reward))
+                hard_transitions.append(trajectories + [[last_step]])
+                recorded_transition = True
+            if self.env.done(state_or_reward):
+                break
             state_str = state_or_reward
             prompts, _, _ = zip(*self.sample_best())
             new_prompt = "\n".join([*prompts, state_str])
@@ -220,8 +217,9 @@ class Q(Model):
 
             action_str, *_ = self.gpt3(new_prompt).lstrip().split(".")
             action_str = reformat(action_str)
-            if good_actions and action_str not in good_actions:
-                hard_actions.append((trajectories, good_actions))
+            if good_actions and action_str not in good_actions and not recorded_action:
+                hard_actions.append((trajectories + [[last_step]], good_actions))
+                recorded_action = True
             t += 1
             if self.debug >= 2:
                 print("action", action_str)
