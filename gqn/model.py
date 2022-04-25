@@ -137,18 +137,18 @@ class Q(Model):
         completions = [state_str, action_str]
         env = deepcopy(self.env)
 
-        path = Path("logs/hard-transitions.pkl")
+        path = Path("logs/transitions.pkl")
         if path.exists():
             with path.open("rb") as f:
-                hard_transitions = pickle.load(f)
+                transitions_to_serialize = pickle.load(f)
         else:
-            hard_transitions = []
-        path = Path("logs/hard-actions.pkl")
+            transitions_to_serialize = []
+        path = Path("logs/actions.pkl")
         if path.exists():
             with path.open("rb") as f:
-                hard_actions = pickle.load(f)
+                actions_to_serialize = pickle.load(f)
         else:
-            hard_actions = []
+            actions_to_serialize = []
 
         recorded_transition = False
         recorded_action = False
@@ -180,20 +180,15 @@ class Q(Model):
                     next_state=next_state,
                 )
 
-                actual_state_or_reward = next_state
-
             if self.debug >= 2:
                 print("state/reward", state_or_reward)
             if self.debug >= 4:
                 breakpoint()
             completions.append(state_or_reward)
-            if (
-                self.env.done(state_or_reward) != done
-                or env.state_str(next_state) != state_or_reward
-            ) and not recorded_transition:
+            if not recorded_transition:
                 # print(state_or_reward, "||", env.state_str(next_state))
                 # breakpoint()
-                hard_transitions.append(trajectories + [[last_step]])
+                transitions_to_serialize.append(trajectories + [[last_step]])
                 recorded_transition = True
             if self.env.done(state_or_reward):
                 break
@@ -229,8 +224,10 @@ class Q(Model):
                     # print("Next state:", next_state, "hopeless", hopeless)
                     if not hopeless:
                         good_actions.append(_action)
-                if good_actions and env.action(action_str) not in good_actions:
-                    hard_actions.append(([*trajectories, [last_step]], good_actions))
+                if 0 < len(good_actions) < 3:
+                    actions_to_serialize.append(
+                        ([*trajectories, [last_step]], good_actions)
+                    )
                     recorded_action = True
             t += 1
             if self.debug >= 2:
@@ -239,10 +236,10 @@ class Q(Model):
                 breakpoint()
             completions.append(action_str)
 
-        with Path("logs/hard-transitions.pkl").open("wb") as f:
-            pickle.dump(hard_transitions, f)
-        with Path("logs/hard-actions.pkl").open("wb") as f:
-            pickle.dump(hard_actions, f)
+        with Path("logs/transitions.pkl").open("wb") as f:
+            pickle.dump(transitions_to_serialize, f)
+        with Path("logs/actions.pkl").open("wb") as f:
+            pickle.dump(actions_to_serialize, f)
         return " ".join(completions)
 
 
