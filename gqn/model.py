@@ -198,7 +198,7 @@ class Q(Model):
             if self.env.done(state_or_reward):
                 break
             state_str = state_or_reward
-            prompts, _, _ = zip(*self.sample_best())
+            prompts, _, trajectories = zip(*self.sample_best())
             new_prompt = "\n".join([*prompts, state_str])
             if self.debug >= 2:
                 print("Q prompt:")
@@ -230,7 +230,7 @@ class Q(Model):
                     if not hopeless:
                         good_actions.append(_action)
                 if good_actions and env.action(action_str) not in good_actions:
-                    hard_actions.append((trajectories + [[last_step]], good_actions))
+                    hard_actions.append(([*trajectories, [last_step]], good_actions))
                     recorded_action = True
             t += 1
             if self.debug >= 2:
