@@ -205,21 +205,33 @@ class Q(Model):
                 print(new_prompt)
 
             good_actions = []
-            for _action in env.actions():
-                _env = deepcopy(env)
-                next_state, _, _, _ = _env.step(_env.action(_action))
-                paddle_x, ball_x, ball_y = next_state
-                hopeless = abs(ball_x - paddle_x) > ball_y
-                if not hopeless:
-                    # print(state, "||", _action, "||", next_state)
-                    # breakpoint()
-                    good_actions.append(_action)
 
             action_str, *_ = self.gpt3(new_prompt).lstrip().split(".")
             action_str = reformat(action_str)
-            if good_actions and action_str not in good_actions and not recorded_action:
-                hard_actions.append((trajectories + [[last_step]], good_actions))
-                recorded_action = True
+            if not recorded_action:
+                _state = env.env._observation()
+                # print("State:", _state)
+                for _action_str in env.actions():
+                    _env = deepcopy(env)
+                    _action = _env.action(_action_str)
+                    next_state, reward, done, _ = _env.step(_action)
+                    if _action == env.action(action_str):
+                        last_step = TimeStep(
+                            state=_state,
+                            action=_action,
+                            reward=reward,
+                            done=done,
+                            next_state=next_state,
+                        )
+
+                    paddle_x, ball_x, ball_y = next_state
+                    hopeless = abs(ball_x - paddle_x) > ball_y
+                    # print("Next state:", next_state, "hopeless", hopeless)
+                    if not hopeless:
+                        good_actions.append(_action)
+                if good_actions and env.action(action_str) not in good_actions:
+                    hard_actions.append((trajectories + [[last_step]], good_actions))
+                    recorded_action = True
             t += 1
             if self.debug >= 2:
                 print("action", action_str)
