@@ -24,7 +24,7 @@ def train(
     env_id: str,
     failure_threshold: float,
     gamma: float,
-    log_probs: Optional[int],
+    logprobs: Optional[int],
     logger: HasuraLogger,
     max_steps: int,
     max_trajectory: int,
@@ -52,7 +52,7 @@ def train(
     buffer: Deque[List[TimeStep]] = deque()
     gpt3 = GPT3(
         debug=debug,
-        log_probs=log_probs,
+        logprobs=logprobs,
         logger=logger,
         temperature=temperature,
         top_p=top_p,
