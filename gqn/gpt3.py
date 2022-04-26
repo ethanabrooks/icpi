@@ -1,6 +1,7 @@
 import sys
 import time
 from dataclasses import dataclass
+from typing import List
 
 import openai
 from run_logger import HasuraLogger
@@ -41,6 +42,7 @@ class GPT3:
     debug: int
     logger: HasuraLogger
     logprobs: int
+    stop: List[str]
     temperature: float
     top_p: float
     max_tokens: int = 100
@@ -76,7 +78,7 @@ class GPT3:
                     prompt=prompt,
                     logprobs=self.logprobs,
                     temperature=0.1,
-                    stop=["."],
+                    stop=self.stop,
                 ).choices
             except openai.error.RateLimitError as e:
                 print(e)

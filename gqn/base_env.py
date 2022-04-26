@@ -19,7 +19,12 @@ class TimeStep(Generic[ObsType, ActType]):
 class Env(gym.Env[ObsType, ActType], abc.ABC):
     def action(self, action_str: str) -> Optional[ActType]:
         try:
-            return self.actions().index(action_str)
+            [action] = [
+                a
+                for a, _action_str in enumerate(self.actions())
+                if _action_str == (action_str + _action_str[-1])
+            ]
+            return action
         except ValueError:
             return None
 

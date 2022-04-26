@@ -199,7 +199,7 @@ class Pi(Model[ObsType, ActType]):
             if self.debug >= 3:
                 breakpoint()
 
-            action = self.env.action(maybe_action + ".")
+            action = self.env.action(maybe_action)
             t += 1
 
         return action
