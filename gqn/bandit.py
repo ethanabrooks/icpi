@@ -113,10 +113,6 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
     def successor_feature(self, obs: np.ndarray) -> np.ndarray:
         return obs.flatten()
 
-    def time_out_str(self) -> str:
-        assert isinstance(self.env, Bandit)
-        return self._reward_str(min(self.env.means))
-
     def ts_to_string(self, ts: base_env.TimeStep) -> str:
         return f"{self.actions()[ts.action]}: {str(round(ts.reward, ndigits=2))}"
 

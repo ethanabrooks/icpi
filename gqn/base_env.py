@@ -50,10 +50,5 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     def successor_feature(self, state: int) -> np.ndarray:
         ...
 
-    @staticmethod
-    @abc.abstractmethod
-    def time_out_str() -> str:
-        ...
-
     def ts_to_string(self, ts: TimeStep) -> str:
         ...

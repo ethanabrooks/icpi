@@ -231,9 +231,6 @@ class Wrapper(gym.Wrapper, Env[np.ndarray, int]):
             description += f" {REWARDS[ts.reward]}"
         return description
 
-    def time_out_str(self) -> str:
-        return REWARDS[0.0]
-
 
 if __name__ == "__main__":
     env = Wrapper(CartPoleEnv(max_episode_steps=5))
