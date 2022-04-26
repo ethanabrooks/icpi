@@ -1,7 +1,6 @@
 import sys
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 import openai
 from run_logger import HasuraLogger
@@ -41,7 +40,7 @@ mutation post_completion($prompt: String!, $completion: String!, $temperature: n
 class GPT3:
     debug: int
     logger: HasuraLogger
-    logprobs: Optional[int]
+    logprobs: int
     temperature: float
     top_p: float
     max_tokens: int = 100

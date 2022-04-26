@@ -3,7 +3,7 @@ import os
 import time
 from collections import deque
 from pprint import pprint
-from typing import Deque, List, Optional
+from typing import Deque, List
 
 import bandit
 import cartpole
@@ -24,7 +24,7 @@ def train(
     env_id: str,
     failure_threshold: float,
     gamma: float,
-    logprobs: Optional[int],
+    logprobs: int,
     logger: HasuraLogger,
     max_steps: int,
     max_trajectory: int,
