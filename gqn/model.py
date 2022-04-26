@@ -50,18 +50,45 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             t for t in self.buffer if get_value(*t, gamma=1) > self.failure_threshold
         ]
 
+    def get_value(self, trajectory: List[TimeStep]) -> float:
+        return get_value(*trajectory, gamma=self.gamma)
+
     def ready(self) -> bool:
         return len(self.buffer) >= self.prompt_size
 
     def sample(self):
-        prompts = [to_string(*t, env=self.env) for t in self.buffer]
-        self.rng.shuffle(prompts)
-        return prompts[: self.prompt_size]
+        successful = [
+            t for t in self.buffer if self.get_value(t) > self.failure_threshold
+        ]
+        unsuccessful = [
+            t for t in self.buffer if self.get_value(t) <= self.failure_threshold
+        ]
+        half1 = self.prompt_size // 2
+        half2 = self.prompt_size - half1
+        successful_choices = [
+            successful[i]
+            for i in self.rng.choice(
+                len(successful), min(half1, len(successful)), replace=False
+            )
+        ]
+        unsuccessful_choices = [
+            unsuccessful[i]
+            for i in self.rng.choice(
+                len(unsuccessful), min(half2, len(unsuccessful)), replace=False
+            )
+        ]
+        trajectories = successful_choices + unsuccessful_choices
+        if all(
+            [
+                len(successful_choices) < len(successful),
+                len(unsuccessful_choices) < len(unsuccessful),
+            ]
+        ):
+            assert len(trajectories) == self.prompt_size
+        return [to_string(*t, env=self.env) for t in trajectories]
 
     def sample_best(self):
-        trajectories = sorted(
-            self.get_good(), key=lambda t: get_value(*t, gamma=self.gamma), reverse=True
-        )
+        trajectories = sorted(self.get_good(), key=self.get_value, reverse=True)
         unique = dict()
 
         for trajectory in trajectories:
