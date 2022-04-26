@@ -12,6 +12,20 @@ from model import GPT3, Pi, Q, TimeStep
 from run_logger import HasuraLogger
 
 
+def make_env(env_id: str, gamma: float, seed: int):
+    if env_id == "bandit":
+        env = bandit.Wrapper(bandit.Env(mapping_seed=seed, num_actions=3))
+    elif env_id == "cartpole":
+        env = cartpole.Wrapper(cartpole.Env(gamma=gamma, max_episode_steps=5))
+    elif env_id == "catch":
+        env = catch.Wrapper(catch.Env(columns=4, gamma=gamma, rows=5, seed=seed))
+    elif env_id == "chain":
+        env = chain.Env(gamma=gamma, goal=4, n=8, random_seed=seed)
+    else:
+        raise RuntimeError()
+    return env
+
+
 def train(
     debug: int,
     delta: float,
@@ -33,16 +47,7 @@ def train(
 ):
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
-    if env_id == "bandit":
-        env = bandit.Wrapper(bandit.Bandit(mapping_seed=seed, num_actions=3))
-    elif env_id == "cartpole":
-        env = cartpole.Wrapper(cartpole.CartPoleEnv(gamma=gamma, max_episode_steps=5))
-    elif env_id == "catch":
-        env = catch.Wrapper(catch.Catch(columns=4, gamma=gamma, rows=5, seed=seed))
-    elif env_id == "chain":
-        env = chain.Chain(gamma=gamma, goal=4, n=8, random_seed=seed)
-    else:
-        raise RuntimeError()
+    env = make_env(env_id, gamma, seed)
 
     buffer: Deque[List[TimeStep]] = deque()
     gpt3 = GPT3(
