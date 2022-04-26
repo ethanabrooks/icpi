@@ -7,8 +7,8 @@ from typing import Deque, List
 
 import numpy as np
 import openai
+from agent.model import GPT3, Pi, Q, TimeStep
 from envs import bandit, cartpole, catch, chain
-from model import GPT3, Pi, Q, TimeStep
 from run_logger import HasuraLogger
 
 

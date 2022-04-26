@@ -6,8 +6,8 @@ from typing import List
 import altair as alt
 import numpy as np
 import pandas as pd
-from base_env import TimeStep
-from gpt3 import GPT3
+from agent.gpt3 import GPT3
+from envs.base_env import TimeStep
 from run_logger import HasuraLogger
 from tqdm import tqdm
 

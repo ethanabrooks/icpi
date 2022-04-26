@@ -1,10 +1,11 @@
 from dataclasses import dataclass
 from typing import Generator, Optional, Tuple
 
-import base_env
+import envs.base_env
 import gym
 import gym.spaces
 import numpy as np
+from envs.base_env import TimeStep
 
 REWARDS = {
     1.0: "Success.",
@@ -13,7 +14,7 @@ REWARDS = {
 
 
 @dataclass
-class Chain(base_env.Env[int, int]):
+class Env(envs.base_env.Env[int, int]):
     gamma: float
     goal: int
     n: int
@@ -83,7 +84,7 @@ class Chain(base_env.Env[int, int]):
         one_hot[state] = 1
         return one_hot
 
-    def ts_to_string(self, ts: base_env.TimeStep) -> str:
+    def ts_to_string(self, ts: TimeStep) -> str:
         if ts.done:
             reward_str = " " + REWARDS[ts.reward]
         else:

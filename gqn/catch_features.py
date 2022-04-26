@@ -1,6 +1,6 @@
+import compare_features
 import numpy as np
-from compare_features import base
-from compare_features.base import Encoder
+from compare_features import Encoder
 from dollar_lambda import command
 
 ACTIONS = ["Left", "Stay", "Right"]
@@ -111,7 +111,7 @@ def main(
     seed: int = 0,
     logprobs: int = 3,
 ):
-    base.main(
+    compare_features.main(
         actions_path=actions_path,
         transitions_path=transitions_path,
         n=n,

@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from typing import Generator, Optional, Tuple, Union
 
-import base_env
+import envs.base_env
 import gym
 import numpy as np
+from envs.base_env import TimeStep
 from gym.core import ActType, ObsType
 
 REWARDS = {
@@ -13,7 +14,7 @@ REWARDS = {
 
 
 @dataclass
-class Env(base_env.Env[int, int]):
+class Env(envs.base_env.Env[int, int]):
     gamma: float
     max_steps: int
     random_seed: int
@@ -92,7 +93,7 @@ class Env(base_env.Env[int, int]):
         one_hot[state] = 1
         return one_hot
 
-    def ts_to_string(self, ts: base_env.TimeStep) -> str:
+    def ts_to_string(self, ts: TimeStep) -> str:
         if ts.done:
             reward_str = " " + REWARDS[ts.reward]
         else:
@@ -115,6 +116,6 @@ if __name__ == "__main__":
                 selected_goal = True
             s_, r, t, i = env.step(a)
             go_home = s_ == 2
-            print(env.ts_to_string(base_env.TimeStep(s, a, r, t, s_)))
+            print(env.ts_to_string(TimeStep(s, a, r, t, s_)))
             s = s_
         breakpoint()
