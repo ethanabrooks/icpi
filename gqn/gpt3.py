@@ -77,7 +77,7 @@ class GPT3:
                     prompt=prompt,
                     logprobs=self.logprobs,
                     temperature=0.1,
-                    stop=["."],
+                    stop=[".", ":"],
                 ).choices
             except openai.error.RateLimitError as e:
                 print(e)

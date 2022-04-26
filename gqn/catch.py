@@ -122,8 +122,8 @@ class Catch(base.Environment):
 
 
 REWARDS = {
-    1.0: "Success",
-    0.0: "Failure",
+    1.0: "success",
+    0.0: "failure",
 }
 
 
@@ -137,9 +137,9 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
 
     def actions(self) -> "list[str]":
         return [
-            "Left.",
-            "Stay.",
-            "Right.",
+            "Left:",
+            "Stay:",
+            "Right:",
         ]
 
     @classmethod
@@ -159,12 +159,7 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
     def state_str(self, obs: np.ndarray) -> str:
         assert isinstance(obs, np.ndarray)
         paddle_x, ball_x, ball_y = obs
-        assert isinstance(self.env, Catch)
-        height = ball_y
-        part1 = f"{paddle_x},{ball_x}"
-        if height == 0:
-            return part1
-        return f"{part1} ({height} to go)."
+        return f"paddle=({paddle_x},0) ball=({ball_x},{ball_y})."
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
         assert isinstance(self.env, Catch)
@@ -181,10 +176,12 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
 
     @classmethod
     def time_out_str(cls) -> str:
-        return f"Out of time ({REWARDS[0.0]})."
+        return "[out of time]."
 
     def ts_to_string(self, ts: TimeStep) -> str:
         description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"
         if ts.done:
-            description += f" {self.state_str(ts.next_state)} ({REWARDS[ts.reward]})."
+            description += (
+                f" {self.state_str(ts.next_state).rstrip('.')} [{REWARDS[ts.reward]}]."
+            )
         return description
