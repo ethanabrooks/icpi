@@ -177,15 +177,18 @@ def main(
 ):
     env = catch.Wrapper(catch.Env(gamma=1.0, rows=5, columns=4, seed=seed))
 
-    trajectories = [collect_trajectory(env) for _ in range(random_trajectories)]
+    def get_trajectories():
+        for _ in range(random_trajectories):
+            trajectory = collect_trajectory(env)
+            for i in range(len(trajectory)):
+                yield trajectory[i:]
+
+    trajectories = list(get_trajectories())
     random = np.random.default_rng(seed=seed)
     successful = [t for t in trajectories if t[-1].time_step.reward == 1]
     unsuccessful = [t for t in trajectories if t[-1].time_step.reward < 1]
-    action_trajectories = [
-        ([ts.time_step for ts in t[: i + 1]], t[i].good_actions)
-        for t in trajectories
-        for i, ts in enumerate(t)
-        if 0 < len(ts.good_actions) < len(ACTIONS)
+    action_time_steps = [
+        ts for t in trajectories for ts in t if 0 < len(ts.good_actions) < len(ACTIONS)
     ]
 
     logger = HasuraLogger(graphql_endpoint=os.getenv("GRAPHQL_ENDPOINT"))
@@ -201,18 +204,16 @@ def main(
     transition_probs = {}
     action_probs = {}
 
-    for prompt_size in range(10, 11):
+    for prompt_size in range(7, 10):
 
         def get_action_trajectories() -> TrajectoriesGoodActions:
             prompt_trajectories = [
                 [ts.time_step for ts in successful[i]]
                 for i in random.choice(len(successful), prompt_size, replace=False)
             ]
-            trajectory, good_actions = action_trajectories[
-                random.choice(len(action_trajectories))
-            ]
-            prompt_trajectories = prompt_trajectories + [trajectory]
-            return TrajectoriesGoodActions(prompt_trajectories, good_actions)
+            ts = action_time_steps[random.choice(len(action_time_steps))]
+            prompt_trajectories = prompt_trajectories + [[ts.time_step]]
+            return TrajectoriesGoodActions(prompt_trajectories, ts.good_actions)
 
         def get_transition_trajectories() -> List[Trajectory]:
             half = ceil((prompt_size + 1) / 2)
@@ -226,16 +227,16 @@ def main(
             random.shuffle(prompt_trajectories)
             prompt_trajectories = prompt_trajectories[: prompt_size + 1]
             last = prompt_trajectories[-1]
-            prompt_trajectories[-1] = last[: random.integers(1, len(last))]
+            prompt_trajectories[-1] = last[:1]
             return prompt_trajectories
 
-        actions = [get_action_trajectories() for _ in range(n)]
-        action_probs[prompt_size] = list(
-            get_good_action_probs(actions=actions, encoder=encoder, gpt3=gpt3)
-        )
         transitions = [get_transition_trajectories() for _ in range(n)]
         transition_probs[prompt_size] = list(
             get_transition_probs(encoder=encoder, gpt3=gpt3, transitions=transitions)
+        )
+        actions = [get_action_trajectories() for _ in range(n)]
+        action_probs[prompt_size] = list(
+            get_good_action_probs(actions=actions, encoder=encoder, gpt3=gpt3)
         )
 
     data = [
