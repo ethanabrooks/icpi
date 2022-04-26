@@ -57,7 +57,7 @@ class Encoder(abc.ABC):
                     ([self.prefix()] if self.prefix() else [])
                     + [self._ts_str(ts) for ts in trajectory]
                 )
-                for trajectory in trajectories[:-1]
+                for trajectory in (trajectories[:-1] + [trajectories[-1][:-1]])
             ]
         )
 
@@ -96,12 +96,10 @@ def get_good_action_probs(
     for tga in tqdm(actions, desc=encoder.name()):
         trajectories = tga.trajectories
         good_actions = tga.good_actions
-        assert len(trajectories[-1]) == 1
         prompt = (
             encoder.prompt_body(trajectories, "actions")
-            + "\n"
-            + ((encoder.prefix() + " ") if encoder.prefix() else "")
-            + encoder.state_str(trajectories[-1][0].state)
+            + " "
+            + encoder.state_str(trajectories[-1][-1].state)
         )
         # print(prompt)
         # for a in good_actions:
@@ -120,15 +118,12 @@ def get_transition_probs(
     encoder: Encoder, gpt3: GPT3, transitions: List[List[Trajectory]]
 ) -> Iterator[float]:
     for trajectories in tqdm(transitions, desc=encoder.name()):
-        assert len(trajectories[-1]) == 1
-
         prompt = (
             encoder.prompt_body(trajectories, "transitions")
-            + "\n"
-            + ((encoder.prefix() + " ") if encoder.prefix() else "")
-            + encoder.state_action_str(trajectories[-1][0])
+            + " "
+            + encoder.state_action_str(trajectories[-1][-1])
         )
-        last_step = trajectories[-1][0]
+        last_step = trajectories[-1][-1]
         if last_step.done:
             ground_truth = encoder.done_str(last_step.reward, last_step.next_state)
         else:

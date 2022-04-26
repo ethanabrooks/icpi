@@ -178,11 +178,14 @@ def main(
     env = catch.Wrapper(catch.Env(gamma=1.0, rows=5, columns=4, seed=seed))
 
     trajectories = [collect_trajectory(env) for _ in range(random_trajectories)]
-    rng = np.random.default_rng(seed=seed)
+    random = np.random.default_rng(seed=seed)
     successful = [t for t in trajectories if t[-1].time_step.reward == 1]
     unsuccessful = [t for t in trajectories if t[-1].time_step.reward < 1]
-    action_time_steps = [
-        ts for t in trajectories for ts in t if 0 < len(ts.good_actions) < len(ACTIONS)
+    action_trajectories = [
+        ([ts.time_step for ts in t[: i + 1]], t[i].good_actions)
+        for t in trajectories
+        for i, ts in enumerate(t)
+        if 0 < len(ts.good_actions) < len(ACTIONS)
     ]
 
     logger = HasuraLogger(graphql_endpoint=os.getenv("GRAPHQL_ENDPOINT"))
@@ -198,29 +201,32 @@ def main(
     transition_probs = {}
     action_probs = {}
 
-    for prompt_size in range(5, 15):
+    for prompt_size in range(10, 11):
 
         def get_action_trajectories() -> TrajectoriesGoodActions:
             prompt_trajectories = [
                 [ts.time_step for ts in successful[i]]
-                for i in rng.choice(len(successful), prompt_size, replace=False)
+                for i in random.choice(len(successful), prompt_size, replace=False)
             ]
-            ts = action_time_steps[rng.choice(len(action_time_steps))]
-            prompt_trajectories = prompt_trajectories + [[ts.time_step]]
-            return TrajectoriesGoodActions(prompt_trajectories, ts.good_actions)
+            trajectory, good_actions = action_trajectories[
+                random.choice(len(action_trajectories))
+            ]
+            prompt_trajectories = prompt_trajectories + [trajectory]
+            return TrajectoriesGoodActions(prompt_trajectories, good_actions)
 
         def get_transition_trajectories() -> List[Trajectory]:
             half = ceil((prompt_size + 1) / 2)
             prompt_trajectories = [
                 [ts.time_step for ts in successful[i]]
-                for i in rng.choice(len(successful), half, replace=False)
+                for i in random.choice(len(successful), half, replace=False)
             ] + [
                 [ts.time_step for ts in unsuccessful[i]]
-                for i in rng.choice(len(unsuccessful), half, replace=False)
+                for i in random.choice(len(unsuccessful), half, replace=False)
             ]
-            rng.shuffle(prompt_trajectories)
+            random.shuffle(prompt_trajectories)
             prompt_trajectories = prompt_trajectories[: prompt_size + 1]
-            prompt_trajectories[-1] = prompt_trajectories[-1][:1]
+            last = prompt_trajectories[-1]
+            prompt_trajectories[-1] = last[: random.integers(1, len(last))]
             return prompt_trajectories
 
         actions = [get_action_trajectories() for _ in range(n)]
