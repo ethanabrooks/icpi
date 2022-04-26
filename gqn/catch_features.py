@@ -204,7 +204,7 @@ def main(
     transition_probs = {}
     action_probs = {}
 
-    for prompt_size in range(7, 10):
+    for prompt_size in range(10, 11):
 
         def get_action_trajectories() -> TrajectoriesGoodActions:
             prompt_trajectories = [
@@ -230,6 +230,7 @@ def main(
             prompt_trajectories[-1] = last[:1]
             return prompt_trajectories
 
+    
         transitions = [get_transition_trajectories() for _ in range(n)]
         transition_probs[prompt_size] = list(
             get_transition_probs(encoder=encoder, gpt3=gpt3, transitions=transitions)
