@@ -15,7 +15,7 @@
 # ============================================================================
 """Catch reinforcement learning environment."""
 
-from typing import Optional, Tuple, cast
+from typing import NamedTuple, Optional, Tuple, cast
 
 import dm_env
 import envs.base_env
@@ -31,6 +31,12 @@ _ACTIONS = (-1, 0, 1)  # Left, no-op, right.
 
 BALL_CODE = 1.0
 PADDLE_CODE = 2.0
+
+
+class Obs(NamedTuple):
+    paddle_x: int
+    ball_x: int
+    ball_y: int
 
 
 class Env(base.Environment):
@@ -76,9 +82,9 @@ class Env(base.Environment):
     def _reset(self) -> dm_env.TimeStep:
         """Returns the first `TimeStep` of a new episode."""
         self._ball_x = self._rng.randint(self._columns)
-        self._ball_y = 0
+        self._ball_y = self._rows - 1
         self._paddle_x = self._columns // 2
-        self._paddle_y = self._rows - 1
+        self._paddle_y = 0
 
         return dm_env.restart(self._observation())
 
@@ -89,7 +95,7 @@ class Env(base.Environment):
         self._paddle_x = np.clip(self._paddle_x + dx, 0, self._columns - 1)
 
         # Drop the ball.
-        self._ball_y += 1
+        self._ball_y -= 1
 
         # Check for termination.
         if self._ball_y == self._paddle_y:
@@ -114,8 +120,8 @@ class Env(base.Environment):
             dtype=np.int, num_values=len(_ACTIONS), name="action"
         )
 
-    def _observation(self) -> np.ndarray:
-        return np.array([self._paddle_x, self._ball_x, self._paddle_y - self._ball_y])
+    def _observation(self) -> Obs:
+        return Obs(paddle_x=self._paddle_x, ball_x=self._ball_x, ball_y=self._ball_y)
 
     def bsuite_info(self):
         return dict(optimal=self._optimal)
@@ -127,7 +133,7 @@ REWARDS = {
 }
 
 
-class Wrapper(gym.Wrapper, envs.base_env.Env[np.ndarray, int]):
+class Wrapper(gym.Wrapper, envs.base_env.Env[Obs, int]):
     def __init__(self, env: Env):
         super().__init__(cast(gym.Env, env))
         self.action_space = Discrete(3, seed=env.random_seed)
@@ -156,12 +162,12 @@ class Wrapper(gym.Wrapper, envs.base_env.Env[np.ndarray, int]):
         assert isinstance(self.env, Env)
         return self.env.reset().observation
 
-    def state_str(self, obs: np.ndarray) -> str:
-        assert isinstance(obs, np.ndarray)
-        paddle_x, ball_x, ball_y = obs
+    def state_str(self, obs: Obs) -> str:
+        assert isinstance(obs, Obs)
+        paddle_x, ball_x, ball_y = Obs(*obs)
         return f"paddle=({paddle_x},0) ball=({ball_x},{ball_y})."
 
-    def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
+    def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
         assert isinstance(self.env, Env)
         time_step: dm_env.TimeStep = self.env.step(action)
         return (
@@ -171,8 +177,8 @@ class Wrapper(gym.Wrapper, envs.base_env.Env[np.ndarray, int]):
             self.bsuite_info(),
         )
 
-    def successor_feature(self, obs: np.ndarray) -> np.ndarray:
-        return obs.flatten()
+    def successor_feature(self, obs: Obs) -> np.ndarray:
+        return np.array(obs)
 
     def ts_to_string(self, ts: TimeStep) -> str:
         description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"
