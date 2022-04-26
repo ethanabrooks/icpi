@@ -13,7 +13,7 @@ REWARDS = {
 
 
 @dataclass
-class Umbrella(base_env.Env[int, int]):
+class Env(base_env.Env[int, int]):
     gamma: float
     max_steps: int
     random_seed: int
@@ -101,7 +101,7 @@ class Umbrella(base_env.Env[int, int]):
 
 
 if __name__ == "__main__":
-    env = Umbrella(gamma=0.99, max_steps=8, random_seed=0)
+    env = Env(gamma=0.99, max_steps=8, random_seed=0)
     while True:
         s = env.reset()
         t = False
