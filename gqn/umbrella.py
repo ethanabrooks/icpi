@@ -92,10 +92,6 @@ class Umbrella(base_env.Env[int, int]):
         one_hot[state] = 1
         return one_hot
 
-    @staticmethod
-    def time_out_str() -> str:
-        return REWARDS[0.0]
-
     def ts_to_string(self, ts: base_env.TimeStep) -> str:
         if ts.done:
             reward_str = " " + REWARDS[ts.reward]

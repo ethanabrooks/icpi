@@ -184,9 +184,7 @@ class Q(Model[ObsType, ActType]):
             action, state_or_reward, *_ = completion.split(".")
             action, state_or_reward = map(reformat, [action, state_or_reward])
             if t == self.max_steps:
-                state_or_reward = (
-                    self.env.time_out_str()
-                )  # TODO: can we eliminate this?
+                break
             t += 1
 
             if self.debug >= 2:

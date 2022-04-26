@@ -174,10 +174,6 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
     def successor_feature(self, obs: np.ndarray) -> np.ndarray:
         return obs.flatten()
 
-    @classmethod
-    def time_out_str(cls) -> str:
-        return "[out of time]."
-
     def ts_to_string(self, ts: TimeStep) -> str:
         description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"
         if ts.done:
