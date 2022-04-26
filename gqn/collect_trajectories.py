@@ -1,7 +1,7 @@
 import pickle
 
 from agent.train import make_env
-from dollar_lambda import command
+from dollar_lambda import argument, command
 from envs.base_env import Env, TimeStep
 
 
@@ -20,8 +20,13 @@ def collect_trajectories(env: Env, num_trajectories: int):
     return trajectories
 
 
-@command()
-def main(env_id: str, seed: int, num_trajectories: int, save_path: str):
+@command(parsers=dict(env_id=argument("env_id")))
+def main(
+    env_id: str,
+    num_trajectories: int,
+    seed: int = 0,
+    save_path: str = "logs/trajectories.pkl",
+):
     env = make_env(env_id, gamma=1.0, seed=seed)
     trajectories = collect_trajectories(env, num_trajectories)
 
