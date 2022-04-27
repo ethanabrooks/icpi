@@ -7,7 +7,7 @@ from typing import Deque, List
 
 import numpy as np
 import openai
-from agent.model import GPT3, Pi, Q, TimeStep
+from agent.model import GPT3, Pi, Q, TimeStep, get_value
 from envs import bandit, cartpole, catch, chain
 from run_logger import HasuraLogger
 
@@ -50,6 +50,8 @@ def train(
     env = make_env(env_id, gamma, seed)
 
     buffer: Deque[List[TimeStep]] = deque()
+    success_buffer: Deque[List[TimeStep]] = deque()
+
     gpt3 = GPT3(
         debug=debug,
         logprobs=logprobs,
@@ -60,6 +62,7 @@ def train(
     )
     pi = Pi(
         buffer=buffer,
+        debug=debug,
         delta=delta,
         env=env,
         failure_threshold=failure_threshold,
@@ -68,10 +71,11 @@ def train(
         max_steps=max_trajectory,
         prompt_size=pi_prompt_size,
         rng=rng,
-        debug=debug,
+        success_buffer=success_buffer,
     )
     q = Q(
         buffer=buffer,
+        debug=debug,
         delta=delta,
         env=env,
         failure_threshold=failure_threshold,
@@ -80,7 +84,7 @@ def train(
         max_steps=max_trajectory,
         prompt_size=q_prompt_size,
         rng=rng,
-        debug=debug,
+        success_buffer=success_buffer,
     )
 
     T = 0
@@ -96,7 +100,7 @@ def train(
         r = 0
         while not done:
             use_model_prob = 1 / (
-                1 + math.exp(2 * (min_successes - len(pi.get_good())))
+                1 + math.exp(2 * (min_successes - len(success_buffer)))
             )
             model = pi if use_pi else q
             use_model = (rng.random() < use_model_prob) and model.ready()
@@ -133,6 +137,8 @@ def train(
         if not timed_out:
             while trajectory:
                 buffer.append(trajectory)
+                if get_value(*trajectory, gamma=1) > failure_threshold:
+                    success_buffer.append(trajectory)
                 head, *trajectory = trajectory
 
     print("done!")
