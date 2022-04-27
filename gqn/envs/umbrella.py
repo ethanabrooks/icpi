@@ -8,8 +8,8 @@ from envs.base_env import TimeStep
 from gym.core import ActType, ObsType
 
 REWARDS = {
-    1.0: "Success.",
-    0.0: "Failure.",
+    1.0: "Success",
+    0.0: "Failure",
 }
 
 
@@ -94,11 +94,10 @@ class Env(envs.base_env.Env[int, int]):
         return one_hot
 
     def ts_to_string(self, ts: TimeStep) -> str:
+        description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"
         if ts.done:
-            reward_str = " " + REWARDS[ts.reward]
-        else:
-            reward_str = ""
-        return f"{self.state_str(ts.state)} {self.action_str(ts.action)}{reward_str}"
+            description += " " + REWARDS[ts.reward] + self.state_stop()
+        return description
 
 
 if __name__ == "__main__":

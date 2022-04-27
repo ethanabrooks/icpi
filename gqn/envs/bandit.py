@@ -90,15 +90,15 @@ class Wrapper(gym.Wrapper, envs.base_env.Env[np.ndarray, int]):
 
     @classmethod
     def quantify(cls, value: str, gamma: Optional[float]) -> float:
-        success = value.endswith(cls.rewards()[1.0])
-        value = gamma ** value.count(".")
-        return value if success else (gamma - 1) * value
+        breakpoint()
+        raise NotImplementedError
 
     def reset(self):
         assert isinstance(self.env, Env)
         return self.env.reset().observation
 
-    def state_str(self, obs: np.ndarray) -> str:
+    @classmethod
+    def _state_str(cls, obs: np.ndarray) -> str:
         return ""
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
@@ -115,7 +115,7 @@ class Wrapper(gym.Wrapper, envs.base_env.Env[np.ndarray, int]):
         return obs.flatten()
 
     def ts_to_string(self, ts: TimeStep) -> str:
-        return f"{self.actions()[ts.action]}: {str(round(ts.reward, ndigits=2))}"
+        return f"{self.actions()[ts.action]}: {str(round(ts.reward, ndigits=2))}{self.state_stop()}"
 
 
 if __name__ == "__main__":

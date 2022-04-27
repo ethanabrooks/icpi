@@ -203,12 +203,12 @@ class Env(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         pass
 
 
-REWARDS = {0.0: "Failure.", 1.0: "Success."}
+REWARDS = {0.0: "Failure", 1.0: "Success"}
 
 
 class Wrapper(gym.Wrapper, envs.base_env.Env[np.ndarray, int]):
     def actions(self) -> "list[str]":
-        return ["Left.", "Right."]
+        return ["Left", "Right"]
 
     def done(self, state_or_reward: str) -> bool:
         return any([r in state_or_reward for r in REWARDS.values()])
@@ -219,9 +219,10 @@ class Wrapper(gym.Wrapper, envs.base_env.Env[np.ndarray, int]):
         value = gamma ** value.count(".")
         return value if success else (gamma - 1) * value
 
-    def state_str(self, obs: np.ndarray) -> str:
+    @classmethod
+    def _state_str(cls, obs: np.ndarray) -> str:
         a, b, c, d = obs
-        return f"x: {a:.2f}, ẋ: {b:.2f}, a: {c:.2f}, ȧ: {d:.2f}."
+        return f"x: {a:.2f}, ẋ: {b:.2f}, a: {c:.2f}, ȧ: {d:.2f}"
 
     def successor_feature(self, obs: np.ndarray) -> np.ndarray:
         return obs.flatten()
@@ -229,7 +230,7 @@ class Wrapper(gym.Wrapper, envs.base_env.Env[np.ndarray, int]):
     def ts_to_string(self, ts: TimeStep) -> str:
         description = f"{self.state_str(ts.state)} {self.actions()[ts.action]}"
         if ts.done:
-            description += f" {REWARDS[ts.reward]}"
+            description += f" {REWARDS[ts.reward]}{self.state_stop()}"
         return description
 
 
