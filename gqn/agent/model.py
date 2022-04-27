@@ -158,7 +158,7 @@ class Q(Model[ObsType, ActType]):
                 break
             else:
                 prompts = self.sample()
-                new_prompt = "\n".join([*prompts, f"{state_str} {action_str}"])
+                new_prompt = "\n".join([*prompts, " ".join(completions)])
                 if self.debug >= 2:
                     print("Q prompt:")
                     print(new_prompt)

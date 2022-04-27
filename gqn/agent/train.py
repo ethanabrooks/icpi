@@ -145,8 +145,8 @@ def train(
 
         trajectory = trajectory[-max_trajectory:]
         if not timed_out:
+            buffer.append(trajectory)
             while trajectory:
-                buffer.append(trajectory)
                 if get_value(*trajectory, gamma=1) > failure_threshold:
                     success_buffer.append(trajectory)
                 head, *trajectory = trajectory
