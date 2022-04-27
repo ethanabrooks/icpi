@@ -47,6 +47,7 @@ class Env(base.Environment):
             range(self._num_actions), size=self._num_actions, replace=False
         )
         self.means = np.linspace(0, 1, self._num_actions)[action_mask]
+        breakpoint()
 
         self._total_regret = 0.0
         self._optimal_return = 1.0

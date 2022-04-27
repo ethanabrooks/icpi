@@ -6,7 +6,7 @@ import altair as alt
 import numpy as np
 import pandas as pd
 from agent.gpt3 import GPT3
-from envs.base_env import TimeStep
+from envs.base_env import Env, TimeStep
 from gym.core import ObsType
 from tqdm import tqdm
 
@@ -133,10 +133,10 @@ def get_transition_probs(
         else:
             ground_truth = encoder.state_str(last_step.next_state)
 
-        # print(prompt)
-        # print()
-        # print(ground_truth)
-        # breakpoint()
+        print(prompt)
+        print()
+        print(ground_truth)
+        breakpoint()
 
         completion = gpt3.get_full_completion(prompt)
         logprobs = completion["logprobs"]
@@ -164,3 +164,15 @@ def save_plot(df: pd.DataFrame, filename: str):
     alt.layer(bars, error_bars, data=df).facet(
         row=alt.Row("encoding:N", header=alt.Header(labelAngle=0, labelAlign="left")),
     ).save(filename)
+
+
+def collect_trajectory(env: Env):
+    trajectory = []
+    state = env.reset()
+    done = False
+    while not done:
+        action = env.action_space.sample()
+        next_state, reward, done, _ = env.step(action)
+        trajectory.append(TimeStep(state, action, reward, next_state, done))
+        state = next_state
+    return trajectory
