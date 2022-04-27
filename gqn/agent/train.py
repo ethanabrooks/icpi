@@ -117,7 +117,7 @@ def train(
                 done = timed_out = True
             if done:
                 episodes += 1
-                if use_pi:
+                if not use_pi:
                     regret = info["optimal"] - r
                     log = dict(
                         episode=episodes,
