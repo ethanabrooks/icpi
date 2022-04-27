@@ -62,9 +62,7 @@ class Encoder(abc.ABC):
         )
 
 
-def get_prob(
-    target: str, logprobs: List[Dict[str, float]], debug=False
-) -> Tuple[float, str]:
+def get_prob(target: str, logprobs: List[Dict[str, float]]) -> Tuple[float, str]:
     if not target:
         return 1, target
     if not logprobs:
@@ -95,7 +93,7 @@ class TrajectoriesGoodActions(Generic[ObsType]):
 
 def get_good_action_probs(
     actions: List[TrajectoriesGoodActions], encoder: Encoder, gpt3: GPT3
-) -> Iterator[List[float]]:
+) -> Iterator[float]:
     for tga in tqdm(actions, desc=encoder.name()):
         trajectories = tga.trajectories
         good_actions = tga.good_actions
@@ -109,10 +107,12 @@ def get_good_action_probs(
         #     print(encoder.action_str(a))
         # breakpoint()
         logprobs = gpt3.get_full_completion(prompt)["logprobs"]
-        probs_per_action = [
-            get_prob(" " + encoder.action_str(action), logprobs)[0]
-            for action in range(3)
-        ]
+        probs_per_action, _ = zip(
+            *[
+                get_prob(" " + encoder.action_str(action), logprobs)
+                for action in range(3)
+            ]
+        )
         yield sum(
             [p for a, p in enumerate(probs_per_action) if a in good_actions]
         ) / sum(probs_per_action)
@@ -130,18 +130,18 @@ def get_transition_probs(
         last_step = trajectories[-1][-1]
         if last_step.done:
             ground_truth = encoder.done_str(last_step.reward, last_step.next_state)
-            # else:
-            #     ground_truth = encoder.state_str(last_step.next_state)
-            # print(prompt)
-            # print()
-            # print(ground_truth)
-            # breakpoint()
+        else:
+            ground_truth = encoder.state_str(last_step.next_state)
 
-            completion = gpt3.get_full_completion(prompt)
-            logprobs = completion["logprobs"]
-            prob, _ = get_prob(" " + ground_truth, logprobs)
-            if prob > 0:
-                yield prob
+        # print(prompt)
+        # print()
+        # print(ground_truth)
+        # breakpoint()
+
+        completion = gpt3.get_full_completion(prompt)
+        logprobs = completion["logprobs"]
+        prob, _ = get_prob(" " + ground_truth, logprobs)
+        yield prob
 
 
 def save_plot(df: pd.DataFrame, filename: str):

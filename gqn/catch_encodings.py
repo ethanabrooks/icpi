@@ -6,7 +6,14 @@ from typing import List, Literal, NamedTuple, Optional
 import numpy as np
 import pandas as pd
 from agent.gpt3 import GPT3
-from compare_encodings import Encoder, Trajectory, get_transition_probs, save_plot
+from compare_encodings import (
+    Encoder,
+    TrajectoriesGoodActions,
+    Trajectory,
+    get_good_action_probs,
+    get_transition_probs,
+    save_plot,
+)
 from dollar_lambda import command
 from envs import catch
 from envs.base_env import TimeStep
@@ -239,16 +246,14 @@ def main(
         for _ in range(random_trajectories):
             trajectory = collect_trajectory(env)
             yield trajectory
-            # for i in range(len(trajectory)):
-            #     yield trajectory[i:]
 
     trajectories = list(get_trajectories())
     random = np.random.default_rng(seed=seed)
     successful = [t for t in trajectories if t[-1].time_step.reward == 1]
     unsuccessful = [t for t in trajectories if t[-1].time_step.reward < 1]
-    # action_time_steps = [
-    #     ts for t in trajectories for ts in t if 0 < len(ts.good_actions) < len(ACTIONS)
-    # ]
+    action_time_steps = [
+        ts for t in trajectories for ts in t if 0 < len(ts.good_actions) < len(ACTIONS)
+    ]
 
     logger = HasuraLogger(graphql_endpoint=os.getenv("GRAPHQL_ENDPOINT"))
     gpt3 = GPT3(
@@ -260,7 +265,7 @@ def main(
         top_p=1,
     )
     transition_probs = {}
-    # action_probs = {}
+    action_probs = {}
 
     for encoder in [
         Math(),
@@ -268,14 +273,14 @@ def main(
         MathWithSuccessOnly(),
     ]:
 
-        # def get_action_trajectories() -> TrajectoriesGoodActions:
-        #     prompt_trajectories = [
-        #         [ts.time_step for ts in successful[i]]
-        #         for i in random.choice(len(successful), prompt_size, replace=False)
-        #     ]
-        #     ts = action_time_steps[random.choice(len(action_time_steps))]
-        #     prompt_trajectories = prompt_trajectories + [[ts.time_step]]
-        #     return TrajectoriesGoodActions(prompt_trajectories, ts.good_actions)
+        def get_action_trajectories() -> TrajectoriesGoodActions:
+            prompt_trajectories = [
+                [ts.time_step for ts in successful[i]]
+                for i in random.choice(len(successful), prompt_size, replace=False)
+            ]
+            ts = action_time_steps[random.choice(len(action_time_steps))]
+            prompt_trajectories = prompt_trajectories + [[ts.time_step]]
+            return TrajectoriesGoodActions(prompt_trajectories, ts.good_actions)
 
         def get_transition_trajectories() -> List[Trajectory]:
             half = ceil((prompt_size + 1) / 2)
@@ -294,17 +299,17 @@ def main(
         transition_probs[encoder.name()] = list(
             get_transition_probs(encoder=encoder, gpt3=gpt3, transitions=transitions)
         )
-        # actions = [get_action_trajectories() for _ in range(n)]
-        # action_probs[prompt_size] = list(
-        #     get_good_action_probs(actions=actions, encoder=encoder, gpt3=gpt3)
-        # )
+        actions = [get_action_trajectories() for _ in range(n)]
+        action_probs[encoder.name()] = list(
+            get_good_action_probs(actions=actions, encoder=encoder, gpt3=gpt3)
+        )
 
     data = [
         dict(encoding=k, probability=np.mean(v), inference="transition", std=np.std(v))
         for k, v in transition_probs.items()
     ] + [
-        # dict(encoding=k, probability=np.mean(v), inference="action", std=np.std(v))
-        # for k, v in action_probs.items()
+        dict(encoding=k, probability=np.mean(v), inference="action", std=np.std(v))
+        for k, v in action_probs.items()
     ]
     df = pd.DataFrame.from_records(data)
     save_plot(df, "logs/catch-prompt-sizes.html")
