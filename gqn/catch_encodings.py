@@ -16,7 +16,7 @@ from run_logger import HasuraLogger
 ACTIONS = ["Left", "Stay", "Right"]
 
 
-class ParensPaddleParensBallWithNames(Encoder):
+class Names(Encoder):
     def name(self) -> str:
         return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}). Right:"
 
@@ -32,7 +32,7 @@ class ParensPaddleParensBallWithNames(Encoder):
         return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [{'caught the ball' if reward == 1 else 'missed the ball'}]."
 
 
-class ParensPaddleParensBallWithNamesAndStart(ParensPaddleParensBallWithNames):
+class Start(Names):
     def name(self) -> str:
         return "Start: Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}). Right:"
 
@@ -40,7 +40,7 @@ class ParensPaddleParensBallWithNamesAndStart(ParensPaddleParensBallWithNames):
         return "Start:"
 
 
-class ParensPaddleParensBallWithNamesAndPreface(ParensPaddleParensBallWithNames):
+class Preface(Names):
     def name(self) -> str:
         return "A paddle that sometimes catches a falling ball:"
 
@@ -54,7 +54,7 @@ class ParensPaddleParensBallWithNamesAndPreface(ParensPaddleParensBallWithNames)
             raise RuntimeError()
 
 
-class ParensPaddleParensBallWithNamesAndFalling(ParensPaddleParensBallWithNames):
+class Falling(Names):
     def name(self) -> str:
         return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [falling]. Right:"
 
@@ -63,7 +63,7 @@ class ParensPaddleParensBallWithNamesAndFalling(ParensPaddleParensBallWithNames)
         return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [falling]."
 
 
-class ParensPaddleParensBallWithNamesAndUnderTheBall(ParensPaddleParensBallWithNames):
+class UnderTheBall(Names):
     def name(self) -> str:
         return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [under the ball]. Right:"
 
@@ -74,9 +74,7 @@ class ParensPaddleParensBallWithNamesAndUnderTheBall(ParensPaddleParensBallWithN
         return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [{under_ball}]."
 
 
-class ParensPaddleParensBallWithNamesAndUnderTheBallNoDone(
-    ParensPaddleParensBallWithNamesAndUnderTheBall
-):
+class UnderTheBallNoDone(UnderTheBall):
     def name(self) -> str:
         return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [under the ball]."
 
@@ -85,30 +83,48 @@ class ParensPaddleParensBallWithNamesAndUnderTheBallNoDone(
         return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [{'under the ball' if reward == 1 else 'not under the ball'}]."
 
 
-class ParensPaddleParensBallWithNamesUnderTheBallFalling(
-    ParensPaddleParensBallWithNames
-):
+class UnderTheBallFalling(Names):
     def name(self) -> str:
         return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [under the ball,falling]. Right:"
 
     def state_str(self, state: np.ndarray) -> str:
         paddle_x, ball_x, ball_y = state
-        under_ball = "under the ball" if ball_x == paddle_x else "not under the ball"
-        falling = "falling" if ball_y > 0 else "not falling"
-        return (
-            f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [{under_ball},{falling}]."
-        )
+        status = self.status(paddle_x, ball_x, ball_y)
+        return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [{status}]."
 
     def done_str(self, reward: float, next_state: np.ndarray) -> str:
         paddle_x, ball_x, ball_y = next_state
+        status = self.status(paddle_x, ball_x, ball_y)
+        return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [{status}]."
+
+    @staticmethod
+    def status(paddle_x, ball_x, ball_y):
         under_ball = "under the ball" if ball_x == paddle_x else "not under the ball"
         falling = "falling" if ball_y > 0 else "not falling"
-        return (
-            f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [{under_ball},{falling}]."
-        )
+        status = under_ball + "," + falling
+        return status
 
 
-class ParensPaddleParensBallWithNamesAndCanCatch(ParensPaddleParensBallWithNames):
+class LeftRightOfBall(UnderTheBallFalling):
+    def name(self) -> str:
+        return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [left of the ball,falling]. Right:"
+
+    @staticmethod
+    def status(paddle_x, ball_x, ball_y):
+        if ball_x > paddle_x:
+            x_status = "left of the ball"
+        elif ball_x < paddle_x:
+            x_status = "right of the ball"
+        else:
+            x_status = "on the ball"
+        if ball_y > 0:
+            y_status = "falling"
+        else:
+            y_status = "not falling"
+        return x_status + "," + y_status
+
+
+class CanCatch(Names):
     def name(self) -> str:
         return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [can catch the ball]. Right:"
 
@@ -204,10 +220,11 @@ def main(
     # action_probs = {}
 
     for encoder in [
-        ParensPaddleParensBallWithNamesAndFalling(),
-        ParensPaddleParensBallWithNamesAndUnderTheBall(),
-        ParensPaddleParensBallWithNamesAndUnderTheBallNoDone(),
-        ParensPaddleParensBallWithNamesUnderTheBallFalling(),
+        Falling(),
+        UnderTheBall(),
+        UnderTheBallNoDone(),
+        UnderTheBallFalling(),
+        LeftRightOfBall(),
     ]:
 
         # def get_action_trajectories() -> TrajectoriesGoodActions:
