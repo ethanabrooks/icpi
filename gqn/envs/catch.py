@@ -128,8 +128,8 @@ class Env(base.Environment):
 
 
 REWARDS = {
-    1.0: "success",
-    0.0: "failure",
+    1.0: "caught the ball",
+    0.0: "missed the ball",
 }
 
 
