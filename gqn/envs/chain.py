@@ -9,7 +9,7 @@ from envs.base_env import TimeStep
 
 REWARDS = {
     1.0: "Success",
-    0.0: "Failure",
+    -1.0: "Failure",
 }
 
 
@@ -53,14 +53,20 @@ class Env(envs.base_env.Env[int, int]):
             state = np.clip(state, 0, self.n - 1)
             done = action == 1
             success = done and state == self.goal
-            reward = float(success)
+            if done:
+                reward = 1 if success else -1
             state = int(state)
 
     @classmethod
-    def quantify(cls, value: str, gamma: Optional[float]) -> float:
-        success = value.endswith(REWARDS[1.0] + cls.state_stop())
-        value = gamma ** value.count(cls.state_stop())
-        return value if success else (gamma - 1) * value
+    def quantify(cls, prompt: str, gamma: Optional[float]) -> float:
+        success = prompt.endswith(REWARDS[1.0] + cls.state_stop())
+        length = prompt.count(cls.state_stop()) // 2 - 1
+        value = gamma ** length
+        if success:
+            return value
+        elif prompt.endswith(REWARDS[-1.0] + cls.state_stop()):
+            return -value
+        return 0
 
     def render(self, mode="human"):
         pass

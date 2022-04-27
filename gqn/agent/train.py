@@ -7,7 +7,7 @@ from typing import Deque, List
 
 import numpy as np
 import openai
-from agent.model import GPT3, Pi, Q, TimeStep, get_value
+from agent.model import GPT3, Pi, Q, TimeStep, get_value, to_string
 from envs import bandit, cartpole, catch, chain
 from run_logger import HasuraLogger
 
@@ -132,6 +132,16 @@ def train(
                         logger.log(**log)
             trajectory.append(step)
             state = next_state
+
+        # quantify unittest
+        prompt = to_string(*trajectory, env=env)
+        value_from_prompt = env.quantify(prompt, gamma=gamma)
+        value_from_trajectory = get_value(*trajectory, gamma=gamma)
+        if not value_from_prompt == value_from_trajectory:
+            print(value_from_prompt, value_from_trajectory)
+            breakpoint()
+            env.quantify(prompt, gamma=gamma)
+            get_value(*trajectory, gamma=gamma)
 
         trajectory = trajectory[-max_trajectory:]
         if not timed_out:
