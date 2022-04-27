@@ -6,7 +6,7 @@ from typing import List, Literal, NamedTuple, Optional
 import numpy as np
 import pandas as pd
 from agent.gpt3 import GPT3
-from compare_encodings import (
+from compute_probabilities import (
     Encoder,
     TrajectoriesGoodActions,
     Trajectory,
