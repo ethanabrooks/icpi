@@ -143,9 +143,9 @@ class Wrapper(gym.Wrapper, envs.base_env.Env[Obs, int]):
 
     def actions(self) -> "list[str]":
         return [
-            "Left:",
-            "Stay:",
-            "Right:",
+            "Left",
+            "Stay",
+            "Right",
         ]
 
     @classmethod
@@ -162,10 +162,11 @@ class Wrapper(gym.Wrapper, envs.base_env.Env[Obs, int]):
         assert isinstance(self.env, Env)
         return self.env.reset().observation
 
-    def state_str(self, obs: Obs) -> str:
+    @classmethod
+    def _state_str(cls, obs: Obs) -> str:
         assert isinstance(obs, Obs)
         paddle_x, ball_x, ball_y = Obs(*obs)
-        return f"paddle=({paddle_x},0) ball=({ball_x},{ball_y})."
+        return f"paddle=({paddle_x},0) ball=({ball_x},{ball_y})"
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
         assert isinstance(self.env, Env)
@@ -183,7 +184,6 @@ class Wrapper(gym.Wrapper, envs.base_env.Env[Obs, int]):
     def ts_to_string(self, ts: TimeStep) -> str:
         description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"
         if ts.done:
-            description += (
-                f" {self.state_str(ts.next_state).rstrip('.')} [{REWARDS[ts.reward]}]."
-            )
+            state_str = self.state_str(ts.next_state).rstrip(self.state_stop())
+            description += f" {state_str} [{REWARDS[ts.reward]}]{self.state_stop()}"
         return description

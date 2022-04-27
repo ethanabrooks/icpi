@@ -115,10 +115,6 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         return prompts
 
 
-def reformat(completion: str) -> str:
-    return f"{completion.lstrip()}."
-
-
 @dataclass
 class Q(Model[ObsType, ActType]):
     def _act(self, state: ObsType) -> ActType:
@@ -169,8 +165,8 @@ class Q(Model[ObsType, ActType]):
                 if self.debug >= 4:
                     breakpoint()
 
-                state_or_reward, *_ = self.gpt3(new_prompt).lstrip().split(".")
-                state_or_reward = reformat(state_or_reward)
+                state_or_reward, *_ = self.gpt3(new_prompt).split(self.env.state_stop())
+                state_or_reward = state_or_reward.lstrip() + self.env.state_stop()
             if self.debug >= 2:
                 print("state/reward", state_or_reward)
             if self.debug >= 4:
@@ -187,8 +183,8 @@ class Q(Model[ObsType, ActType]):
             if self.debug >= 4:
                 breakpoint()
 
-            action_str, *_ = self.gpt3(new_prompt).lstrip().split(".")
-            action_str = reformat(action_str)
+            action_str, *_ = self.gpt3(new_prompt).split(self.env.state_stop())
+            action_str = action_str.lstrip() + self.env.action_stop()
             t += 1
 
             if self.debug >= 2:
@@ -213,8 +209,7 @@ class Pi(Model[ObsType, ActType]):
             if self.debug >= 1:
                 print("pi prompt:")
                 print(prompt)
-            completion = self.gpt3(prompt).lstrip()
-            maybe_action, *_ = completion.split(".")
+            maybe_action, *_ = self.gpt3(prompt).lstrip().split(self.env.action_stop())
             if self.debug >= 1:
                 print("Action:", maybe_action)
             if self.debug >= 3:

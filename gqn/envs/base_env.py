@@ -22,15 +22,19 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
             [action] = [
                 a
                 for a, _action_str in enumerate(self.actions())
-                if _action_str == (action_str + _action_str[-1])
+                if _action_str == action_str
             ]
             return action
         except ValueError:
             return None
 
+    @staticmethod
+    def action_stop() -> str:
+        return ":"
+
     def action_str(self, action: ActType) -> str:
         try:
-            return self.actions()[action]
+            return self.actions()[action] + self.action_stop()
         except IndexError:
             breakpoint()
 
@@ -48,8 +52,16 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
         ...
 
     @staticmethod
+    def state_stop() -> str:
+        return "."
+
+    @classmethod
+    def state_str(cls, state: ObsType) -> str:
+        return cls._state_str(state) + cls.state_stop()
+
+    @classmethod
     @abc.abstractmethod
-    def state_str(state: ObsType) -> str:
+    def _state_str(cls, state: ObsType) -> str:
         ...
 
     def successor_feature(self, state: int) -> np.ndarray:

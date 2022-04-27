@@ -8,8 +8,8 @@ import numpy as np
 from envs.base_env import TimeStep
 
 REWARDS = {
-    1.0: "Success.",
-    0.0: "Failure.",
+    1.0: "Success",
+    0.0: "Failure",
 }
 
 
@@ -27,15 +27,19 @@ class Env(envs.base_env.Env[int, int]):
         )
         self.observation_space = gym.spaces.Discrete(self.n)
 
+    @staticmethod
+    def action_stop() -> str:
+        return "."
+
     def actions(self):
         return [
-            "Left.",
-            "Try goal.",
-            "Right.",
+            "Left",
+            "Try goal",
+            "Right",
         ]
 
     def done(self, state_or_reward: str) -> bool:
-        return state_or_reward in REWARDS.values()
+        return state_or_reward.rstrip(self.state_stop()) in REWARDS.values()
 
     def generator(self) -> Generator[Tuple[int, float, bool, dict], int, None]:
         start_state = state = self.random.choice(self.n)
@@ -54,8 +58,8 @@ class Env(envs.base_env.Env[int, int]):
 
     @classmethod
     def quantify(cls, value: str, gamma: Optional[float]) -> float:
-        success = value.endswith(REWARDS[1.0])
-        value = gamma ** value.count(".")
+        success = value.endswith(REWARDS[1.0] + cls.state_stop())
+        value = gamma ** value.count(cls.state_stop())
         return value if success else (gamma - 1) * value
 
     def render(self, mode="human"):
@@ -72,9 +76,9 @@ class Env(envs.base_env.Env[int, int]):
         s, _, _, _ = next(self.iterator)
         return s
 
-    @staticmethod
-    def state_str(state: int) -> str:
-        return f"{state}."
+    @classmethod
+    def _state_str(cls, state: int) -> str:
+        return str(state)
 
     def step(self, action: int) -> Tuple[int, float, bool, dict]:
         return self.iterator.send(action)
@@ -85,8 +89,7 @@ class Env(envs.base_env.Env[int, int]):
         return one_hot
 
     def ts_to_string(self, ts: TimeStep) -> str:
+        description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"
         if ts.done:
-            reward_str = " " + REWARDS[ts.reward]
-        else:
-            reward_str = ""
-        return f"{self.state_str(ts.state)} {self.action_str(ts.action)}{reward_str}"
+            description += " " + REWARDS[ts.reward] + self.state_stop()
+        return description
