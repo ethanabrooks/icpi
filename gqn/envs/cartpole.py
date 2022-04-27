@@ -6,13 +6,14 @@ permalink: https://perma.cc/C9ZM-652R
 import math
 from typing import Optional, Union
 
+import envs.base_env
 import gym
 import numpy as np
-from base_env import Env, TimeStep
+from envs.base_env import TimeStep
 from gym import logger, spaces
 
 
-class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
+class Env(gym.Env[np.ndarray, Union[int, np.ndarray]]):
     """
     ### Description
 
@@ -205,7 +206,7 @@ class CartPoleEnv(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 REWARDS = {0.0: "Failure.", 1.0: "Success."}
 
 
-class Wrapper(gym.Wrapper, Env[np.ndarray, int]):
+class Wrapper(gym.Wrapper, envs.base_env.Env[np.ndarray, int]):
     def actions(self) -> "list[str]":
         return ["Left.", "Right."]
 
@@ -233,7 +234,7 @@ class Wrapper(gym.Wrapper, Env[np.ndarray, int]):
 
 
 if __name__ == "__main__":
-    env = Wrapper(CartPoleEnv(max_episode_steps=5))
+    env = Wrapper(Env(max_episode_steps=5))
     t = True
     while True:
         if t:

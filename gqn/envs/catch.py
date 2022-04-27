@@ -17,14 +17,14 @@
 
 from typing import Optional, Tuple, cast
 
-import base_env
 import dm_env
+import envs.base_env
 import gym
 import numpy as np
-from base_env import TimeStep
 from bsuite.environments import base
 from bsuite.experiments.catch import sweep
 from dm_env import specs
+from envs.base_env import TimeStep
 from gym.spaces import Discrete, MultiDiscrete
 
 _ACTIONS = (-1, 0, 1)  # Left, no-op, right.
@@ -33,7 +33,7 @@ BALL_CODE = 1.0
 PADDLE_CODE = 2.0
 
 
-class Catch(base.Environment):
+class Env(base.Environment):
     """A Catch environment built on the dm_env.Environment class.
 
     The agent must move a paddle to intercept falling balls. Falling balls only
@@ -127,8 +127,8 @@ REWARDS = {
 }
 
 
-class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
-    def __init__(self, env: Catch):
+class Wrapper(gym.Wrapper, envs.base_env.Env[np.ndarray, int]):
+    def __init__(self, env: Env):
         super().__init__(cast(gym.Env, env))
         self.action_space = Discrete(3, seed=env.random_seed)
         self.observation_space = MultiDiscrete(
@@ -153,7 +153,7 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
         return prompt if success else (gamma - 1) * prompt
 
     def reset(self):
-        assert isinstance(self.env, Catch)
+        assert isinstance(self.env, Env)
         return self.env.reset().observation
 
     def state_str(self, obs: np.ndarray) -> str:
@@ -162,7 +162,7 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
         return f"paddle=({paddle_x},0) ball=({ball_x},{ball_y})."
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
-        assert isinstance(self.env, Catch)
+        assert isinstance(self.env, Env)
         time_step: dm_env.TimeStep = self.env.step(action)
         return (
             time_step.observation,

@@ -7,11 +7,11 @@ from shlex import quote
 from typing import Optional
 
 import run_logger
+from agent.train import train
 from dollar_lambda import CommandTree, argument
 from git import Repo
 from run_logger import HasuraLogger
 from run_logger.main import get_config_params
-from train import train
 from vega_charts import line
 
 tree = CommandTree()

@@ -19,17 +19,18 @@ Rewards are [0, 0.1, .. 1] assigned randomly to 11 arms and deterministic
 """
 from typing import Optional, Tuple, cast
 
-import base_env
 import dm_env
+import envs.base_env
 import gym
 import numpy as np
 from bsuite.environments import base
 from bsuite.experiments.bandit import sweep
 from dm_env import specs
+from envs.base_env import TimeStep
 from gym.spaces import Discrete
 
 
-class Bandit(base.Environment):
+class Env(base.Environment):
     """SimpleBandit environment."""
 
     def __init__(self, mapping_seed: Optional[int] = None, num_actions: int = 11):
@@ -38,7 +39,7 @@ class Bandit(base.Environment):
           mapping_seed: Optional integer. Seed for action mapping.
           num_actions: number of actions available, defaults to 11.
         """
-        super(Bandit, self).__init__()
+        super(Env, self).__init__()
         self.random_seed = mapping_seed
         self._rng = np.random.RandomState(mapping_seed)
         self._num_actions = num_actions
@@ -75,13 +76,13 @@ class Bandit(base.Environment):
         return dict(total_regret=self._total_regret)
 
 
-class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
-    def __init__(self, env: Bandit):
+class Wrapper(gym.Wrapper, envs.base_env.Env[np.ndarray, int]):
+    def __init__(self, env: Env):
         super().__init__(cast(gym.Env, env))
         self.action_space = Discrete(3, seed=env.random_seed)
 
     def actions(self) -> "list[str]":
-        assert isinstance(self.env, Bandit)
+        assert isinstance(self.env, Env)
         return [str(i) for i in range(self.env.action_spec().num_values)]
 
     def done(self, state_or_reward: str) -> bool:
@@ -94,14 +95,14 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
         return value if success else (gamma - 1) * value
 
     def reset(self):
-        assert isinstance(self.env, Bandit)
+        assert isinstance(self.env, Env)
         return self.env.reset().observation
 
     def state_str(self, obs: np.ndarray) -> str:
         return ""
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
-        assert isinstance(self.env, Bandit)
+        assert isinstance(self.env, Env)
         time_step: dm_env.TimeStep = self.env.step(action)
         return (
             time_step.observation,
@@ -113,15 +114,15 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
     def successor_feature(self, obs: np.ndarray) -> np.ndarray:
         return obs.flatten()
 
-    def ts_to_string(self, ts: base_env.TimeStep) -> str:
+    def ts_to_string(self, ts: TimeStep) -> str:
         return f"{self.actions()[ts.action]}: {str(round(ts.reward, ndigits=2))}"
 
 
 if __name__ == "__main__":
-    env = Wrapper(Bandit(mapping_seed=0, num_actions=3))
+    env = Wrapper(Env(mapping_seed=0, num_actions=3))
     while True:
         env.reset()
         a = env.action_space.sample()
         s, r, t, i = env.step(a)
-        print(env.ts_to_string(base_env.TimeStep(s, a, r, t, s)))
+        print(env.ts_to_string(TimeStep(s, a, r, t, s)))
         breakpoint()
