@@ -126,15 +126,15 @@ def get_transition_probs(
         last_step = trajectories[-1][-1]
         if last_step.done:
             ground_truth = encoder.done_str(last_step.reward, last_step.next_state)
-        else:
-            ground_truth = encoder.state_str(last_step.next_state)
-        # print(prompt)
-        # print()
-        # print(ground_truth)
-        # breakpoint()
+            # else:
+            #     ground_truth = encoder.state_str(last_step.next_state)
+            # print(prompt)
+            # print()
+            # print(ground_truth)
+            # breakpoint()
 
-        logprobs = gpt3.get_full_completion(prompt)["logprobs"]
-        yield get_prob(" " + ground_truth, logprobs)
+            logprobs = gpt3.get_full_completion(prompt)["logprobs"]
+            yield get_prob(" " + ground_truth, logprobs)
 
 
 def save_plot(df: pd.DataFrame, filename: str):

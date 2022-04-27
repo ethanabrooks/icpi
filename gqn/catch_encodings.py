@@ -6,14 +6,7 @@ from typing import List, Literal, NamedTuple, Optional
 import numpy as np
 import pandas as pd
 from agent.gpt3 import GPT3
-from compare_features import (
-    Encoder,
-    TrajectoriesGoodActions,
-    Trajectory,
-    get_good_action_probs,
-    get_transition_probs,
-    save_plot,
-)
+from compare_encodings import Encoder, Trajectory, get_transition_probs, save_plot
 from dollar_lambda import command
 from envs import catch
 from envs.base_env import TimeStep
@@ -21,38 +14,6 @@ from envs.catch import Obs
 from run_logger import HasuraLogger
 
 ACTIONS = ["Left", "Stay", "Right"]
-
-
-class PaddleXBallXParensBallY(Encoder):
-    def name(self) -> str:
-        return "{paddle_x},{ball_x} ({ball_y} to go). Right:"
-
-    def state_str(self, state: np.ndarray) -> str:
-        paddle_x, ball_x, ball_y = state
-        return f"{paddle_x},{ball_x} ({ball_y} to go)."
-
-    def action_str(self, action: int) -> str:
-        return f"{ACTIONS[action]}:"
-
-    def done_str(self, reward: float, next_state: np.ndarray) -> str:
-        paddle_x, ball_x, _ = next_state
-        return f"{paddle_x},{ball_x} ({'success' if reward == 1 else 'failure'})."
-
-
-class ParensPaddleParensBall(Encoder):
-    def name(self) -> str:
-        return "({paddle_x},0) ({ball_x},{ball_y}). Right:"
-
-    def state_str(self, state: np.ndarray) -> str:
-        paddle_x, ball_x, ball_y = state
-        return f"({paddle_x},0) ({ball_x},{ball_y})."
-
-    def action_str(self, action: int) -> str:
-        return f"{ACTIONS[action]}:"
-
-    def done_str(self, reward: float, next_state: np.ndarray) -> str:
-        paddle_x, ball_x, ball_y = next_state
-        return f"({paddle_x},0) ({ball_x},{ball_y}) [{'success' if reward == 1 else 'failure'}]."
 
 
 class ParensPaddleParensBallWithNames(Encoder):
@@ -93,14 +54,6 @@ class ParensPaddleParensBallWithNamesAndPreface(ParensPaddleParensBallWithNames)
             raise RuntimeError()
 
 
-class ParensPaddleParensBallWithNamesAndVerboseActions(ParensPaddleParensBallWithNames):
-    def name(self) -> str:
-        return "({paddle_x},0) ({ball_x},{ball_y}). Move the paddle right:"
-
-    def action_str(self, action: int) -> str:
-        return f"{'Do not move paddle' if action == 1 else ('Move paddle ' + ACTIONS[action].lower())}:"
-
-
 class ParensPaddleParensBallWithNamesAndFalling(ParensPaddleParensBallWithNames):
     def name(self) -> str:
         return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [falling]. Right:"
@@ -108,6 +61,51 @@ class ParensPaddleParensBallWithNamesAndFalling(ParensPaddleParensBallWithNames)
     def state_str(self, state: np.ndarray) -> str:
         paddle_x, ball_x, ball_y = state
         return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [falling]."
+
+
+class ParensPaddleParensBallWithNamesAndUnderTheBall(ParensPaddleParensBallWithNames):
+    def name(self) -> str:
+        return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [under the ball]. Right:"
+
+    def state_str(self, state: np.ndarray) -> str:
+        paddle_x, ball_x, ball_y = state
+        under_ball = ball_x == paddle_x
+        under_ball = "under the ball" if under_ball else "not under the ball"
+        return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [{under_ball}]."
+
+
+class ParensPaddleParensBallWithNamesAndUnderTheBallNoDone(
+    ParensPaddleParensBallWithNamesAndUnderTheBall
+):
+    def name(self) -> str:
+        return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [under the ball]."
+
+    def done_str(self, reward: float, next_state: np.ndarray) -> str:
+        paddle_x, ball_x, ball_y = next_state
+        return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [{'under the ball' if reward == 1 else 'not under the ball'}]."
+
+
+class ParensPaddleParensBallWithNamesUnderTheBallFalling(
+    ParensPaddleParensBallWithNames
+):
+    def name(self) -> str:
+        return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [under the ball,falling]. Right:"
+
+    def state_str(self, state: np.ndarray) -> str:
+        paddle_x, ball_x, ball_y = state
+        under_ball = "under the ball" if ball_x == paddle_x else "not under the ball"
+        falling = "falling" if ball_y > 0 else "not falling"
+        return (
+            f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [{under_ball},{falling}]."
+        )
+
+    def done_str(self, reward: float, next_state: np.ndarray) -> str:
+        paddle_x, ball_x, ball_y = next_state
+        under_ball = "under the ball" if ball_x == paddle_x else "not under the ball"
+        falling = "falling" if ball_y > 0 else "not falling"
+        return (
+            f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [{under_ball},{falling}]."
+        )
 
 
 class ParensPaddleParensBallWithNamesAndCanCatch(ParensPaddleParensBallWithNames):
@@ -173,6 +171,7 @@ def main(
     n: int = 40,
     seed: int = 0,
     logprobs: int = 3,
+    prompt_size=8,
     random_trajectories: int = 500,
 ):
     env = catch.Wrapper(catch.Env(gamma=1.0, rows=5, columns=4, seed=seed))
@@ -180,16 +179,17 @@ def main(
     def get_trajectories():
         for _ in range(random_trajectories):
             trajectory = collect_trajectory(env)
-            for i in range(len(trajectory)):
-                yield trajectory[i:]
+            yield trajectory
+            # for i in range(len(trajectory)):
+            #     yield trajectory[i:]
 
     trajectories = list(get_trajectories())
     random = np.random.default_rng(seed=seed)
     successful = [t for t in trajectories if t[-1].time_step.reward == 1]
     unsuccessful = [t for t in trajectories if t[-1].time_step.reward < 1]
-    action_time_steps = [
-        ts for t in trajectories for ts in t if 0 < len(ts.good_actions) < len(ACTIONS)
-    ]
+    # action_time_steps = [
+    #     ts for t in trajectories for ts in t if 0 < len(ts.good_actions) < len(ACTIONS)
+    # ]
 
     logger = HasuraLogger(graphql_endpoint=os.getenv("GRAPHQL_ENDPOINT"))
     gpt3 = GPT3(
@@ -200,20 +200,24 @@ def main(
         temperature=0.1,
         top_p=1,
     )
-    encoder = ParensPaddleParensBallWithNamesAndStart()
     transition_probs = {}
-    action_probs = {}
+    # action_probs = {}
 
-    for prompt_size in range(10, 11):
+    for encoder in [
+        ParensPaddleParensBallWithNamesAndFalling(),
+        ParensPaddleParensBallWithNamesAndUnderTheBall(),
+        ParensPaddleParensBallWithNamesAndUnderTheBallNoDone(),
+        ParensPaddleParensBallWithNamesUnderTheBallFalling(),
+    ]:
 
-        def get_action_trajectories() -> TrajectoriesGoodActions:
-            prompt_trajectories = [
-                [ts.time_step for ts in successful[i]]
-                for i in random.choice(len(successful), prompt_size, replace=False)
-            ]
-            ts = action_time_steps[random.choice(len(action_time_steps))]
-            prompt_trajectories = prompt_trajectories + [[ts.time_step]]
-            return TrajectoriesGoodActions(prompt_trajectories, ts.good_actions)
+        # def get_action_trajectories() -> TrajectoriesGoodActions:
+        #     prompt_trajectories = [
+        #         [ts.time_step for ts in successful[i]]
+        #         for i in random.choice(len(successful), prompt_size, replace=False)
+        #     ]
+        #     ts = action_time_steps[random.choice(len(action_time_steps))]
+        #     prompt_trajectories = prompt_trajectories + [[ts.time_step]]
+        #     return TrajectoriesGoodActions(prompt_trajectories, ts.good_actions)
 
         def get_transition_trajectories() -> List[Trajectory]:
             half = ceil((prompt_size + 1) / 2)
@@ -226,25 +230,23 @@ def main(
             ]
             random.shuffle(prompt_trajectories)
             prompt_trajectories = prompt_trajectories[: prompt_size + 1]
-            last = prompt_trajectories[-1]
-            prompt_trajectories[-1] = last[:1]
             return prompt_trajectories
 
         transitions = [get_transition_trajectories() for _ in range(n)]
-        transition_probs[prompt_size] = list(
+        transition_probs[encoder.name()] = list(
             get_transition_probs(encoder=encoder, gpt3=gpt3, transitions=transitions)
         )
-        actions = [get_action_trajectories() for _ in range(n)]
-        action_probs[prompt_size] = list(
-            get_good_action_probs(actions=actions, encoder=encoder, gpt3=gpt3)
-        )
+        # actions = [get_action_trajectories() for _ in range(n)]
+        # action_probs[prompt_size] = list(
+        #     get_good_action_probs(actions=actions, encoder=encoder, gpt3=gpt3)
+        # )
 
     data = [
         dict(encoding=k, probability=np.mean(v), inference="transition", std=np.std(v))
         for k, v in transition_probs.items()
     ] + [
-        dict(encoding=k, probability=np.mean(v), inference="action", std=np.std(v))
-        for k, v in action_probs.items()
+        # dict(encoding=k, probability=np.mean(v), inference="action", std=np.std(v))
+        # for k, v in action_probs.items()
     ]
     df = pd.DataFrame.from_records(data)
     save_plot(df, "logs/catch-prompt-sizes.html")
