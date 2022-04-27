@@ -128,8 +128,8 @@ class Env(base.Environment):
 
 
 REWARDS = {
-    1.0: "P.x==B.x, B.y==0",
-    0.0: "P.x!=B.x, B.y==0",
+    1.0: "P.x==B.x, B.y==0, success",
+    0.0: "P.x!=B.x, B.y==0, failure",
 }
 
 
@@ -177,7 +177,15 @@ class Wrapper(gym.Wrapper, envs.base_env.Env[Obs, int]):
         paddle_x, ball_x, ball_y = Obs(*obs)
         x_status = "P.x==B.x" if paddle_x == ball_x else "P.x!=B.x"
         y_status = "B.y==0" if ball_y == 0 else "B.y>0"
-        return f"{x_status}, {y_status}"
+        if ball_y == 0:
+            reward = (
+                "success"
+                if x_status == "P.x==B.x" and y_status == "B.y==0"
+                else "failure"
+            )
+        else:
+            reward = "in progress"
+        return f"{x_status}, {y_status}, {reward}"
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
         assert isinstance(self.env, Env)
