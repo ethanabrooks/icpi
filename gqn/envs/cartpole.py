@@ -215,9 +215,9 @@ class Wrapper(gym.Wrapper, envs.base_env.Env[np.ndarray, int]):
 
     @classmethod
     def quantify(cls, value: str, gamma: Optional[float]) -> float:
-        success = value.endswith(REWARDS[1.0])
+        success = value.endswith(REWARDS[1.0] + ".")
         value = gamma ** value.count(".")
-        return value if success else (gamma - 1) * value
+        return value if success else 0
 
     @classmethod
     def _state_str(cls, obs: np.ndarray) -> str:

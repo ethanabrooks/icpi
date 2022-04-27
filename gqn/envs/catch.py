@@ -155,8 +155,8 @@ class Wrapper(gym.Wrapper, envs.base_env.Env[Obs, int]):
     @classmethod
     def quantify(cls, prompt: str, gamma: Optional[float]) -> float:
         success = prompt.endswith(f"[{REWARDS[1.0]}].")
-        prompt = gamma ** prompt.count(".")
-        return prompt if success else (gamma - 1) * prompt
+        value = gamma ** (prompt.count(":") - 1)
+        return value if success else 0
 
     def reset(self):
         assert isinstance(self.env, Env)
