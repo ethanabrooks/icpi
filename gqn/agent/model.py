@@ -1,5 +1,4 @@
 import abc
-from copy import deepcopy
 from dataclasses import dataclass
 from typing import Deque, Generic, List
 
@@ -153,7 +152,6 @@ class Q(Model[ObsType, ActType]):
         state_str = self.env.state_str(state)
         action_str = self.env.action_str(action)
         completions = [state_str, action_str]
-        env = deepcopy(self.env)
 
         while True:
             if t == self.max_steps:
@@ -167,15 +165,8 @@ class Q(Model[ObsType, ActType]):
                 if self.debug >= 4:
                     breakpoint()
 
-                # state_or_reward, *_ = self.gpt3(new_prompt).split(self.env.state_stop())
-                # state_or_reward = state_or_reward.lstrip() + self.env.state_stop()
-                next_state, reward, done, _ = env.step(
-                    env.action(action_str.rstrip(env.action_stop()))
-                )
-                if done:
-                    state_or_reward = self.env.done_str(next_state, reward)
-                else:
-                    state_or_reward = self.env.state_str(next_state)
+                state_or_reward, *_ = self.gpt3(new_prompt).split(self.env.state_stop())
+                state_or_reward = state_or_reward.lstrip() + self.env.state_stop()
             if self.debug >= 2:
                 print("state/reward", state_or_reward)
             if self.debug >= 4:
