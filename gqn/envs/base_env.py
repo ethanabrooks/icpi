@@ -67,5 +67,9 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     def successor_feature(self, state: int) -> np.ndarray:
         ...
 
+    @classmethod
+    def done_str(cls, state_str, reward) -> str:
+        return "WTF"
+
     def ts_to_string(self, ts: TimeStep) -> str:
         ...
