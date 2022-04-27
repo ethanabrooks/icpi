@@ -1,6 +1,6 @@
 import abc
 from dataclasses import dataclass
-from typing import Dict, Generic, Iterator, List, Literal, Optional
+from typing import Dict, Generic, Iterator, List, Literal, Optional, Tuple
 
 import altair as alt
 import numpy as np
@@ -62,22 +62,25 @@ class Encoder(abc.ABC):
         )
 
 
-def get_prob(target: str, logprobs: List[Dict[str, float]]) -> float:
+def get_prob(
+    target: str, logprobs: List[Dict[str, float]], debug=False
+) -> Tuple[float, str]:
     if not target:
-        return 1
+        return 1, target
     if not logprobs:
-        return 0
+        return 0, target
 
     def get_prob_rec(logprobs):
         while logprobs:
             head, *logprobs = logprobs
             for token, lp in head.items():
-                prob = np.exp(lp)
+                p1 = np.exp(lp)
                 if target.startswith(token):
-                    yield prob * get_prob(target[len(token) :], logprobs)
+                    p2, s = get_prob(target[len(token) :], logprobs)
+                    yield p1 * p2, token + s
 
     rec = list(get_prob_rec(logprobs))
-    return max(rec, default=0)
+    return max(rec, key=lambda x: x[0], default=(0, ""))
 
 
 Trajectory = List[TimeStep]
@@ -107,7 +110,8 @@ def get_good_action_probs(
         # breakpoint()
         logprobs = gpt3.get_full_completion(prompt)["logprobs"]
         probs_per_action = [
-            get_prob(" " + encoder.action_str(action), logprobs) for action in range(3)
+            get_prob(" " + encoder.action_str(action), logprobs)[0]
+            for action in range(3)
         ]
         yield sum(
             [p for a, p in enumerate(probs_per_action) if a in good_actions]
@@ -133,8 +137,11 @@ def get_transition_probs(
             # print(ground_truth)
             # breakpoint()
 
-            logprobs = gpt3.get_full_completion(prompt)["logprobs"]
-            yield get_prob(" " + ground_truth, logprobs)
+            completion = gpt3.get_full_completion(prompt)
+            logprobs = completion["logprobs"]
+            prob, _ = get_prob(" " + ground_truth, logprobs)
+            if prob > 0:
+                yield prob
 
 
 def save_plot(df: pd.DataFrame, filename: str):

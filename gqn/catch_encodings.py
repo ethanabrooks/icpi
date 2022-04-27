@@ -16,6 +16,49 @@ from run_logger import HasuraLogger
 ACTIONS = ["Left", "Stay", "Right"]
 
 
+class Math(Encoder):
+    def name(self) -> str:
+        return "P=({paddle_x},0) B=({ball_x},{ball_y}) [P.x==B.x,B.y>0]; Right:"
+
+    def state_str(self, state: np.ndarray) -> str:
+        paddle_x, ball_x, ball_y = state
+        return f"P=({paddle_x},0) B=({ball_x},{ball_y}) [{self.status(*state)}];"
+
+    @staticmethod
+    def status(paddle_x: float, ball_x: float, ball_y: float) -> str:
+        x_status = "P.x==B.x" if paddle_x == ball_x else "P.x!=B.x"
+        y_status = "B.y==0" if ball_y == 0 else "B.y>0"
+        return f"{x_status},{y_status}"
+
+    def action_str(self, action: int) -> str:
+        return f"{ACTIONS[action]}:"
+
+    def done_str(self, reward: float, next_state: np.ndarray) -> str:
+        return self.state_str(next_state)
+
+
+class MathWithReward(Math):
+    def name(self) -> str:
+        return "P=({paddle_x},0) B=({ball_x},{ball_y}) [P.x!=B.x,B.y==0,Failure];"
+
+    def status(self, paddle_x: float, ball_x: float, ball_y: float) -> str:
+        status = super().status(paddle_x, ball_x, ball_y)
+        if ball_y == 0:
+            status += ",Success" if paddle_x == ball_x else ",Failure"
+        return status
+
+
+class MathWithSuccessOnly(Math):
+    def name(self) -> str:
+        return "P=({paddle_x},0) B=({ball_x},{ball_y}) [P.x==B.x,B.y==0,Success];"
+
+    def status(self, paddle_x: float, ball_x: float, ball_y: float) -> str:
+        status = super().status(paddle_x, ball_x, ball_y)
+        if ball_y == 0 and paddle_x == ball_x:
+            status += ",Success"
+        return status
+
+
 class Names(Encoder):
     def name(self) -> str:
         return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}). Right:"
@@ -212,7 +255,7 @@ def main(
         debug=-1,
         logprobs=logprobs,
         logger=logger,
-        stop=[".", ":"],
+        stop=[";", ":"],
         temperature=0.1,
         top_p=1,
     )
@@ -220,11 +263,9 @@ def main(
     # action_probs = {}
 
     for encoder in [
-        Falling(),
-        UnderTheBall(),
-        UnderTheBallNoDone(),
-        UnderTheBallFalling(),
-        LeftRightOfBall(),
+        Math(),
+        MathWithReward(),
+        MathWithSuccessOnly(),
     ]:
 
         # def get_action_trajectories() -> TrajectoriesGoodActions:
