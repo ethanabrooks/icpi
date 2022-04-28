@@ -4,7 +4,7 @@ Copied from http://incompleteideas.net/sutton/book/code/pole.c
 permalink: https://perma.cc/C9ZM-652R
 """
 import math
-from typing import Optional, Union
+from typing import NamedTuple, Optional, Union
 
 import envs.base_env
 import gym
@@ -13,7 +13,12 @@ from envs.base_env import TimeStep
 from gym import logger, spaces
 
 
-class Env(gym.Env[np.ndarray, Union[int, np.ndarray]]):
+class Obs(NamedTuple):
+    state: np.ndarray
+    steps_to_go: int
+
+
+class Env(gym.Env[np.ndarray, Union[int, Obs]]):
     """
     ### Description
 
@@ -74,7 +79,7 @@ class Env(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 50}
 
-    def __init__(self, gamma: float, max_episode_steps: int):
+    def __init__(self, gamma: float, max_episode_steps: int, seed: int):
         self.max_episode_steps = max_episode_steps
         self.gravity = 9.8
         self.masscart = 1.0
@@ -103,16 +108,17 @@ class Env(gym.Env[np.ndarray, Union[int, np.ndarray]]):
             dtype=np.float32,
         )
 
-        self.action_space = spaces.Discrete(2)
+        self.action_space = spaces.Discrete(2, seed=seed)
         self.observation_space = spaces.Box(-high, high, dtype=np.float32)
 
         self.screen = None
         self.clock = None
         self.isopen = True
         self.state = None
-        self.timestep = 0
+        self.steps_to_go = max_episode_steps
 
         self.steps_beyond_done = None
+        self.seed(seed)
 
     def step(self, action):
         err_msg = f"{action!r} ({type(action)}) invalid"
@@ -153,15 +159,16 @@ class Env(gym.Env[np.ndarray, Union[int, np.ndarray]]):
             or theta > self.theta_threshold_radians
         )
 
-        if self.timestep == self.max_episode_steps - 1:
+        if self.steps_to_go == 0:
             reward = 1.0
             done = True
         else:
             reward = 0.0
 
         if self.steps_beyond_done is None:
-            # Pole just fell!
-            self.steps_beyond_done = 0
+            if done:
+                # Pole just fell!
+                self.steps_beyond_done = 0
         else:
             if self.steps_beyond_done == 0:
                 logger.warn(
@@ -172,9 +179,10 @@ class Env(gym.Env[np.ndarray, Union[int, np.ndarray]]):
                 )
             self.steps_beyond_done += 1
 
-        self.timestep += 1
+        self.steps_to_go -= 1
+        state = np.array(self.state, dtype=np.float32)
         return (
-            np.array(self.state, dtype=np.float32),
+            Obs(state, self.steps_to_go),
             reward,
             done,
             dict(optimal=self._optimal),
@@ -188,13 +196,14 @@ class Env(gym.Env[np.ndarray, Union[int, np.ndarray]]):
         options: Optional[dict] = None,
     ):
         super().reset(seed=seed)
-        self.timestep = 0
+        self.steps_to_go = self.max_episode_steps
         self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
         self.steps_beyond_done = None
         if not return_info:
-            return np.array(self.state, dtype=np.float32)
+            state = np.array(self.state, dtype=np.float32)
         else:
-            return np.array(self.state, dtype=np.float32), {}
+            state = np.array(self.state, dtype=np.float32), {}
+        return Obs(state, self.steps_to_go)
 
     def render(self, mode="human"):
         pass
@@ -206,7 +215,7 @@ class Env(gym.Env[np.ndarray, Union[int, np.ndarray]]):
 REWARDS = {0.0: "Failure", 1.0: "Success"}
 
 
-class Wrapper(gym.Wrapper, envs.base_env.Env[np.ndarray, int]):
+class Wrapper(gym.Wrapper, envs.base_env.Env[Obs, int]):
     def actions(self) -> "list[str]":
         return ["Left", "Right"]
 
@@ -215,27 +224,33 @@ class Wrapper(gym.Wrapper, envs.base_env.Env[np.ndarray, int]):
 
     @classmethod
     def quantify(cls, value: str, gamma: Optional[float]) -> float:
-        success = value.endswith(REWARDS[1.0] + ".")
-        value = gamma ** value.count(".")
+        success = value.endswith(REWARDS[1.0] + ";")
+        value = gamma ** value.count(";")
         return value if success else 0
 
     @classmethod
-    def _state_str(cls, obs: np.ndarray) -> str:
-        a, b, c, d = obs
-        return f"x: {a:.2f}, ẋ: {b:.2f}, a: {c:.2f}, ȧ: {d:.2f}"
+    def _state_str(cls, obs: Obs) -> str:
+        a, b, c, d = obs.state
+        return (
+            f"x={a:.2f}, ẋ={b:.2f}, a={c:.2f}, ȧ={d:.2f} ({obs.steps_to_go + 1} to go)"
+        )
 
-    def successor_feature(self, obs: np.ndarray) -> np.ndarray:
-        return obs.flatten()
+    @staticmethod
+    def state_stop() -> str:
+        return ";"
+
+    def successor_feature(self, obs: Obs) -> np.ndarray:
+        return obs.state.flatten()
 
     def ts_to_string(self, ts: TimeStep) -> str:
-        description = f"{self.state_str(ts.state)} {self.actions()[ts.action]}"
+        description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"
         if ts.done:
-            description += f" {REWARDS[ts.reward]}{self.state_stop()}"
+            description += f"{self.state_str(ts.next_state)} {REWARDS[ts.reward]}{self.state_stop()}"
         return description
 
 
 if __name__ == "__main__":
-    env = Wrapper(Env(max_episode_steps=5))
+    env = Wrapper(Env(max_episode_steps=5, gamma=1, seed=0))
     t = True
     while True:
         if t:
