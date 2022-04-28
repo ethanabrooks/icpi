@@ -23,50 +23,39 @@ from run_logger import HasuraLogger
 ACTIONS = ["Left", "Stay", "Right"]
 
 
-class Math(Encoder):
+class PaddleXBallXParensBallY(Encoder):
     def name(self) -> str:
-        return "P=({paddle_x},0) B=({ball_x},{ball_y}) [P.x==B.x,B.y>0]; Right:"
+        return "{paddle_x},{ball_x} ({ball_y} to go). Right:"
 
     def state_str(self, state: np.ndarray) -> str:
         paddle_x, ball_x, ball_y = state
-        return f"P=({paddle_x},0) B=({ball_x},{ball_y}) [{self.status(*state)}];"
-
-    @staticmethod
-    def status(paddle_x: float, ball_x: float, ball_y: float) -> str:
-        x_status = "P.x==B.x" if paddle_x == ball_x else "P.x!=B.x"
-        y_status = "B.y==0" if ball_y == 0 else "B.y>0"
-        return f"{x_status},{y_status}"
+        return f"{paddle_x},{ball_x} ({ball_y} to go)."
 
     def action_str(self, action: int) -> str:
         return f"{ACTIONS[action]}:"
 
     def done_str(self, reward: float, next_state: np.ndarray) -> str:
-        return self.state_str(next_state)
+        paddle_x, ball_x, _ = next_state
+        return f"{paddle_x},{ball_x} ({'success' if reward == 1 else 'failure'})."
 
 
-class MathWithReward(Math):
+class ParensPaddleParensBall(Encoder):
     def name(self) -> str:
-        return "P=({paddle_x},0) B=({ball_x},{ball_y}) [P.x!=B.x,B.y==0,Failure];"
+        return "({paddle_x},0) ({ball_x},{ball_y}). Right:"
 
-    def status(self, paddle_x: float, ball_x: float, ball_y: float) -> str:
-        status = super().status(paddle_x, ball_x, ball_y)
-        if ball_y == 0:
-            status += ",Success" if paddle_x == ball_x else ",Failure"
-        return status
+    def state_str(self, state: np.ndarray) -> str:
+        paddle_x, ball_x, ball_y = state
+        return f"({paddle_x},0) ({ball_x},{ball_y})."
 
+    def action_str(self, action: int) -> str:
+        return f"{ACTIONS[action]}:"
 
-class MathWithSuccessOnly(Math):
-    def name(self) -> str:
-        return "P=({paddle_x},0) B=({ball_x},{ball_y}) [P.x==B.x,B.y==0,Success];"
-
-    def status(self, paddle_x: float, ball_x: float, ball_y: float) -> str:
-        status = super().status(paddle_x, ball_x, ball_y)
-        if ball_y == 0 and paddle_x == ball_x:
-            status += ",Success"
-        return status
+    def done_str(self, reward: float, next_state: np.ndarray) -> str:
+        paddle_x, ball_x, ball_y = next_state
+        return f"({paddle_x},0) ({ball_x},{ball_y}) [{'success' if reward == 1 else 'failure'}]."
 
 
-class Names(Encoder):
+class ParensPaddleParensBallWithNames(Encoder):
     def name(self) -> str:
         return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}). Right:"
 
@@ -82,7 +71,7 @@ class Names(Encoder):
         return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [{'caught the ball' if reward == 1 else 'missed the ball'}]."
 
 
-class Start(Names):
+class ParensPaddleParensBallWithNamesAndStart(ParensPaddleParensBallWithNames):
     def name(self) -> str:
         return "Start: Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}). Right:"
 
@@ -90,7 +79,7 @@ class Start(Names):
         return "Start:"
 
 
-class Preface(Names):
+class ParensPaddleParensBallWithNamesAndPreface(ParensPaddleParensBallWithNames):
     def name(self) -> str:
         return "A paddle that sometimes catches a falling ball:"
 
@@ -104,7 +93,15 @@ class Preface(Names):
             raise RuntimeError()
 
 
-class Falling(Names):
+class ParensPaddleParensBallWithNamesAndVerboseActions(ParensPaddleParensBallWithNames):
+    def name(self) -> str:
+        return "({paddle_x},0) ({ball_x},{ball_y}). Move the paddle right:"
+
+    def action_str(self, action: int) -> str:
+        return f"{'Do not move paddle' if action == 1 else ('Move paddle ' + ACTIONS[action].lower())}:"
+
+
+class ParensPaddleParensBallWithNamesAndFalling(ParensPaddleParensBallWithNames):
     def name(self) -> str:
         return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [falling]. Right:"
 
@@ -113,68 +110,7 @@ class Falling(Names):
         return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [falling]."
 
 
-class UnderTheBall(Names):
-    def name(self) -> str:
-        return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [under the ball]. Right:"
-
-    def state_str(self, state: np.ndarray) -> str:
-        paddle_x, ball_x, ball_y = state
-        under_ball = ball_x == paddle_x
-        under_ball = "under the ball" if under_ball else "not under the ball"
-        return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [{under_ball}]."
-
-
-class UnderTheBallNoDone(UnderTheBall):
-    def name(self) -> str:
-        return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [under the ball]."
-
-    def done_str(self, reward: float, next_state: np.ndarray) -> str:
-        paddle_x, ball_x, ball_y = next_state
-        return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [{'under the ball' if reward == 1 else 'not under the ball'}]."
-
-
-class UnderTheBallFalling(Names):
-    def name(self) -> str:
-        return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [under the ball,falling]. Right:"
-
-    def state_str(self, state: np.ndarray) -> str:
-        paddle_x, ball_x, ball_y = state
-        status = self.status(paddle_x, ball_x, ball_y)
-        return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [{status}]."
-
-    def done_str(self, reward: float, next_state: np.ndarray) -> str:
-        paddle_x, ball_x, ball_y = next_state
-        status = self.status(paddle_x, ball_x, ball_y)
-        return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [{status}]."
-
-    @staticmethod
-    def status(paddle_x, ball_x, ball_y):
-        under_ball = "under the ball" if ball_x == paddle_x else "not under the ball"
-        falling = "falling" if ball_y > 0 else "not falling"
-        status = under_ball + "," + falling
-        return status
-
-
-class LeftRightOfBall(UnderTheBallFalling):
-    def name(self) -> str:
-        return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [left of the ball,falling]. Right:"
-
-    @staticmethod
-    def status(paddle_x, ball_x, ball_y):
-        if ball_x > paddle_x:
-            x_status = "left of the ball"
-        elif ball_x < paddle_x:
-            x_status = "right of the ball"
-        else:
-            x_status = "on the ball"
-        if ball_y > 0:
-            y_status = "falling"
-        else:
-            y_status = "not falling"
-        return x_status + "," + y_status
-
-
-class CanCatch(Names):
+class ParensPaddleParensBallWithNamesAndCanCatch(ParensPaddleParensBallWithNames):
     def name(self) -> str:
         return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [can catch the ball]. Right:"
 
@@ -237,7 +173,6 @@ def main(
     n: int = 40,
     seed: int = 0,
     logprobs: int = 3,
-    prompt_size=8,
     random_trajectories: int = 500,
 ):
     env = catch.Wrapper(catch.Env(gamma=1.0, rows=5, columns=4, seed=seed))
@@ -245,7 +180,8 @@ def main(
     def get_trajectories():
         for _ in range(random_trajectories):
             trajectory = collect_trajectory(env)
-            yield trajectory
+            for i in range(len(trajectory)):
+                yield trajectory[i:]
 
     trajectories = list(get_trajectories())
     random = np.random.default_rng(seed=seed)
@@ -260,18 +196,15 @@ def main(
         debug=-1,
         logprobs=logprobs,
         logger=logger,
-        stop=[";", ":"],
+        stop=[".", ":"],
         temperature=0.1,
         top_p=1,
     )
+    encoder = ParensPaddleParensBallWithNamesAndStart()
     transition_probs = {}
     action_probs = {}
 
-    for encoder in [
-        Math(),
-        MathWithReward(),
-        MathWithSuccessOnly(),
-    ]:
+    for prompt_size in range(10, 11):
 
         def get_action_trajectories() -> TrajectoriesGoodActions:
             prompt_trajectories = [
@@ -293,14 +226,16 @@ def main(
             ]
             random.shuffle(prompt_trajectories)
             prompt_trajectories = prompt_trajectories[: prompt_size + 1]
+            last = prompt_trajectories[-1]
+            prompt_trajectories[-1] = last[:1]
             return prompt_trajectories
 
         transitions = [get_transition_trajectories() for _ in range(n)]
-        transition_probs[encoder.name()] = list(
+        transition_probs[prompt_size] = list(
             get_transition_probs(encoder=encoder, gpt3=gpt3, transitions=transitions)
         )
         actions = [get_action_trajectories() for _ in range(n)]
-        action_probs[encoder.name()] = list(
+        action_probs[prompt_size] = list(
             get_good_action_probs(actions=actions, encoder=encoder, gpt3=gpt3)
         )
 
