@@ -110,14 +110,14 @@ def train(
                 action = env.action_space.sample()
             next_state, reward, done, info = env.step(action)
             step = TimeStep(state, action, reward, done, next_state)
-            r += gamma ** t * reward
+            r += gamma**t * reward
             t += 1
             T += 1
             if t >= max_steps:
                 done = timed_out = True
             if done:
                 episodes += 1
-                if not use_pi:
+                if use_pi:
                     regret = info["optimal"] - r
                     log = dict(
                         episode=episodes,
