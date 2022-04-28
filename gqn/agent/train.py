@@ -16,7 +16,9 @@ def make_env(env_id: str, gamma: float, seed: int):
     if env_id == "bandit":
         env = bandit.Wrapper(bandit.Env(mapping_seed=seed, num_actions=3))
     elif env_id == "cartpole":
-        env = cartpole.Wrapper(cartpole.Env(gamma=gamma, max_episode_steps=5))
+        env = cartpole.Wrapper(
+            cartpole.Env(gamma=gamma, max_episode_steps=5, seed=seed)
+        )
     elif env_id == "catch":
         env = catch.Wrapper(catch.Env(columns=4, gamma=gamma, rows=5, seed=seed))
     elif env_id == "chain":
