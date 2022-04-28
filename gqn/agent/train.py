@@ -116,6 +116,7 @@ def train(
             if t >= max_steps:
                 done = timed_out = True
             if done:
+                print(".", end="")
                 episodes += 1
                 if use_pi:
                     regret = info["optimal"] - r
