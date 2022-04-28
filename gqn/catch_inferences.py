@@ -1,12 +1,13 @@
 import os
+from abc import ABC
 from math import ceil
-from typing import List, NamedTuple
+from typing import List, NamedTuple, Tuple
 
 import numpy as np
 import pandas as pd
 from agent.gpt3 import GPT3
+from compute_probabilities import Encoder as BaseEncoder
 from compute_probabilities import (
-    Encoder,
     Trajectory,
     collect_trajectory,
     get_transition_probs,
@@ -21,11 +22,20 @@ from run_logger import HasuraLogger
 ACTIONS = ["Left", "Stay", "Right"]
 
 
+class Encoder(BaseEncoder, ABC):
+    def transition_pair(self, trajectories: List["Trajectory"]) -> Tuple[str, str]:
+        body = self.prompt_body(trajectories, "transitions")
+        *query, ground_truth = self.ts_str(trajectories[-1][-1]).split("[")
+        prompt = body + ("" if body.endswith("\n") else " ") + "[".join(query)
+        ground_truth = "[" + ground_truth
+        return prompt.rstrip(), ground_truth
+
+
 class Math(Encoder):
     def name(self) -> str:
-        return "P=({paddle_x},0) B=({ball_x},{ball_y}) [P.x==B.x, B.y>0]; Right:"
+        return "P=(3,0) B=(3,0) [P.x==B.x, B.y==0];"
 
-    def state_str(self, state: np.ndarray) -> str:
+    def state_str(self, state: Obs) -> str:
         paddle_x, ball_x, ball_y = state
         return f"P=({paddle_x},0) B=({ball_x},{ball_y}) [{self.status(*state)}];"
 
@@ -38,13 +48,13 @@ class Math(Encoder):
     def action_str(self, action: int) -> str:
         return f"{ACTIONS[action]}:"
 
-    def done_str(self, reward: float, next_state: np.ndarray) -> str:
+    def done_str(self, reward: float, next_state: Obs) -> str:
         return self.state_str(next_state)
 
 
 class MathWithReward(Math):
     def name(self) -> str:
-        return "P=({paddle_x},0) B=({ball_x},{ball_y}) [P.x!=B.x, B.y==0, Failure];"
+        return "P=(3,0) B=(3,0) [P.x==B.x, B.y==0, success];"
 
     def status(self, paddle_x: float, ball_x: float, ball_y: float) -> str:
         status = super().status(paddle_x, ball_x, ball_y)
@@ -55,16 +65,16 @@ class MathWithReward(Math):
 
 class Names(Encoder):
     def name(self) -> str:
-        return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}). Right:"
+        return "paddle=(3,0) ball=(3,0) [caught the ball]."
 
-    def state_str(self, state: np.ndarray) -> str:
+    def state_str(self, state: Obs) -> str:
         paddle_x, ball_x, ball_y = state
         return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y})."
 
     def action_str(self, action: int) -> str:
         return f"{ACTIONS[action]}:"
 
-    def done_str(self, reward: float, next_state: np.ndarray) -> str:
+    def done_str(self, reward: float, next_state: Obs) -> str:
         paddle_x, ball_x, ball_y = next_state
         return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [{'caught the ball' if reward == 1 else 'missed the ball'}]."
 
@@ -183,7 +193,7 @@ def main(
         for k, v in probs.items()
     ]
     df = pd.DataFrame.from_records(data)
-    save_plot(df, "logs/catch-prompt-sizes.html")
+    save_plot(df, "logs/catch-encodings.html")
 
 
 if __name__ == "__main__":

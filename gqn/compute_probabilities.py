@@ -138,12 +138,7 @@ def get_transition_probs(
     debug: int = 0,
 ) -> Iterator[float]:
     for trajectories in tqdm(transitions, desc=encoder.name()):
-        prompt = encoder.transition_prompt(trajectories)
-        last_step = trajectories[-1][-1]
-        if last_step.done:
-            ground_truth = encoder.done_str(last_step.reward, last_step.next_state)
-        else:
-            ground_truth = encoder.state_str(last_step.next_state)
+        prompt, ground_truth = encoder.transition_pair(trajectories)
 
         if debug > 0:
             print(prompt)
@@ -186,6 +181,6 @@ def collect_trajectory(env: Env):
     while not done:
         action = env.action_space.sample()
         next_state, reward, done, _ = env.step(action)
-        trajectory.append(TimeStep(state, action, reward, next_state, done))
+        trajectory.append(TimeStep(state, action, reward, done, next_state))
         state = next_state
     return trajectory
