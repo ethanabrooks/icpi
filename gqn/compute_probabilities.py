@@ -6,12 +6,20 @@ import altair as alt
 import numpy as np
 import pandas as pd
 from agent.gpt3 import GPT3
-from envs.base_env import TimeStep
+from envs.base_env import Env, TimeStep
 from gym.core import ObsType
 from tqdm import tqdm
 
 
 class Encoder(abc.ABC):
+    def action_prompt(self, trajectories: List["Trajectory"]) -> Optional[str]:
+        body = self.prompt_body(trajectories, "actions")
+        return (
+            body
+            + ("" if body.endswith("\n") else " ")
+            + self.state_str(trajectories[-1][-1].state)
+        )
+
     @staticmethod
     def first_line(prediction: Literal["actions", "transitions"]) -> Optional[str]:
         return None
@@ -39,7 +47,15 @@ class Encoder(abc.ABC):
     def state_action_str(self, ts: TimeStep) -> str:
         return self.state_str(ts.state) + " " + self.action_str(ts.action)
 
-    def _ts_str(self, ts: TimeStep) -> str:
+    def transition_prompt(self, trajectories: List["Trajectory"]) -> Optional[str]:
+        body = self.prompt_body(trajectories, "transitions")
+        return (
+            body
+            + ("" if body.endswith("\n") else " ")
+            + self.state_action_str(trajectories[-1][-1])
+        )
+
+    def ts_str(self, ts: TimeStep) -> str:
         string = self.state_action_str(ts)
         if ts.done:
             string += " " + self.done_str(ts.reward, ts.next_state)
@@ -55,7 +71,7 @@ class Encoder(abc.ABC):
             + [
                 " ".join(
                     ([self.prefix()] if self.prefix() else [])
-                    + [self._ts_str(ts) for ts in trajectory]
+                    + [self.ts_str(ts) for ts in trajectory]
                 )
                 for trajectory in (trajectories[:-1] + [trajectories[-1][:-1]])
             ]
@@ -92,20 +108,17 @@ class TrajectoriesGoodActions(Generic[ObsType]):
 
 
 def get_good_action_probs(
-    actions: List[TrajectoriesGoodActions], encoder: Encoder, gpt3: GPT3
+    actions: List[TrajectoriesGoodActions], encoder: Encoder, gpt3: GPT3, debug: int = 0
 ) -> Iterator[float]:
     for tga in tqdm(actions, desc=encoder.name()):
         trajectories = tga.trajectories
         good_actions = tga.good_actions
-        prompt = (
-            encoder.prompt_body(trajectories, "actions")
-            + " "
-            + encoder.state_str(trajectories[-1][-1].state)
-        )
-        # print(prompt)
-        # for a in good_actions:
-        #     print(encoder.action_str(a))
-        # breakpoint()
+        prompt = encoder.action_prompt(trajectories)
+        if debug > 0:
+            print(prompt)
+            for a in good_actions:
+                print(encoder.action_str(a))
+            breakpoint()
         logprobs = gpt3.get_full_completion(prompt)["logprobs"]
         probs_per_action, _ = zip(
             *[
@@ -119,24 +132,24 @@ def get_good_action_probs(
 
 
 def get_transition_probs(
-    encoder: Encoder, gpt3: GPT3, transitions: List[List[Trajectory]]
+    encoder: Encoder,
+    gpt3: GPT3,
+    transitions: List[List[Trajectory]],
+    debug: int = 0,
 ) -> Iterator[float]:
     for trajectories in tqdm(transitions, desc=encoder.name()):
-        prompt = (
-            encoder.prompt_body(trajectories, "transitions")
-            + " "
-            + encoder.state_action_str(trajectories[-1][-1])
-        )
+        prompt = encoder.transition_prompt(trajectories)
         last_step = trajectories[-1][-1]
         if last_step.done:
             ground_truth = encoder.done_str(last_step.reward, last_step.next_state)
         else:
             ground_truth = encoder.state_str(last_step.next_state)
 
-        # print(prompt)
-        # print()
-        # print(ground_truth)
-        # breakpoint()
+        if debug > 0:
+            print(prompt)
+            print()
+            print(ground_truth)
+            breakpoint()
 
         completion = gpt3.get_full_completion(prompt)
         logprobs = completion["logprobs"]
@@ -164,3 +177,15 @@ def save_plot(df: pd.DataFrame, filename: str):
     alt.layer(bars, error_bars, data=df).facet(
         row=alt.Row("encoding:N", header=alt.Header(labelAngle=0, labelAlign="left")),
     ).save(filename)
+
+
+def collect_trajectory(env: Env):
+    trajectory = []
+    state = env.reset()
+    done = False
+    while not done:
+        action = env.action_space.sample()
+        next_state, reward, done, _ = env.step(action)
+        trajectory.append(TimeStep(state, action, reward, next_state, done))
+        state = next_state
+    return trajectory
