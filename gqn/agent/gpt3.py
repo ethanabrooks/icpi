@@ -77,7 +77,7 @@ class GPT3:
 
         self.print("Prompt:")
         self.print(prompt)
-        if self.debug >= 6:
+        if self.debug >= 5:
             breakpoint()
         while True:
             # print("Prompt:", prompt.split("\n")[-1])
@@ -114,7 +114,7 @@ class GPT3:
             if self.debug >= 0:
                 print(">", end="")
             self.print("Completion:", completion.split("\n")[0])
-            if self.debug >= 5:
+            if self.debug >= 6:
                 breakpoint()
             return dict(
                 prompt=prompt,
