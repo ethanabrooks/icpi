@@ -9,6 +9,7 @@ import numpy as np
 import openai
 from agent.model import GPT3, Pi, Q, TimeStep, get_value, to_string
 from envs import bandit, cartpole, catch, chain
+from envs.base_env import Env
 from run_logger import HasuraLogger
 
 
@@ -24,6 +25,27 @@ def make_env(env_id: str, gamma: float, seed: int):
     else:
         raise RuntimeError()
     return env
+
+
+def evaluate(env: Env, gamma: float, pi: Pi):
+    starting_states = set(env.starting_states())
+    while starting_states:
+        state = env.reset()
+        if state in starting_states:
+            starting_states.remove(state)
+            done = False
+            return_ = 0
+            optimal = 0
+            t = 0
+            while not done:
+                action = pi.act(state)
+                state, reward, done, info = env.step(action)
+                optimal = info["optimal"]
+                return_ += reward * gamma ** t
+                t += 1
+                if done:
+                    break
+            yield return_, (optimal - return_)
 
 
 def train(
