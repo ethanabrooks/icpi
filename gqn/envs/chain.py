@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Generator, Optional, Tuple
+from typing import Generator, Iterable, Optional, Tuple
 
 import envs.base_env
 import gym
@@ -81,6 +81,9 @@ class Env(envs.base_env.Env[int, int]):
         self.iterator = self.generator()
         s, _, _, _ = next(self.iterator)
         return s
+
+    def starting_states(self) -> Iterable[int]:
+        yield from range(self.n)
 
     @classmethod
     def _state_str(cls, state: int) -> str:

@@ -4,7 +4,7 @@ Copied from http://incompleteideas.net/sutton/book/code/pole.c
 permalink: https://perma.cc/C9ZM-652R
 """
 import math
-from typing import Optional, Union
+from typing import Iterable, Optional, Union
 
 import envs.base_env
 import gym
@@ -218,6 +218,9 @@ class Wrapper(gym.Wrapper, envs.base_env.Env[np.ndarray, int]):
         success = value.endswith(REWARDS[1.0] + ".")
         value = gamma ** value.count(".")
         return value if success else 0
+
+    def starting_states(self) -> Iterable[tuple]:
+        raise RuntimeError()
 
     @classmethod
     def _state_str(cls, obs: np.ndarray) -> str:

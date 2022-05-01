@@ -14,8 +14,7 @@
 # limitations under the License.
 # ============================================================================
 """Catch reinforcement learning environment."""
-
-from typing import NamedTuple, Optional, Tuple, cast
+from typing import Iterable, NamedTuple, Optional, Tuple, cast
 
 import dm_env
 import envs.base_env
@@ -66,8 +65,8 @@ class Env(base.Environment):
           seed: random seed for the RNG.
         """
         self.random_seed = seed
-        self._rows = rows
-        self._columns = columns
+        self.rows = rows
+        self.columns = columns
         self._rng = np.random.RandomState(seed)
         self._ball_x = None
         self._ball_y = None
@@ -81,9 +80,9 @@ class Env(base.Environment):
 
     def _reset(self) -> dm_env.TimeStep:
         """Returns the first `TimeStep` of a new episode."""
-        self._ball_x = self._rng.randint(self._columns)
-        self._ball_y = self._rows - 1
-        self._paddle_x = self._columns // 2
+        self._ball_x = self._rng.randint(self.columns)
+        self._ball_y = self.rows - 1
+        self._paddle_x = self.columns // 2
         self._paddle_y = 0
 
         return dm_env.restart(self._observation())
@@ -92,7 +91,7 @@ class Env(base.Environment):
         """Updates the environment according to the action."""
         # Move the paddle.
         dx = _ACTIONS[action]
-        self._paddle_x = np.clip(self._paddle_x + dx, 0, self._columns - 1)
+        self._paddle_x = np.clip(self._paddle_x + dx, 0, self.columns - 1)
 
         # Drop the ball.
         self._ball_y -= 1
@@ -109,7 +108,7 @@ class Env(base.Environment):
         return specs.BoundedArray(
             dtype=np.int,
             minimum=0,
-            maximum=max(self._rows, self._columns),
+            maximum=max(self.rows, self.columns),
             name="observation",
             shape=(3,),
         )
@@ -161,6 +160,11 @@ class Wrapper(gym.Wrapper, envs.base_env.Env[Obs, int]):
     def reset(self):
         assert isinstance(self.env, Env)
         return self.env.reset().observation
+
+    def starting_states(self) -> Iterable[Obs]:
+        assert isinstance(self.env, Env)
+        for bx in range(self.env.columns):
+            yield Obs(paddle_x=self.columns // 2, ball_x=bx, ball_y=self.env.rows - 1)
 
     @staticmethod
     def state_stop() -> str:

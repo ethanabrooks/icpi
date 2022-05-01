@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Generator, Optional, Tuple, Union
+from typing import Generator, Iterable, Optional, Tuple, Union
 
 import envs.base_env
 import gym
@@ -78,6 +78,9 @@ class Env(envs.base_env.Env[int, int]):
         action = yield go_home_state, reward, done, info
         reward = 0 if overworked else ((action - 2) == need_umbrella)
         yield go_home_state, reward, True, info
+
+    def starting_states(self) -> Iterable[ObsType]:
+        raise RuntimeError()
 
     @classmethod
     def state_str(cls, state: int) -> str:

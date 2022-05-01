@@ -17,7 +17,7 @@
 Observation is a single pixel of 0 - this is an independent arm bandit problem!
 Rewards are [0, 0.1, .. 1] assigned randomly to 11 arms and deterministic
 """
-from typing import Optional, Tuple, cast
+from typing import Iterable, Optional, Tuple, cast
 
 import dm_env
 import envs.base_env
@@ -76,7 +76,7 @@ class Env(base.Environment):
         return dict(total_regret=self._total_regret)
 
 
-class Wrapper(gym.Wrapper, envs.base_env.Env[np.ndarray, int]):
+class Wrapper(gym.Wrapper, envs.base_env.Env[int, int]):
     def __init__(self, env: Env):
         super().__init__(cast(gym.Env, env))
         self.action_space = Discrete(3, seed=env.random_seed)
@@ -95,7 +95,10 @@ class Wrapper(gym.Wrapper, envs.base_env.Env[np.ndarray, int]):
 
     def reset(self):
         assert isinstance(self.env, Env)
-        return self.env.reset().observation
+        return self.env.reset().observation.item()
+
+    def starting_states(self) -> Iterable[int]:
+        yield 0
 
     @classmethod
     def _state_str(cls, obs: np.ndarray) -> str:
@@ -105,7 +108,7 @@ class Wrapper(gym.Wrapper, envs.base_env.Env[np.ndarray, int]):
         assert isinstance(self.env, Env)
         time_step: dm_env.TimeStep = self.env.step(action)
         return (
-            time_step.observation,
+            time_step.observation.item(),
             time_step.reward,
             time_step.last(),
             self.bsuite_info(),

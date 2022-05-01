@@ -1,6 +1,6 @@
 import abc
 from dataclasses import dataclass
-from typing import Generic, Optional
+from typing import Generic, Iterable, Optional
 
 import gym
 import numpy as np
@@ -49,6 +49,9 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     @classmethod
     @abc.abstractmethod
     def quantify(cls, value: str, gamma: Optional[float]) -> float:
+        ...
+
+    def starting_states(self) -> Iterable[ObsType]:
         ...
 
     @staticmethod
