@@ -30,6 +30,7 @@ def train(
     debug: int,
     delta: float,
     env_id: str,
+    eval_frequency: int,
     failure_threshold: float,
     gamma: float,
     logprobs: int,
@@ -94,7 +95,7 @@ def train(
         done = False
         state = env.reset()
         trajectory: List[TimeStep] = []
-        use_pi = episodes % 2 == 0
+        use_pi = episodes % eval_frequency == 0
         timed_out = False
         t = 0
         r = 0
@@ -110,9 +111,10 @@ def train(
                 action = env.action_space.sample()
             next_state, reward, done, info = env.step(action)
             step = TimeStep(state, action, reward, done, next_state)
-            r += gamma**t * reward
+            r += gamma ** t * reward
             t += 1
-            T += 1
+            if not use_pi:
+                T += 1
             if t >= max_steps:
                 done = timed_out = True
             if done:
@@ -143,12 +145,12 @@ def train(
             env.quantify(prompt, gamma=gamma)
             get_value(*trajectory, gamma=gamma)
 
-        trajectory = trajectory[-max_trajectory:]
-        if not timed_out:
-            buffer.append(trajectory)
-            while trajectory:
-                if get_value(*trajectory, gamma=1) > failure_threshold:
-                    success_buffer.append(trajectory)
-                head, *trajectory = trajectory
+        if not use_pi:
+            if not timed_out:
+                buffer.append(trajectory)
+                while trajectory:
+                    if get_value(*trajectory, gamma=1) > failure_threshold:
+                        success_buffer.append(trajectory)
+                    head, *trajectory = trajectory
 
     print("done!")
