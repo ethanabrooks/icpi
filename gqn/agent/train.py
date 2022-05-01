@@ -114,46 +114,43 @@ def train(
     episodes = 0
     start_time = time.time()
     while T < total_steps:
+        use_model_prob = 1 / (1 + math.exp(2 * (min_successes - len(success_buffer))))
+
+        if episodes % eval_frequency == 0:
+            for return_, regret in evaluate(env, gamma, pi):
+                log = dict(
+                    episode=episodes,
+                    hours=(time.time() - start_time) / 3600,
+                    regret=regret,
+                    step=T,
+                    use_model_prob=use_model_prob,
+                    **{"return": return_, "run ID": logger.run_id}
+                )
+                pprint(log)
+                if logger.run_id is not None:
+                    logger.log(**log)
+
         done = False
         state = env.reset()
         trajectory: List[TimeStep] = []
-        use_pi = episodes % eval_frequency == 0
         timed_out = False
         t = 0
         r = 0
         while not done:
-            use_model_prob = 1 / (
-                1 + math.exp(2 * (min_successes - len(success_buffer)))
-            )
-            model = pi if use_pi else q
-            use_model = (rng.random() < use_model_prob) and model.ready()
+            use_model = (rng.random() < use_model_prob) and q.ready()
             if use_model:
-                action = model.act(state)
+                action = q.act(state)
             else:
                 action = env.action_space.sample()
             next_state, reward, done, info = env.step(action)
             step = TimeStep(state, action, reward, done, next_state)
             r += gamma ** t * reward
             t += 1
-            if not use_pi:
-                T += 1
+            T += 1
             if t >= max_steps:
                 done = timed_out = True
             if done:
                 episodes += 1
-                if use_pi:
-                    regret = info["optimal"] - r
-                    log = dict(
-                        episode=episodes,
-                        hours=(time.time() - start_time) / 3600,
-                        regret=regret,
-                        step=T,
-                        use_model_prob=use_model_prob,
-                        **{"return": r, "run ID": logger.run_id}
-                    )
-                    pprint(log)
-                    if logger.run_id is not None:
-                        logger.log(**log)
             trajectory.append(step)
             state = next_state
 
@@ -167,12 +164,11 @@ def train(
             env.quantify(prompt, gamma=gamma)
             get_value(*trajectory, gamma=gamma)
 
-        if not use_pi:
-            if not timed_out:
-                buffer.append(trajectory)
-                while trajectory:
-                    if get_value(*trajectory, gamma=1) > failure_threshold:
-                        success_buffer.append(trajectory)
-                    head, *trajectory = trajectory
+        if not timed_out:
+            buffer.append(trajectory)
+            while trajectory:
+                if get_value(*trajectory, gamma=1) > failure_threshold:
+                    success_buffer.append(trajectory)
+                head, *trajectory = trajectory
 
     print("done!")
