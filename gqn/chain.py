@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Generator, Optional, Tuple
+from typing import Optional, Tuple
 
 import base_env
 import gym
@@ -41,22 +41,6 @@ class Env(base_env.Env[int, int]):
     def done(self, state_or_reward: str) -> bool:
         return state_or_reward.rstrip(self.state_stop()) in REWARDS.values()
 
-    def generator(self) -> Generator[Tuple[int, float, bool, dict], int, None]:
-        start_state = state = self.random.choice(self.n)
-        reward = 0
-        done = False
-        optimal = self.gamma ** abs(start_state - self.goal)
-        while True:
-            info = dict(optimal=optimal)
-            action = yield state, reward, done, info
-            state += action - 1
-            state = np.clip(state, 0, self.n - 1)
-            done = action == 1
-            success = done and state == self.goal
-            if done:
-                reward = 1 if success else -1
-            state = int(state)
-
     @classmethod
     def quantify(cls, prompt: str, gamma: Optional[float]) -> float:
         success = prompt.endswith(REWARDS[1.0] + cls.state_stop())
@@ -78,16 +62,26 @@ class Env(base_env.Env[int, int]):
         return_info: bool = False,
         options: Optional[dict] = None,
     ) -> int:
-        self.iterator = self.generator()
-        s, _, _, _ = next(self.iterator)
-        return s
+        self._state = self._start_state = self.random.choice(self.n)
+        return self._start_state
 
     @classmethod
     def _state_str(cls, state: int) -> str:
         return str(state)
 
     def step(self, action: int) -> Tuple[int, float, bool, dict]:
-        return self.iterator.send(action)
+        optimal = self.gamma ** abs(self._start_state - self.goal)
+        info = dict(optimal=optimal)
+        self._state += action - 1
+        self._state = np.clip(self._state, 0, self.n - 1)
+        done = action == 1
+        success = done and self._state == self.goal
+        state = int(self._state)
+        if done:
+            reward = 1 if success else -1
+        else:
+            reward = 0
+        return state, reward, done, info
 
     def successor_feature(self, state: int) -> np.ndarray:
         one_hot = np.zeros(self.n)
