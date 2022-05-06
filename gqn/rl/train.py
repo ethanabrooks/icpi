@@ -49,7 +49,6 @@ def train(
     prompt_size: int,
     seed: int,
     status: bool,
-    stop: str,
     temperature: float,
     top_p: float,
     total_steps: int,
@@ -65,7 +64,7 @@ def train(
         debug=debug,
         logprobs=logprobs,
         logger=logger,
-        stop=stop.split(" "),
+        stop=[env.action_stop(), env.state_stop()],
         temperature=temperature,
         top_p=top_p,
     )
