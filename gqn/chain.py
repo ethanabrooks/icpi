@@ -29,7 +29,7 @@ class Env(base_env.Env[int, int]):
 
     @staticmethod
     def action_stop() -> str:
-        return "."
+        return ":"
 
     def actions(self):
         return [
@@ -44,7 +44,7 @@ class Env(base_env.Env[int, int]):
     @classmethod
     def quantify(cls, prompt: str, gamma: Optional[float]) -> float:
         success = prompt.endswith(REWARDS[1.0] + cls.state_stop())
-        length = prompt.count(cls.state_stop()) // 2 - 1
+        length = prompt.count(cls.action_stop()) - 1
         value = gamma ** length
         if success:
             return value
