@@ -1,10 +1,10 @@
 from dataclasses import dataclass
 from typing import Generator, Optional, Tuple, Union
 
-import envs.base_env
+import base_env
 import gym
 import numpy as np
-from envs.base_env import TimeStep
+from base_env import TimeStep
 from gym.core import ActType, ObsType
 
 REWARDS = {
@@ -14,7 +14,7 @@ REWARDS = {
 
 
 @dataclass
-class Env(envs.base_env.Env[int, int]):
+class Env(base_env.Env[int, int]):
     gamma: float
     max_steps: int
     random_seed: int

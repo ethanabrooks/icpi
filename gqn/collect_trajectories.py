@@ -1,8 +1,8 @@
 import pickle
 
 from agent.train import make_env
+from base_env import Env, TimeStep
 from dollar_lambda import command
-from envs.base_env import Env, TimeStep
 
 
 def collect_trajectories(env: Env, num_trajectories: int):
