@@ -11,11 +11,13 @@ import catch
 import chain
 import numpy as np
 import openai
+from base_env import Env
+from gym.wrappers import TimeLimit
 from rl.model import GPT3, Pi, Q, TimeStep, get_value, to_string
 from run_logger import HasuraLogger
 
 
-def make_env(env_id: str, gamma: float, seed: int, status: bool):
+def make_env(env_id: str, gamma: float, seed: int, status: bool) -> Env:
     if env_id == "bandit":
         env = bandit.Wrapper(bandit.Env(mapping_seed=seed, num_actions=3))
     elif env_id == "cartpole":
@@ -25,7 +27,10 @@ def make_env(env_id: str, gamma: float, seed: int, status: bool):
     elif env_id == "catch":
         env = catch.Wrapper(catch.Env(columns=4, gamma=gamma, rows=5, seed=seed))
     elif env_id == "chain":
-        env = chain.Env(gamma=gamma, goal=4, n=8, random_seed=seed, status=status)
+        env = TimeLimit(
+            chain.Env(gamma=gamma, goal=4, n=8, random_seed=seed, status=status),
+            max_episode_steps=8,
+        )
     else:
         raise RuntimeError()
     return env
@@ -39,7 +44,6 @@ def train(
     gamma: float,
     logprobs: int,
     logger: HasuraLogger,
-    max_steps: int,
     max_trajectory: int,
     min_successes: int,
     q_prompt_size: int,
@@ -119,8 +123,7 @@ def train(
             r += gamma ** t * reward
             t += 1
             T += 1
-            if t >= max_steps:
-                done = timed_out = True
+            timed_out = "TimeLimit.truncated" in info
             if done:
                 print(".", end="")
                 episodes += 1
