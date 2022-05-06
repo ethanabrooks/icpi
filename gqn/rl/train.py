@@ -15,7 +15,7 @@ from rl.model import GPT3, Pi, Q, TimeStep, get_value, to_string
 from run_logger import HasuraLogger
 
 
-def make_env(env_id: str, gamma: float, seed: int):
+def make_env(env_id: str, gamma: float, seed: int, status: bool):
     if env_id == "bandit":
         env = bandit.Wrapper(bandit.Env(mapping_seed=seed, num_actions=3))
     elif env_id == "cartpole":
@@ -25,7 +25,7 @@ def make_env(env_id: str, gamma: float, seed: int):
     elif env_id == "catch":
         env = catch.Wrapper(catch.Env(columns=4, gamma=gamma, rows=5, seed=seed))
     elif env_id == "chain":
-        env = chain.Env(gamma=gamma, goal=4, n=8, random_seed=seed)
+        env = chain.Env(gamma=gamma, goal=4, n=8, random_seed=seed, status=status)
     else:
         raise RuntimeError()
     return env
@@ -45,6 +45,7 @@ def train(
     q_prompt_size: int,
     pi_prompt_size: int,
     seed: int,
+    status: bool,
     stop: str,
     temperature: float,
     top_p: float,
@@ -52,7 +53,7 @@ def train(
 ):
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
-    env = make_env(env_id, gamma, seed)
+    env = make_env(env_id=env_id, gamma=gamma, seed=seed, status=status)
 
     buffer: Deque[List[TimeStep]] = deque()
     success_buffer: Deque[List[TimeStep]] = deque()

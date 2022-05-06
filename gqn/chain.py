@@ -1,11 +1,12 @@
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Iterable, Optional, Tuple
 
 import base_env
 import gym
 import gym.spaces
 import numpy as np
 from base_env import TimeStep
+from gym.core import ObsType
 
 REWARDS = {
     1.0: "Success",
@@ -15,10 +16,12 @@ REWARDS = {
 
 @dataclass
 class Env(base_env.Env[int, int]):
+
     gamma: float
     goal: int
     n: int
     random_seed: int
+    status: bool
 
     def __post_init__(self):
         self.random = np.random.default_rng(self.random_seed)
@@ -65,9 +68,14 @@ class Env(base_env.Env[int, int]):
         self._state = self._start_state = self.random.choice(self.n)
         return self._start_state
 
-    @classmethod
-    def _state_str(cls, state: int) -> str:
-        return str(state)
+    def start_states(self) -> Iterable[ObsType]:
+        return range(self.n)
+
+    def _state_str(self, state: int) -> str:
+        if not self.status:
+            return str(state)
+        status = f"at {self.goal}" if state == self.goal else f"not at {self.goal}"
+        return f"{state} [{status}]"
 
     def step(self, action: int) -> Tuple[int, float, bool, dict]:
         optimal = self.gamma ** abs(self._start_state - self.goal)

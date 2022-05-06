@@ -46,18 +46,16 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     def done(self, state_or_reward: str) -> bool:
         ...
 
-    @classmethod
     @abc.abstractmethod
-    def quantify(cls, value: str, gamma: Optional[float]) -> float:
+    def quantify(self, value: str, gamma: Optional[float]) -> float:
         ...
 
     @staticmethod
     def state_stop() -> str:
         return "."
 
-    @classmethod
-    def state_str(cls, state: ObsType) -> str:
-        return cls._state_str(state) + cls.state_stop()
+    def state_str(self, state: ObsType) -> str:
+        return self._state_str(state) + self.state_stop()
 
     @classmethod
     @abc.abstractmethod
