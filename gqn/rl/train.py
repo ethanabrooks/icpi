@@ -11,6 +11,7 @@ import catch
 import chain
 import numpy as np
 import openai
+import umbrella
 from base_env import Env
 from gym.wrappers import TimeLimit
 from rl.model import GPT3, Pi, Q, TimeStep, get_value, to_string
@@ -19,18 +20,23 @@ from run_logger import HasuraLogger
 
 def make_env(env_id: str, gamma: float, seed: int, status: bool) -> Env:
     if env_id == "bandit":
-        env = bandit.Wrapper(bandit.Env(mapping_seed=seed, num_actions=3))
+        assert gamma == 1.0
+        env = bandit.Env(num_steps=5, num_arms=2, random_seed=seed)
     elif env_id == "cartpole":
         env = cartpole.Wrapper(
             cartpole.Env(gamma=gamma, max_episode_steps=5, seed=seed)
         )
     elif env_id == "catch":
+        assert gamma == 1.0
         env = catch.Wrapper(catch.Env(columns=4, gamma=gamma, rows=5, seed=seed))
     elif env_id == "chain":
         env = TimeLimit(
             chain.Env(gamma=gamma, goal=4, n=8, random_seed=seed, status=status),
             max_episode_steps=8,
         )
+    elif env_id == "umbrella":
+        assert gamma == 1.0
+        env = umbrella.Env(num_colors=2, num_steps=2, random_seed=seed)
     else:
         raise RuntimeError()
     return env

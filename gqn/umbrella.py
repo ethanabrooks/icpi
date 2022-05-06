@@ -1,42 +1,56 @@
 from dataclasses import dataclass
-from typing import Generator, Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import base_env
-import gym
 import numpy as np
 from base_env import TimeStep
-from gym.core import ActType, ObsType
+from gym.spaces import Discrete
 
 REWARDS = {
     1.0: "Success",
     0.0: "Failure",
 }
 
+COLORS = [
+    "red",
+    "blue",
+    "green",
+    "yellow",
+    "orange",
+    "purple",
+    "pink",
+    "brown",
+    "black",
+    "white",
+]
+
 
 @dataclass
 class Env(base_env.Env[int, int]):
-    gamma: float
-    max_steps: int
+    num_colors: int
+    num_steps: int
     random_seed: int
 
     def __post_init__(self):
-        self.random = np.random.default_rng(self.random_seed)
-        self.action_space = gym.spaces.Discrete(
-            len(self.actions()), seed=self.random_seed
-        )
-        self.observation_space = gym.spaces.Discrete(len(self.states()))
+        self.means = None
+        self.rng = np.random.default_rng(seed=self.random_seed)
+        self.action_space = Discrete(self.num_colors, seed=self.random_seed)
+
+    def action_stop(self) -> str:
+        return "."
+
+    def actions(self) -> "list[str]":
+        assert isinstance(self.action_space, Discrete)
+        return [str(i) for i in range(self.action_space.n)]
 
     def done(self, state_or_reward: str) -> bool:
-        return state_or_reward in REWARDS.values()
+        return True
 
-    @classmethod
-    def quantify(cls, value: str, gamma: Optional[float]) -> float:
-        success = value.endswith(REWARDS[1.0])
-        value = gamma ** value.count(".")
-        return value if success else (gamma - 1) * value
+    def quantify(self, prompt: str, gamma: Optional[float]) -> float:
+        return prompt.endswith("Success.")
 
-    def step(self, action: ActType) -> Tuple[ObsType, float, bool, dict]:
-        return self.iterator.send(action)
+    def render(self, mode="human"):
+        pass
 
     def reset(
         self,
@@ -44,48 +58,28 @@ class Env(base_env.Env[int, int]):
         seed: Optional[int] = None,
         return_info: bool = False,
         options: Optional[dict] = None,
-    ) -> Union[ObsType, tuple[ObsType, dict]]:
-        self.iterator = self.generator()
-        s, _, _, _ = next(self.iterator)
-        return s
+    ) -> np.ndarray:
+        *self.observations, self.last = self.rng.choice(
+            self.num_colors, size=self.num_steps + 1
+        )
+        self.t = 0
+        self.first = self.observations[0]
+        return self.first
 
-    def render(self, mode="human"):
-        pass
-
-    def actions(self):
-        return ["Look busy.", "Relax.", "Leave Umbrella.", "Take umbrella."]
-
-    def generator(self) -> Generator[Tuple[int, float, bool, dict], int, None]:
-        n_chain = self.random.integers(2, self.max_steps)
-        weather_step = self.random.choice(n_chain)
-        need_umbrella = self.random.choice(2)
-        optimal = self.gamma ** n_chain
-        done = False
-        overworked = False
-        reward = 0.0
-        info = dict(optimal=optimal)
-        go_home_state = 2
-        for i in range(n_chain - 1):
-            state = self.random.choice(2)
-            if i == weather_step:
-                state = go_home_state + need_umbrella + 1
-            action = yield state, reward, done, info
-            if state == 0 and action != 0:  # boss is in and you were not looking busy
-                done = True
-            elif state == 1 and action != 1:  # you worked unnecessarily
-                overworked = True
-
-        action = yield go_home_state, reward, done, info
-        reward = 0 if overworked else ((action - 2) == need_umbrella)
-        yield go_home_state, reward, True, info
+    def start_state(self) -> np.ndarray:
+        return self.first
 
     @classmethod
-    def state_str(cls, state: int) -> str:
-        return cls.states()[state]
+    def _state_str(cls, obs: int) -> str:
+        return COLORS[obs]
 
-    @staticmethod
-    def states():
-        return ["Boss is in.", "Boss is out.", "Go home.", "Sunny.", "Raining."]
+    def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
+        try:
+            self.t += 1
+            return self.observations[self.t], 0, False, {}
+        except IndexError:
+            success = action == self.first
+            return self.last, float(success), True, dict(optimal=1)
 
     def successor_feature(self, state: "int | tuple[int, int]") -> np.ndarray:
         assert isinstance(self.observation_space, gym.spaces.Discrete)
@@ -101,18 +95,12 @@ class Env(base_env.Env[int, int]):
 
 
 if __name__ == "__main__":
-    env = Env(gamma=0.99, max_steps=8, random_seed=0)
+    env = Env(num_colors=2, num_steps=3, random_seed=0)
     while True:
         s = env.reset()
         t = False
-        go_home = False
         while not t:
-            if go_home:
-                a = 2 + env.random.choice(2)
-            else:
-                a = env.random.choice(2)
-            if a == 1:
-                selected_goal = True
+            a = env.action_space.sample()
             s_, r, t, i = env.step(a)
             go_home = s_ == 2
             print(env.ts_to_string(TimeStep(s, a, r, t, s_)))
