@@ -1,8 +1,8 @@
 import os
 import shelve
 
-from agent.gpt3 import post_completion
 from dollar_lambda import command
+from rl.gpt3 import post_completion
 from run_logger import HasuraLogger
 from tqdm import tqdm
 
