@@ -46,8 +46,7 @@ def train(
     logger: HasuraLogger,
     max_trajectory: int,
     min_successes: int,
-    q_prompt_size: int,
-    pi_prompt_size: int,
+    prompt_size: int,
     seed: int,
     status: bool,
     stop: str,
@@ -79,7 +78,7 @@ def train(
         gamma=gamma,
         gpt3=gpt3,
         max_steps=max_trajectory,
-        prompt_size=pi_prompt_size,
+        prompt_size=prompt_size,
         rng=rng,
         success_buffer=success_buffer,
     )
@@ -92,7 +91,7 @@ def train(
         gamma=gamma,
         gpt3=gpt3,
         max_steps=max_trajectory,
-        prompt_size=q_prompt_size,
+        prompt_size=prompt_size,
         rng=rng,
         success_buffer=success_buffer,
     )
