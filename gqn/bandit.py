@@ -19,14 +19,14 @@ Rewards are [0, 0.1, .. 1] assigned randomly to 11 arms and deterministic
 """
 from typing import Optional, Tuple, cast
 
+import base_env
 import dm_env
-import envs.base_env
 import gym
 import numpy as np
+from base_env import TimeStep
 from bsuite.environments import base
 from bsuite.experiments.bandit import sweep
 from dm_env import specs
-from envs.base_env import TimeStep
 from gym.spaces import Discrete
 
 
@@ -76,7 +76,7 @@ class Env(base.Environment):
         return dict(total_regret=self._total_regret)
 
 
-class Wrapper(gym.Wrapper, envs.base_env.Env[np.ndarray, int]):
+class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
     def __init__(self, env: Env):
         super().__init__(cast(gym.Env, env))
         self.action_space = Discrete(3, seed=env.random_seed)

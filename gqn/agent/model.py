@@ -4,7 +4,7 @@ from typing import Deque, Generic, List
 
 import numpy as np
 from agent.gpt3 import GPT3
-from envs.base_env import Env, TimeStep
+from base_env import Env, TimeStep
 from gym.core import ActType, ObsType
 from gym.spaces import Discrete
 from numpy.linalg import norm

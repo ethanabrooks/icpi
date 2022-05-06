@@ -1,11 +1,11 @@
 from dataclasses import dataclass
 from typing import Generator, Optional, Tuple
 
-import envs.base_env
+import base_env
 import gym
 import gym.spaces
 import numpy as np
-from envs.base_env import TimeStep
+from base_env import TimeStep
 
 REWARDS = {
     1.0: "Success",
@@ -14,7 +14,7 @@ REWARDS = {
 
 
 @dataclass
-class Env(envs.base_env.Env[int, int]):
+class Env(base_env.Env[int, int]):
     gamma: float
     goal: int
     n: int

@@ -5,10 +5,13 @@ from collections import deque
 from pprint import pprint
 from typing import Deque, List
 
+import bandit
+import cartpole
+import catch
+import chain
 import numpy as np
 import openai
 from agent.model import GPT3, Pi, Q, TimeStep, get_value, to_string
-from envs import bandit, cartpole, catch, chain
 from run_logger import HasuraLogger
 
 

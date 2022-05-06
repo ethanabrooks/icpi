@@ -17,14 +17,14 @@
 
 from typing import NamedTuple, Optional, Tuple, cast
 
+import base_env
 import dm_env
-import envs.base_env
 import gym
 import numpy as np
+from base_env import TimeStep
 from bsuite.environments import base
 from bsuite.experiments.catch import sweep
 from dm_env import specs
-from envs.base_env import TimeStep
 from gym.spaces import Discrete, MultiDiscrete
 
 _ACTIONS = (-1, 0, 1)  # Left, no-op, right.
@@ -133,7 +133,7 @@ REWARDS = {
 }
 
 
-class Wrapper(gym.Wrapper, envs.base_env.Env[Obs, int]):
+class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
     def __init__(self, env: Env):
         super().__init__(cast(gym.Env, env))
         self.action_space = Discrete(3, seed=env.random_seed)

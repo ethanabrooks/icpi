@@ -6,7 +6,7 @@ import altair as alt
 import numpy as np
 import pandas as pd
 from agent.gpt3 import GPT3
-from envs.base_env import TimeStep
+from base_env import TimeStep
 from gym.core import ObsType
 from tqdm import tqdm
 

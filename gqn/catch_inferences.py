@@ -3,9 +3,12 @@ from copy import deepcopy
 from math import ceil
 from typing import List, Literal, NamedTuple, Optional
 
+import catch
 import numpy as np
 import pandas as pd
 from agent.gpt3 import GPT3
+from base_env import TimeStep
+from catch import Obs
 from compute_probabilities import (
     Encoder,
     TrajectoriesGoodActions,
@@ -15,9 +18,6 @@ from compute_probabilities import (
     save_plot,
 )
 from dollar_lambda import command
-from envs import catch
-from envs.base_env import TimeStep
-from envs.catch import Obs
 from run_logger import HasuraLogger
 
 ACTIONS = ["Left", "Stay", "Right"]
