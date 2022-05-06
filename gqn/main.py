@@ -61,7 +61,7 @@ def log(
     charts = [
         line.spec(x=x, y=y, visualizer_url=visualizer_url)
         for x in ["step", "hours"]
-        for y in ["regret", "return", "use_model_prob"]
+        for y in ["regret", "return", "use_model_prob", "eval regret", "eval return"]
     ]
 
     params, logger = run_logger.initialize(

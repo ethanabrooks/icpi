@@ -3,7 +3,7 @@ import os
 import time
 from collections import deque
 from pprint import pprint
-from typing import Deque, List
+from typing import Deque, List, Optional
 
 import bandit
 import cartpole
@@ -40,6 +40,7 @@ def train(
     debug: int,
     delta: float,
     env_id: str,
+    eval_interval: Optional[int],
     failure_threshold: float,
     gamma: float,
     logprobs: int,
@@ -98,11 +99,49 @@ def train(
     T = 0
     episodes = 0
     start_time = time.time()
+
+    def make_log(return_: float, return_key: str, regret_key: str):
+        regret = info["optimal"] - return_
+        log = dict(
+            hours=(time.time() - start_time) / 3600,
+            step=T,
+            use_model_prob=use_model_prob,
+            **{
+                return_key: return_,
+                regret_key: regret,
+                "run ID": logger.run_id,
+                "success buffer": len(success_buffer),
+            }
+        )
+        pprint(log)
+        if logger.run_id is not None:
+            logger.log(**log)
+
     while T < total_steps:
+        if eval_interval is not None and episodes % eval_interval == 0 and pi.ready():
+
+            # evaluate
+            initial_start_states = list(env.start_states())
+            start_states = list(initial_start_states)
+            while len(initial_start_states) - len(start_states) < eval_interval:
+                state = None
+                while state not in start_states:
+                    state = env.reset()
+                start_states.remove(state)
+                done = False
+                r = 0
+                t = 0
+                while not done:
+                    action = pi.act(state)
+                    state, reward, done, _ = env.step(action)
+                    r += gamma ** t * reward
+                    t += 1
+                    if done:
+                        make_log(r, "eval return", "eval regret")
+
         done = False
         state = env.reset()
         trajectory: List[TimeStep] = []
-        use_pi = episodes % 2 == 0
         timed_out = False
         t = 0
         r = 0
@@ -110,10 +149,9 @@ def train(
             use_model_prob = 1 / (
                 1 + math.exp(2 * (min_successes - len(success_buffer)))
             )
-            model = pi if use_pi else q
-            use_model = (rng.random() < use_model_prob) and model.ready()
+            use_model = (rng.random() < use_model_prob) and q.ready()
             if use_model:
-                action = model.act(state)
+                action = q.act(state)
             else:
                 action = env.action_space.sample()
             next_state, reward, done, info = env.step(action)
@@ -125,19 +163,7 @@ def train(
             if done:
                 print(".", end="")
                 episodes += 1
-                if use_pi:
-                    regret = info["optimal"] - r
-                    log = dict(
-                        episode=episodes,
-                        hours=(time.time() - start_time) / 3600,
-                        regret=regret,
-                        step=T,
-                        use_model_prob=use_model_prob,
-                        **{"return": r, "run ID": logger.run_id}
-                    )
-                    pprint(log)
-                    if logger.run_id is not None:
-                        logger.log(**log)
+                make_log(r, "return", "regret")
             trajectory.append(step)
             state = next_state
 
