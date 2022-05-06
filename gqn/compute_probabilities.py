@@ -5,9 +5,9 @@ from typing import Dict, Generic, Iterator, List, Literal, Optional
 import altair as alt
 import numpy as np
 import pandas as pd
-from agent.gpt3 import GPT3
 from base_env import TimeStep
 from gym.core import ObsType
+from rl.gpt3 import GPT3
 from tqdm import tqdm
 
 

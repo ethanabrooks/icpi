@@ -3,12 +3,12 @@ from dataclasses import dataclass
 from typing import Deque, Generic, List
 
 import numpy as np
-from agent.gpt3 import GPT3
 from base_env import Env, TimeStep
 from gym.core import ActType, ObsType
 from gym.spaces import Discrete
 from numpy.linalg import norm
 from numpy.random import Generator
+from rl.gpt3 import GPT3
 
 
 def to_string(*_trajectory: TimeStep, env) -> str:

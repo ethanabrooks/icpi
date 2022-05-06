@@ -11,7 +11,7 @@ import catch
 import chain
 import numpy as np
 import openai
-from agent.model import GPT3, Pi, Q, TimeStep, get_value, to_string
+from rl.model import GPT3, Pi, Q, TimeStep, get_value, to_string
 from run_logger import HasuraLogger
 
 
