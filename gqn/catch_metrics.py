@@ -1,154 +1,221 @@
-import os
+import abc
+import itertools
+from abc import ABC
+from collections import defaultdict
 from copy import deepcopy
-from math import ceil
-from typing import List, Literal, NamedTuple, Optional
+from typing import List, Optional, Tuple
 
 import catch
-import numpy as np
-import pandas as pd
 from base_env import TimeStep
 from catch import Obs
-from compute_probabilities import (
-    Encoder,
-    TrajectoriesGoodActions,
-    Trajectory,
-    get_good_action_probs,
-    get_transition_probs,
-    save_plot,
+from dollar_lambda import command, option
+from gym.spaces import Discrete
+from metrics.encoder import Encoder as BaseEncoder
+from metrics.metric import (
+    Action,
+    Episode,
+    FailureReward,
+    NonterminalReward,
+    SuccessReward,
+    TimeStepWithActions,
+    Transition,
+    get_trajectory,
 )
-from dollar_lambda import command
-from rl.gpt3 import GPT3
-from run_logger import HasuraLogger
+from metrics.test_runner import TestRunner
 
 ACTIONS = ["Left", "Stay", "Right"]
 
 
-class PaddleXBallXParensBallY(Encoder):
-    def name(self) -> str:
-        return "{paddle_x},{ball_x} ({ball_y} to go). Right:"
-
-    def state_str(self, state: np.ndarray) -> str:
-        paddle_x, ball_x, ball_y = state
-        return f"{paddle_x},{ball_x} ({ball_y} to go)."
+class Encoder(BaseEncoder, ABC):
+    def actions(self):
+        return range(3)
 
     def action_str(self, action: int) -> str:
         return f"{ACTIONS[action]}:"
 
-    def done_str(self, reward: float, next_state: np.ndarray) -> str:
-        paddle_x, ball_x, _ = next_state
-        return f"{paddle_x},{ball_x} ({'success' if reward == 1 else 'failure'})."
+    def action_query(self, state: Obs) -> str:
+        return self.state_str(state)
 
-
-class ParensPaddleParensBall(Encoder):
     def name(self) -> str:
-        return "({paddle_x},0) ({ball_x},{ball_y}). Right:"
+        return self.state_action_str(TimeStep(Obs(1, 1, 4), 0, 0, False, Obs(0, 1, 3)))
 
-    def state_str(self, state: np.ndarray) -> str:
-        paddle_x, ball_x, ball_y = state
-        return f"({paddle_x},0) ({ball_x},{ball_y})."
+    def nonterminal_reward_str(self, ts: TimeStep[Obs, int]) -> str:
+        return self.status_str(ts.state)
 
-    def action_str(self, action: int) -> str:
-        return f"{ACTIONS[action]}:"
+    def reward_query(self, ts: TimeStep[Obs, int]) -> str:
+        if ts.done:
+            return self.state_action_str(ts) + " " + self.state_str(ts.next_state)
+        else:
+            return self.state_without_status_str(ts.state)
 
-    def done_str(self, reward: float, next_state: np.ndarray) -> str:
-        paddle_x, ball_x, ball_y = next_state
-        return f"({paddle_x},0) ({ball_x},{ball_y}) [{'success' if reward == 1 else 'failure'}]."
+    def state_str(self, state: Obs) -> str:
+        string = self.state_without_status_str(state)
+        status = self.status_str(state)
+        if status:
+            string += " " + status
+        return string
+
+    def state_action_str(self, ts: TimeStep[Obs, int]) -> str:
+        return " ".join(
+            [
+                self.state_str(ts.state),
+                self.action_str(ts.action),
+            ]
+        )
+
+    @abc.abstractmethod
+    def state_without_status_str(self, state: Obs) -> str:
+        ...
+
+    def status_str(self, state: Obs) -> str:
+        return ""
+
+    def stop(self) -> List[str]:
+        return [":", ";"]
+
+    def transition_query(self, ts: TimeStep[Obs, int]) -> str:
+        return self.state_str(ts.state) + " " + self.action_str(ts.action)
+
+    def time_step_str(self, ts: TimeStep[Obs, int]) -> str:
+        return " ".join(
+            [
+                self.state_str(ts.state),
+                self.action_str(ts.action),
+            ]
+            + (
+                [
+                    self.state_str(ts.next_state),
+                    self.terminal_reward_str(ts),
+                ]
+                if ts.done
+                else []
+            )
+        )
 
 
-class ParensPaddleParensBallWithNames(Encoder):
-    def name(self) -> str:
-        return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}). Right:"
+class WithStatus(Encoder, ABC):
+    @staticmethod
+    @abc.abstractmethod
+    def ball() -> str:
+        ...
 
-    def state_str(self, state: np.ndarray) -> str:
-        paddle_x, ball_x, ball_y = state
-        return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y})."
-
-    def action_str(self, action: int) -> str:
-        return f"{ACTIONS[action]}:"
-
-    def done_str(self, reward: float, next_state: np.ndarray) -> str:
-        paddle_x, ball_x, ball_y = next_state
-        return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [{'caught the ball' if reward == 1 else 'missed the ball'}]."
-
-
-class ParensPaddleParensBallWithNamesAndStart(ParensPaddleParensBallWithNames):
-    def name(self) -> str:
-        return "Start: Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}). Right:"
-
-    def prefix(self) -> str:
-        return "Start:"
-
-
-class ParensPaddleParensBallWithNamesAndPreface(ParensPaddleParensBallWithNames):
-    def name(self) -> str:
-        return "A paddle that sometimes catches a falling ball:"
+    def nonterminal_reward_str(self, ts: TimeStep[Obs, int]) -> str:
+        return self.status_str(ts.state)
 
     @staticmethod
-    def first_line(prediction: Literal["actions", "transitions"]) -> Optional[str]:
-        if prediction == "actions":
-            return "A paddle that catches a falling ball:"
-        elif prediction == "transitions":
-            return "A paddle that sometimes catches a falling ball:"
+    @abc.abstractmethod
+    def paddle() -> str:
+        ...
+
+    @staticmethod
+    @abc.abstractmethod
+    def failure_str() -> str:
+        ...
+
+    @staticmethod
+    @abc.abstractmethod
+    def nonterminal_str() -> str:
+        ...
+
+    def status_str(self, state: Obs) -> str:
+        paddle_x, ball_x, ball_y = state
+        same_x = paddle_x == ball_x
+        if ball_y > 0:
+            nonterminal = self.nonterminal_str()
+            if nonterminal:
+                nonterminal = ", " + nonterminal
+            return f"[{self.paddle()}.x{'==' if same_x else '!='}{self.ball()}.x, {self.paddle()}.y>0{nonterminal}];"
         else:
-            raise RuntimeError()
+            return ""
 
-
-class ParensPaddleParensBallWithNamesAndVerboseActions(ParensPaddleParensBallWithNames):
-    def name(self) -> str:
-        return "({paddle_x},0) ({ball_x},{ball_y}). Move the paddle right:"
-
-    def action_str(self, action: int) -> str:
-        return f"{'Do not move paddle' if action == 1 else ('Move paddle ' + ACTIONS[action].lower())}:"
-
-
-class ParensPaddleParensBallWithNamesAndFalling(ParensPaddleParensBallWithNames):
-    def name(self) -> str:
-        return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [falling]. Right:"
-
-    def state_str(self, state: np.ndarray) -> str:
+    def state_without_status_str(self, state: Obs) -> str:
         paddle_x, ball_x, ball_y = state
-        return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [falling]."
+        return f"{self.paddle()}=({paddle_x},0) {self.ball()}=({ball_x},{ball_y})"
+
+    @staticmethod
+    @abc.abstractmethod
+    def success_str() -> str:
+        ...
+
+    def terminal_reward_str(self, ts: TimeStep[Obs, int]) -> str:
+        paddle_x, ball_x, ball_y = ts.next_state
+        same_x = paddle_x == ball_x
+        return f"[P.x{'==' if same_x else '!='}B.x, P.y==0, {self.success_str() if same_x else self.failure_str()}];"
 
 
-class ParensPaddleParensBallWithNamesAndCanCatch(ParensPaddleParensBallWithNames):
-    def name(self) -> str:
-        return "Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [can catch the ball]. Right:"
+class WithReward(WithStatus, ABC):
+    @staticmethod
+    def failure_str() -> str:
+        return "R=0"
 
-    def state_str(self, state: np.ndarray) -> str:
-        paddle_x, ball_x, ball_y = state
-        can_catch = ball_y >= abs(paddle_x - ball_x)
-        return f"Paddle=({paddle_x},0) Ball=({ball_x},{ball_y}) [{'can catch the ball' if can_catch else 'cannot catch the ball'}]."
+    @staticmethod
+    def nonterminal_str() -> str:
+        return "R=0"
+
+    @staticmethod
+    def success_str() -> str:
+        return "R=1"
 
 
-def get_prob(target, logprobs):
-    if not target:
-        return 1
-    if not logprobs:
-        return 0
+class WithoutReward(WithStatus, ABC):
+    @staticmethod
+    def failure_str() -> str:
+        return "failure"
 
-    def get_prob_rec(logprobs):
-        while logprobs:
-            head, *logprobs = logprobs
-            for token, lp in head.items():
-                prob = np.exp(lp)
-                if target.startswith(token):
-                    yield prob * get_prob(target[len(token) :], logprobs)
+    @staticmethod
+    def nonterminal_str() -> str:
+        return ""
 
-    rec = list(get_prob_rec(logprobs))
-    return max(rec, default=0)
+    @staticmethod
+    def success_str() -> str:
+        return "success"
+
+
+class Terse(WithStatus, ABC):
+    @staticmethod
+    def ball() -> str:
+        return "B"
+
+    @staticmethod
+    def paddle() -> str:
+        return "P"
+
+
+class Verbose(WithStatus, ABC):
+    @staticmethod
+    def ball() -> str:
+        return "Ball"
+
+    @staticmethod
+    def paddle() -> str:
+        return "Paddle"
+
+
+class TerseWithReward(WithReward, Terse):
+    pass
+
+
+class VerboseWithReward(WithReward, Verbose):
+    pass
+
+
+class TerseWithoutReward(WithoutReward, Terse):
+    pass
+
+
+class VerboseWithoutReward(WithoutReward, Verbose):
+    pass
 
 
 def hopeless(s: Obs) -> bool:
     return s.ball_y < abs(s.paddle_x - s.ball_x)
 
 
-class TimeStepGoodActions(NamedTuple):
-    time_step: TimeStep[Obs, int]
-    good_actions: List[int]
-
-
-def collect_trajectory(env: catch.Wrapper) -> List[TimeStepGoodActions]:
+def collect_trajectory(
+    env: catch.Wrapper,
+) -> Tuple[List[TimeStepWithActions], catch.Wrapper]:
     trajectory = []
+    _env = deepcopy(env)
     state = env.reset()
     done = False
     while not done:
@@ -162,92 +229,120 @@ def collect_trajectory(env: catch.Wrapper) -> List[TimeStepGoodActions]:
                     good_actions.append(a)
 
         next_state, reward, done, _ = env.step(action)
+
         step = TimeStep(state, action, reward, done, next_state)
-        trajectory.append(TimeStepGoodActions(step, good_actions))
+        trajectory.append(TimeStepWithActions(step, good_actions))
         state = next_state
-    return trajectory
+    return trajectory, _env
 
 
-@command()
-def main(
-    n: int = 40,
-    seed: int = 0,
-    logprobs: int = 3,
-    random_trajectories: int = 500,
-):
-    env = catch.Wrapper(catch.Env(gamma=1.0, rows=5, columns=4, seed=seed))
+COLUMNS = 4
+ROWS = 5
+ALL_START_STATES = [(COLUMNS // 2, bx, ROWS - 1) for bx in range(COLUMNS)]
 
-    def get_trajectories():
-        for _ in range(random_trajectories):
-            trajectory = collect_trajectory(env)
-            for i in range(len(trajectory)):
-                yield trajectory[i:]
 
-    trajectories = list(get_trajectories())
-    random = np.random.default_rng(seed=seed)
-    successful = [t for t in trajectories if t[-1].time_step.reward == 1]
-    unsuccessful = [t for t in trajectories if t[-1].time_step.reward < 1]
-    action_time_steps = [
-        ts for t in trajectories for ts in t if 0 < len(ts.good_actions) < len(ACTIONS)
-    ]
+def impossible(obs: Obs):
+    return abs(obs.paddle_x - COLUMNS // 2) > (ROWS - 1 - obs.ball_y)
 
-    logger = HasuraLogger(graphql_endpoint=os.getenv("GRAPHQL_ENDPOINT"))
-    gpt3 = GPT3(
-        debug=-1,
-        logprobs=logprobs,
-        logger=logger,
-        stop=[".", ":"],
-        temperature=0.1,
-        top_p=1,
+
+@command(
+    parsers=dict(
+        prompt_sizes=option(
+            "prompt_sizes",
+            default=(8,),
+            type=lambda s: tuple(map(int, s.split(","))),
+        )
     )
-    encoder = ParensPaddleParensBallWithNamesAndStart()
-    transition_probs = {}
-    action_probs = {}
-
-    for prompt_size in range(10, 11):
-
-        def get_action_trajectories() -> TrajectoriesGoodActions:
-            prompt_trajectories = [
-                [ts.time_step for ts in successful[i]]
-                for i in random.choice(len(successful), prompt_size, replace=False)
-            ]
-            ts = action_time_steps[random.choice(len(action_time_steps))]
-            prompt_trajectories = prompt_trajectories + [[ts.time_step]]
-            return TrajectoriesGoodActions(prompt_trajectories, ts.good_actions)
-
-        def get_transition_trajectories() -> List[Trajectory]:
-            half = ceil((prompt_size + 1) / 2)
-            prompt_trajectories = [
-                [ts.time_step for ts in successful[i]]
-                for i in random.choice(len(successful), half, replace=False)
-            ] + [
-                [ts.time_step for ts in unsuccessful[i]]
-                for i in random.choice(len(unsuccessful), half, replace=False)
-            ]
-            random.shuffle(prompt_trajectories)
-            prompt_trajectories = prompt_trajectories[: prompt_size + 1]
-            last = prompt_trajectories[-1]
-            prompt_trajectories[-1] = last[:1]
-            return prompt_trajectories
-
-        transitions = [get_transition_trajectories() for _ in range(n)]
-        transition_probs[prompt_size] = list(
-            get_transition_probs(encoder=encoder, gpt3=gpt3, transitions=transitions)
+)
+def main(
+    prompt_sizes: Tuple[int, ...],
+    debug: int = -1,
+    encoder: Optional[str] = None,
+    logprobs: int = 5,
+    metric: Optional[str] = None,
+    num_trajectories: int = 5,
+    seed: int = 0,
+):
+    env = catch.Wrapper(catch.Env(gamma=1.0, rows=ROWS, columns=COLUMNS, seed=seed))
+    success_trajectories_by_feature = defaultdict(list)
+    failure_trajectories_by_feature = defaultdict(list)
+    all_states = [
+        Obs(px, bx, by)
+        for px, bx, by in itertools.product(
+            range(COLUMNS), range(COLUMNS), range(1, ROWS)
         )
-        actions = [get_action_trajectories() for _ in range(n)]
-        action_probs[prompt_size] = list(
-            get_good_action_probs(actions=actions, encoder=encoder, gpt3=gpt3)
-        )
-
-    data = [
-        dict(encoding=k, probability=np.mean(v), inference="transition", std=np.std(v))
-        for k, v in transition_probs.items()
-    ] + [
-        dict(encoding=k, probability=np.mean(v), inference="action", std=np.std(v))
-        for k, v in action_probs.items()
+        if not impossible(Obs(px, bx, by))
     ]
-    df = pd.DataFrame.from_records(data)
-    save_plot(df, "logs/catch-prompt-sizes.html")
+    trajectories_by_last_state_action = {
+        (Obs(*state), action): []
+        for state in all_states
+        for action in range(len(ACTIONS))
+    }
+    envs_by_first_state = {Obs(*state): None for state in ALL_START_STATES}
+
+    while any(
+        [
+            len(v) < num_trajectories
+            for d in [
+                success_trajectories_by_feature,
+                failure_trajectories_by_feature,
+                trajectories_by_last_state_action,
+            ]
+            for v in d.values()
+        ]
+        + [not e for e in envs_by_first_state.values()]
+    ):
+        trajectory, _env = collect_trajectory(env)
+        trajectories_by_feature = (
+            success_trajectories_by_feature
+            if trajectory[-1].time_step.reward > 0
+            else failure_trajectories_by_feature
+        )
+        trajectories_by_feature[trajectory[0].time_step.state.ball_x].append(
+            get_trajectory(trajectory)
+        )
+        for i in range(len(trajectory)):
+            last_time_step: TimeStepWithActions = trajectory[i]
+            sub_trajectory = trajectory[: i + 1]
+            step = last_time_step.time_step
+            trajectories_by_last_state_action[step.state, step.action].append(
+                sub_trajectory
+            )
+            envs_by_first_state[trajectory[0].time_step.state] = _env
+
+    queries = trajectories_by_last_state_action
+    envs = list(envs_by_first_state.values())
+    failure_trajectories = list(failure_trajectories_by_feature.values())
+    success_trajectories = list(success_trajectories_by_feature.values())
+
+    action_space = env.action_space
+    assert isinstance(action_space, Discrete)
+    TestRunner().run(
+        debug=debug,
+        encoder_str=encoder,
+        encoders=[
+            TerseWithReward(),
+            TerseWithoutReward(),
+            VerboseWithReward(),
+            VerboseWithoutReward(),
+        ],
+        failure_trajectories=failure_trajectories,
+        filename="logs/catch-metrics.html",
+        logprobs=logprobs,
+        metric_str=metric,
+        metrics=[
+            Action(queries, num_actions=action_space.n),
+            Episode(envs=envs),
+            FailureReward(queries),
+            NonterminalReward(queries),
+            SuccessReward(queries),
+            Transition(queries),
+        ],
+        prompt_sizes=list(prompt_sizes),
+        seed=seed,
+        success_trajectories=success_trajectories,
+        title="Catch",
+    )
 
 
 if __name__ == "__main__":
