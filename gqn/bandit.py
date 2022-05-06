@@ -17,109 +17,81 @@
 Observation is a single pixel of 0 - this is an independent arm bandit problem!
 Rewards are [0, 0.1, .. 1] assigned randomly to 11 arms and deterministic
 """
-from typing import Optional, Tuple, cast
+import re
+from dataclasses import dataclass
+from typing import Optional, Tuple
 
-import base_env
-import dm_env
-import gym
 import numpy as np
+from base_env import Env as BaseEnv
 from base_env import TimeStep
-from bsuite.environments import base
-from bsuite.experiments.bandit import sweep
-from dm_env import specs
 from gym.spaces import Discrete
 
 
-class Env(base.Environment):
-    """SimpleBandit environment."""
+@dataclass
+class Env(BaseEnv[np.ndarray, int]):
+    num_steps: int
+    num_arms: int
+    random_seed: int
 
-    def __init__(self, mapping_seed: Optional[int] = None, num_actions: int = 11):
-        """Builds a simple bandit environment.
-        Args:
-          mapping_seed: Optional integer. Seed for action mapping.
-          num_actions: number of actions available, defaults to 11.
-        """
-        super(Env, self).__init__()
-        self.random_seed = mapping_seed
-        self._rng = np.random.RandomState(mapping_seed)
-        self._num_actions = num_actions
-        action_mask = self._rng.choice(
-            range(self._num_actions), size=self._num_actions, replace=False
-        )
-        self.means = np.linspace(0, 1, self._num_actions)[action_mask]
-
-        self._total_regret = 0.0
-        self._optimal_return = 1.0
-        self.bsuite_num_episodes = sweep.NUM_EPISODES
-
-    @staticmethod
-    def _get_observation():
-        return np.ones(shape=(1, 1), dtype=np.float32)
-
-    def _reset(self) -> dm_env.TimeStep:
-        observation = self._get_observation()
-        return dm_env.restart(observation)
-
-    def _step(self, action: int) -> dm_env.TimeStep:
-        reward = self._rng.normal(self.means[action], 1)
-        self._total_regret += self._optimal_return - reward
-        observation = self._get_observation()
-        return dm_env.termination(reward=reward, observation=observation)
-
-    def observation_spec(self):
-        return specs.Array(shape=(1, 1), dtype=np.float32, name="observation")
-
-    def action_spec(self):
-        return specs.DiscreteArray(self._num_actions, name="action")
-
-    def bsuite_info(self):
-        return dict(total_regret=self._total_regret)
-
-
-class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
-    def __init__(self, env: Env):
-        super().__init__(cast(gym.Env, env))
-        self.action_space = Discrete(3, seed=env.random_seed)
+    def __post_init__(self):
+        self.means = None
+        self.rng = np.random.default_rng(seed=self.random_seed)
+        self.action_space = Discrete(self.num_arms, seed=self.random_seed)
 
     def actions(self) -> "list[str]":
-        assert isinstance(self.env, Env)
-        return [str(i) for i in range(self.env.action_spec().num_values)]
+        assert isinstance(self.action_space, Discrete)
+        return [str(i) for i in range(self.action_space.n)]
 
     def done(self, state_or_reward: str) -> bool:
-        return True
+        return state_or_reward.count(self.state_stop()) == self.num_steps
 
-    @classmethod
-    def quantify(cls, value: str, gamma: Optional[float]) -> float:
-        breakpoint()
-        raise NotImplementedError
+    def quantify(self, prompt: str, gamma: Optional[float]) -> float:
+        rewards = re.findall(r"\d: ([.\d]+);", prompt)
+        rewards = rewards[: self.num_steps]
+        return sum(map(float, rewards))
 
-    def reset(self):
-        assert isinstance(self.env, Env)
-        return self.env.reset().observation
+    def render(self, mode="human"):
+        pass
+
+    def reset(
+        self,
+        *,
+        seed: Optional[int] = None,
+        return_info: bool = False,
+        options: Optional[dict] = None,
+    ) -> np.ndarray:
+        self.means = np.linspace(0, 1.0, self.num_arms)
+        self.rng.shuffle(self.means)
+        self.t = 0
+        return self.means
+
+    @staticmethod
+    def state_stop() -> str:
+        return ";"
 
     @classmethod
     def _state_str(cls, obs: np.ndarray) -> str:
         return ""
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
-        assert isinstance(self.env, Env)
-        time_step: dm_env.TimeStep = self.env.step(action)
-        return (
-            time_step.observation,
-            time_step.reward,
-            time_step.last(),
-            self.bsuite_info(),
-        )
+        reward = self.rng.normal(self.means[action], scale=0.5 / (self.num_arms - 1))
+        optimal = self.means.argmax() * self.num_steps
+        done = self.t == self.num_steps
+        self.t += 1
+        return self.means, reward, done, dict(optimal=optimal)
 
     def ts_to_string(self, ts: TimeStep) -> str:
         return f"{self.actions()[ts.action]}: {str(round(ts.reward, ndigits=2))}{self.state_stop()}"
 
 
 if __name__ == "__main__":
-    env = Wrapper(Env(mapping_seed=0, num_actions=3))
+    env = Env(num_steps=5, num_arms=3, random_seed=0)
     while True:
-        env.reset()
-        a = env.action_space.sample()
-        s, r, t, i = env.step(a)
-        print(env.ts_to_string(TimeStep(s, a, r, t, s)))
-        breakpoint()
+        s = env.reset()
+        t = False
+        while not t:
+            a = env.action_space.sample()
+            s, r, t, i = env.step(a)
+            print(s)
+            print(env.ts_to_string(TimeStep(s, a, r, t, s)))
+            breakpoint()
