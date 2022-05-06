@@ -87,12 +87,6 @@ class Env(base_env.Env[int, int]):
     def states():
         return ["Boss is in.", "Boss is out.", "Go home.", "Sunny.", "Raining."]
 
-    def successor_feature(self, state: "int | tuple[int, int]") -> np.ndarray:
-        assert isinstance(self.observation_space, gym.spaces.Discrete)
-        one_hot = np.zeros(self.observation_space.n)
-        one_hot[state] = 1
-        return one_hot
-
     def ts_to_string(self, ts: TimeStep) -> str:
         description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"
         if ts.done:

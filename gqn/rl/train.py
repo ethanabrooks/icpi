@@ -38,7 +38,6 @@ def make_env(env_id: str, gamma: float, seed: int, status: bool) -> Env:
 
 def train(
     debug: int,
-    delta: float,
     env_id: str,
     eval_interval: Optional[int],
     failure_threshold: float,
@@ -50,6 +49,7 @@ def train(
     prompt_size: int,
     seed: int,
     status: bool,
+    success_buffer_size: int,
     temperature: float,
     top_p: float,
     total_steps: int,
@@ -59,7 +59,7 @@ def train(
     env = make_env(env_id=env_id, gamma=gamma, seed=seed, status=status)
 
     buffer: Deque[List[TimeStep]] = deque()
-    success_buffer: Deque[List[TimeStep]] = deque()
+    success_buffer: Deque[List[TimeStep]] = deque(maxlen=success_buffer_size)
 
     gpt3 = GPT3(
         debug=debug,
@@ -72,7 +72,6 @@ def train(
     pi = Pi(
         buffer=buffer,
         debug=debug,
-        delta=delta,
         env=env,
         failure_threshold=failure_threshold,
         gamma=gamma,
@@ -82,10 +81,10 @@ def train(
         rng=rng,
         success_buffer=success_buffer,
     )
+
     q = Q(
         buffer=buffer,
         debug=debug,
-        delta=delta,
         env=env,
         failure_threshold=failure_threshold,
         gamma=gamma,
@@ -180,9 +179,7 @@ def train(
         trajectory = trajectory[-max_trajectory:]
         if not timed_out:
             buffer.append(trajectory)
-            while trajectory:
-                if get_value(*trajectory, gamma=1) > failure_threshold:
-                    success_buffer.append(trajectory)
-                head, *trajectory = trajectory
+            if get_value(*trajectory, gamma=1) > failure_threshold:
+                success_buffer.append(trajectory)
 
     print("done!")

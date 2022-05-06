@@ -111,9 +111,6 @@ class Wrapper(gym.Wrapper, base_env.Env[np.ndarray, int]):
             self.bsuite_info(),
         )
 
-    def successor_feature(self, obs: np.ndarray) -> np.ndarray:
-        return obs.flatten()
-
     def ts_to_string(self, ts: TimeStep) -> str:
         return f"{self.actions()[ts.action]}: {str(round(ts.reward, ndigits=2))}{self.state_stop()}"
 

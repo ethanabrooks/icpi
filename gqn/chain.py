@@ -87,11 +87,6 @@ class Env(base_env.Env[int, int]):
         state = int(self._state)
         return state, float(success), done, info
 
-    def successor_feature(self, state: int) -> np.ndarray:
-        one_hot = np.zeros(self.n)
-        one_hot[state] = 1
-        return one_hot
-
     def ts_to_string(self, ts: TimeStep) -> str:
         description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"
         if ts.done:

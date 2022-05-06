@@ -28,7 +28,6 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     buffer: Deque[List[TimeStep]]
     env: Env
     debug: int
-    delta: float
     failure_threshold: float
     gamma: float
     gpt3: GPT3
@@ -50,7 +49,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         return get_value(*trajectory, gamma=self.gamma)
 
     def ready(self) -> bool:
-        return len(self.buffer) >= self.prompt_size
+        return len(self.success_buffer) >= 1
 
     def sample(self):
         successful = [
@@ -84,35 +83,18 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         return [to_string(*t, env=self.env) for t in trajectories]
 
     def sample_best(self):
-        trajectories = sorted(self.success_buffer, key=self.get_value, reverse=True)
-        unique = dict()
-
-        for trajectory in trajectories:
-            if len(unique) == self.prompt_size:
-                break
-
-            def successor_representation(
-                *trajectory: TimeStep, gamma: float
-            ) -> np.ndarray:
-                representation = 0
-                for t, ts in enumerate(trajectory):
-                    representation += gamma ** t * self.env.successor_feature(ts.state)
-                assert isinstance(representation, np.ndarray)
-                return representation
-
-            rep1 = successor_representation(*trajectory, gamma=self.gamma)
-            different = True
-            for rep2 in unique.values():
-                if cosine_similarity(rep1, rep2) > self.delta:
-                    different = False
-                    break
-            if different:
-                prompt = to_string(*trajectory, env=self.env)
-                unique[prompt] = rep1
-
-        prompts = list(unique)
-        self.rng.shuffle(prompts)
-        return prompts
+        trajectories = list(self.success_buffer)
+        for trajectory in list(trajectories):
+            while trajectory:
+                _, *trajectory = trajectory
+                if trajectory:
+                    trajectories.append(trajectory)
+        trajectories = [
+            trajectories[i]
+            for i in self.rng.choice(len(trajectories), self.prompt_size)
+        ]
+        assert len(trajectories) == self.prompt_size
+        return [to_string(*t, env=self.env) for t in trajectories]
 
 
 @dataclass
@@ -219,9 +201,3 @@ class Pi(Model[ObsType, ActType]):
             t += 1
 
         return action
-
-    def ready(self) -> bool:
-        trajectories = [
-            t for t in self.buffer if get_value(*t, gamma=1) > self.failure_threshold
-        ]
-        return len(trajectories) > 0
