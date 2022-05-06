@@ -9,7 +9,7 @@ from base_env import TimeStep
 
 REWARDS = {
     1.0: "Success",
-    -1.0: "Failure",
+    0.0: "Failure",
 }
 
 
@@ -48,8 +48,8 @@ class Env(base_env.Env[int, int]):
         value = gamma ** length
         if success:
             return value
-        elif prompt.endswith(REWARDS[-1.0] + cls.state_stop()):
-            return -value
+        elif prompt.endswith(REWARDS[0.0] + cls.state_stop()):
+            return 0
         return 0
 
     def render(self, mode="human"):
@@ -77,11 +77,7 @@ class Env(base_env.Env[int, int]):
         done = action == 1
         success = done and self._state == self.goal
         state = int(self._state)
-        if done:
-            reward = 1 if success else -1
-        else:
-            reward = 0
-        return state, reward, done, info
+        return state, float(success), done, info
 
     def successor_feature(self, state: int) -> np.ndarray:
         one_hot = np.zeros(self.n)
