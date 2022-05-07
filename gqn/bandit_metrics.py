@@ -107,7 +107,7 @@ def main(
             state = next_state
         return trajectory
 
-    env = bandit.Env(num_steps=num_steps, num_arms=num_arms, random_seed=seed)
+    env = bandit.Env(num_steps=num_steps, random_seed=seed)
 
     class TestRunner(BaseTestRunner):
         def get_envs(self) -> List[Env]:

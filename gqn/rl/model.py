@@ -11,8 +11,8 @@ from numpy.random import Generator
 from rl.gpt3 import GPT3
 
 
-def to_string(*_trajectory: TimeStep, env) -> str:
-    return " ".join([env.ts_to_string(ts) for ts in _trajectory])
+def to_string(*trajectory: TimeStep, env) -> str:
+    return " ".join([env.ts_to_string(ts) for ts in trajectory])
 
 
 def get_value(*trajectory: TimeStep, gamma: float) -> float:
@@ -151,7 +151,7 @@ class Q(Model[ObsType, ActType]):
         t = 0
         state_str = self.env.state_str(state)
         action_str = self.env.action_str(action)
-        completions = [state_str, action_str]
+        completions = [s for s in [state_str, action_str] if s]
         if self.env.partially_observable():
             completions = [self.env.ts_to_string(ts) for ts in trajectory] + completions
 

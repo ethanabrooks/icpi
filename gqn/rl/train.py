@@ -21,7 +21,7 @@ from run_logger import HasuraLogger
 def make_env(env_id: str, gamma: float, seed: int, status: bool) -> Env:
     if env_id == "bandit":
         assert gamma == 1.0
-        env = bandit.Env(num_steps=5, num_arms=2, random_seed=seed)
+        env = bandit.Env(num_steps=5, random_seed=seed)
     elif env_id == "cartpole":
         env = cartpole.Wrapper(
             cartpole.Env(gamma=gamma, max_episode_steps=5, seed=seed)

@@ -30,13 +30,12 @@ from gym.spaces import Discrete
 @dataclass
 class Env(BaseEnv[np.ndarray, int]):
     num_steps: int
-    num_arms: int
     random_seed: int
 
     def __post_init__(self):
-        self.means = None
+        self.distributions = None
         self.rng = np.random.default_rng(seed=self.random_seed)
-        self.action_space = Discrete(self.num_arms, seed=self.random_seed)
+        self.action_space = Discrete(2, seed=self.random_seed)
 
     def actions(self) -> "list[str]":
         assert isinstance(self.action_space, Discrete)
@@ -64,10 +63,10 @@ class Env(BaseEnv[np.ndarray, int]):
         return_info: bool = False,
         options: Optional[dict] = None,
     ) -> np.ndarray:
-        self.means = np.linspace(0, 1.0, self.num_arms)
-        self.rng.shuffle(self.means)
+        self.distributions = np.array([[0, 0.5], [0.5, 1]])
+        self.rng.shuffle(self.distributions)
         self.t = 0
-        return self.means
+        return self.distributions
 
     @staticmethod
     def state_stop() -> str:
@@ -77,12 +76,16 @@ class Env(BaseEnv[np.ndarray, int]):
     def _state_str(cls, obs: np.ndarray) -> str:
         return ""
 
+    def state_str(self, state: np.ndarray) -> str:
+        return self._state_str(state)
+
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
-        reward = self.rng.normal(self.means[action], scale=0.5 / (self.num_arms - 1))
-        optimal = self.means.argmax() * self.num_steps
-        done = self.t == self.num_steps
+        dist = self.distributions[action]
+        reward = self.rng.choice(dist)
+        optimal = self.distributions.max() * self.num_steps
         self.t += 1
-        return self.means, reward, done, dict(optimal=optimal)
+        done = self.t == self.num_steps
+        return self.distributions, reward, done, dict(optimal=optimal)
 
     def successor_feature(self, obs: np.ndarray) -> np.ndarray:
         return obs.flatten()
@@ -92,7 +95,7 @@ class Env(BaseEnv[np.ndarray, int]):
 
 
 if __name__ == "__main__":
-    env = Env(num_steps=5, num_arms=3, random_seed=0)
+    env = Env(num_steps=5, random_seed=0)
     while True:
         s = env.reset()
         t = False
