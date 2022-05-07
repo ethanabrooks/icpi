@@ -7,7 +7,7 @@ repos:
       - id: check-ast
       - id: check-merge-conflict
   - repo: https://github.com/psf/black
-    rev: 21.10b0
+    rev: 22.3.0
     hooks:
       - id: black
   - repo: https://github.com/jumanjihouse/pre-commit-hooks

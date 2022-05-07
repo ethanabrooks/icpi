@@ -94,7 +94,7 @@ class Env(gym.Env[np.ndarray, Union[int, Obs]]):
         # Angle at which to fail the episode
         self.theta_threshold_radians = 12 * 2 * math.pi / 360
         self.x_threshold = 2.4
-        self._optimal = gamma ** max_episode_steps
+        self._optimal = gamma**max_episode_steps
 
         # Angle limit set to 2 * theta_threshold_radians so failing observation
         # is still within bounds.
@@ -132,10 +132,10 @@ class Env(gym.Env[np.ndarray, Union[int, Obs]]):
         # For the interested reader:
         # https://coneural.org/florian/papers/05_cart_pole.pdf
         temp = (
-            force + self.polemass_length * theta_dot ** 2 * sintheta
+            force + self.polemass_length * theta_dot**2 * sintheta
         ) / self.total_mass
         thetaacc = (self.gravity * sintheta - costheta * temp) / (
-            self.length * (4.0 / 3.0 - self.masspole * costheta ** 2 / self.total_mass)
+            self.length * (4.0 / 3.0 - self.masspole * costheta**2 / self.total_mass)
         )
         xacc = temp - self.polemass_length * thetaacc * costheta / self.total_mass
 

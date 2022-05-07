@@ -74,7 +74,7 @@ class Env(base.Environment):
         self._paddle_x = None
         self._paddle_y = None
         self.bsuite_num_episodes = sweep.NUM_EPISODES
-        self._optimal = gamma ** rows
+        self._optimal = gamma**rows
 
     def render(self, mode="human"):
         pass

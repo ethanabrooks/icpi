@@ -55,7 +55,7 @@ class Env(base_env.Env[int, int]):
     def quantify(cls, prompt: str, gamma: Optional[float]) -> float:
         success = prompt.endswith(REWARDS[1.0] + cls.state_stop())
         length = prompt.count(cls.action_stop()) - 1
-        value = gamma ** length
+        value = gamma**length
         if success:
             return value
         elif prompt.endswith(REWARDS[0.0] + cls.state_stop()):

@@ -16,7 +16,7 @@ def to_string(*trajectory: TimeStep, env) -> str:
 
 
 def get_value(*trajectory: TimeStep, gamma: float) -> float:
-    return sum([gamma ** t * ts.reward for t, ts in enumerate(trajectory)])
+    return sum([gamma**t * ts.reward for t, ts in enumerate(trajectory)])
 
 
 def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
@@ -95,7 +95,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             ) -> np.ndarray:
                 representation = 0
                 for t, ts in enumerate(trajectory):
-                    representation += gamma ** t * self.env.successor_feature(ts.state)
+                    representation += gamma**t * self.env.successor_feature(ts.state)
                 assert isinstance(representation, np.ndarray)
                 return representation
 
