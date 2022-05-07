@@ -68,20 +68,23 @@ def train(
     buffer: Deque[List[TimeStep]] = deque()
     success_buffer: Deque[List[TimeStep]] = deque(maxlen=success_buffer_size)
 
-    gpt3 = GPT3(
-        debug=debug,
-        logprobs=logprobs,
-        logger=logger,
-        stop=[env.action_stop(), env.state_stop()],
-        temperature=temperature,
-        top_p=top_p,
-    )
+    def make_gpt3(best_of: bool):
+        return GPT3(
+            best_of=1 if best_of else None,
+            debug=debug,
+            logprobs=logprobs,
+            logger=logger,
+            stop=[env.action_stop(), env.state_stop()],
+            temperature=temperature,
+            top_p=top_p,
+        )
+
     pi = Pi(
         buffer=buffer,
         debug=debug,
         env=env,
         gamma=gamma,
-        gpt3=gpt3,
+        gpt3=make_gpt3(best_of=True),
         max_steps=max_trajectory,
         prompt_size=prompt_size,
         rng=rng,
@@ -92,7 +95,7 @@ def train(
         debug=debug,
         env=env,
         gamma=gamma,
-        gpt3=gpt3,
+        gpt3=make_gpt3(best_of=False),
         max_steps=max_trajectory,
         prompt_size=prompt_size,
         rng=rng,
