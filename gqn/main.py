@@ -20,11 +20,12 @@ DEFAULT_CONFIG = "config.yml"
 GRAPHQL_ENDPOINT = os.getenv("GRAPHQL_ENDPOINT")
 
 
-@tree.command()
+@tree.command(parsers=dict(local_rank=argument("local_rank")))
 def no_logging(
     config: str = DEFAULT_CONFIG,
     debug: int = 0,
     load_id: Optional[int] = None,
+    local_rank: Optional[str] = None,
 ):
     logger = HasuraLogger(GRAPHQL_ENDPOINT)
     params = dict(get_config_params(config), debug=debug)

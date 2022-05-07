@@ -42,6 +42,8 @@ services:
     volumes:
       - "${PWD}/logs:/tmp/logs"
       - "${PWD}/completions:/root/completions"
+      - "${HUGGINGFACE_CACHE_DIR}:/root/.cache/huggingface"
+      - "${TORCH_EXTENSIONS_HOST_DIR}:/root/.cache/torch_extensions"
     deploy:
       replicas: ${REPLICAS}
       resources:

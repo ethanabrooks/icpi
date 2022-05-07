@@ -15,6 +15,9 @@ dollar-lambda = {git = "https://github.com/ethanabrooks/dollar-lambda.git", rev 
 sweep-logger = {git = "https://github.com/run-tracker/sweep-logger.git", rev = "main"}
 vega-charts = {git = "https://github.com/run-tracker/vega-charts.git", rev = "main"}
 bsuite = "^0.3.5"
+torch = {url = "https://download.pytorch.org/whl/cu111/torch-1.10.2%2Bcu111-cp39-cp39-linux_x86_64.whl"}
+transformers = "4.18.0"
+deepspeed = "0.6.1"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.2.0"
