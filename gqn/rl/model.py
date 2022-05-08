@@ -29,7 +29,6 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     env: Env
     debug: int
     delta: float
-    failure_threshold: float
     gamma: float
     gpt3: GPT3
     max_steps: int
@@ -54,10 +53,10 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
 
     def sample(self):
         successful = [
-            t for t in self.buffer if self.get_value(t) > self.failure_threshold
+            t for t in self.buffer if self.get_value(t) > self.env.failure_threshold()
         ]
         unsuccessful = [
-            t for t in self.buffer if self.get_value(t) <= self.failure_threshold
+            t for t in self.buffer if self.get_value(t) <= self.env.failure_threshold()
         ]
         half1 = self.prompt_size // 2
         half2 = self.prompt_size - half1
@@ -231,6 +230,8 @@ class Pi(Model[ObsType, ActType]):
 
     def ready(self) -> bool:
         trajectories = [
-            t for t in self.buffer if get_value(*t, gamma=1) > self.failure_threshold
+            t
+            for t in self.buffer
+            if get_value(*t, gamma=1) > self.env.failure_threshold()
         ]
         return len(trajectories) > 0

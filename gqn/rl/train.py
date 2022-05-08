@@ -46,7 +46,6 @@ def train(
     debug: int,
     delta: float,
     env_id: str,
-    failure_threshold: float,
     gamma: float,
     logprobs: int,
     logger: HasuraLogger,
@@ -79,7 +78,6 @@ def train(
         debug=debug,
         delta=delta,
         env=env,
-        failure_threshold=failure_threshold,
         gamma=gamma,
         gpt3=gpt3,
         max_steps=max_trajectory,
@@ -92,7 +90,6 @@ def train(
         debug=debug,
         delta=delta,
         env=env,
-        failure_threshold=failure_threshold,
         gamma=gamma,
         gpt3=gpt3,
         max_steps=max_trajectory,
@@ -161,7 +158,7 @@ def train(
         if not timed_out:
             buffer.append(trajectory)
             while trajectory:
-                if get_value(*trajectory, gamma=1) > failure_threshold:
+                if get_value(*trajectory, gamma=1) > env.failure_threshold():
                     success_buffer.append(trajectory)
                 head, *trajectory = trajectory
 

@@ -223,6 +223,9 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
         *_, state_or_reward = completions
         return any([r in state_or_reward for r in REWARDS.values()])
 
+    def failure_threshold(self) -> float:
+        return 0
+
     def partially_observable(self) -> bool:
         return False
 

@@ -45,6 +45,9 @@ class Env(base_env.Env[int, int]):
         *_, state_or_reward = completions
         return state_or_reward.rstrip(self.state_stop()) in REWARDS.values()
 
+    def failure_threshold(self) -> float:
+        return 0
+
     def partially_observable(self) -> bool:
         return False
 

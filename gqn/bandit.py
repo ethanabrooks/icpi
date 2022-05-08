@@ -45,6 +45,9 @@ class Env(BaseEnv[np.ndarray, int]):
         trajectory_length = " ".join(completions).count(self.action_stop())
         return trajectory_length >= self.num_steps
 
+    def failure_threshold(self) -> float:
+        return 0.5 * self.num_steps
+
     def partially_observable(self) -> bool:
         return True
 

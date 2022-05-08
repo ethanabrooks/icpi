@@ -47,6 +47,9 @@ class Env(base_env.Env[int, int]):
     def done(self, *completions: str) -> bool:
         return len(completions) // 2 == self.num_steps
 
+    def failure_threshold(self) -> float:
+        return 0
+
     def partially_observable(self) -> bool:
         return True
 
