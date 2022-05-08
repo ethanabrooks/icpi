@@ -28,7 +28,9 @@ def make_env(env_id: str, gamma: float, seed: int, status: bool) -> Env:
         )
     elif env_id == "catch":
         assert gamma == 1.0
-        env = catch.Wrapper(catch.Env(columns=4, gamma=gamma, rows=5, seed=seed))
+        env = catch.Wrapper(
+            catch.Env(columns=4, gamma=gamma, rows=5, seed=seed), status=status
+        )
     elif env_id == "chain":
         env = TimeLimit(
             chain.Env(gamma=gamma, goal=4, n=8, random_seed=seed, status=status),

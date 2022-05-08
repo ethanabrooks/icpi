@@ -134,8 +134,9 @@ REWARDS = {
 
 
 class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
-    def __init__(self, env: Env):
+    def __init__(self, env: Env, status: bool):
         super().__init__(cast(gym.Env, env))
+        self.status = status
         self.action_space = Discrete(3, seed=env.random_seed)
         self.observation_space = MultiDiscrete(
             np.ones_like(env.observation_spec().shape), seed=env.random_seed
