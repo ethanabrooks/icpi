@@ -95,6 +95,11 @@ class GPT3:
                 print(e)
                 time.sleep(1)
                 continue
+            except openai.error.InvalidRequestError as e:
+                print(e)
+                _, *prompts = prompt.split("\n")
+                prompt = "\n".join(prompts)
+                continue
 
             top_logprobs = [l.to_dict() for l in choice.logprobs.top_logprobs]
             completion = choice.text.lstrip()
