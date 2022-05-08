@@ -48,7 +48,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         return get_value(*trajectory, gamma=self.gamma)
 
     def ready(self) -> bool:
-        return len(self.buffer) >= self.prompt_size
+        return len(self.success_buffer) > 0
 
     def sample(self):
         successful = [
@@ -210,11 +210,3 @@ class Pi(Model[ObsType, ActType]):
             t += 1
 
         return action
-
-    def ready(self) -> bool:
-        trajectories = [
-            t
-            for t in self.buffer
-            if get_value(*t, gamma=1) > self.env.failure_threshold()
-        ]
-        return len(trajectories) > 0
