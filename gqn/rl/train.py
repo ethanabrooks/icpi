@@ -165,7 +165,7 @@ def train(
             r += gamma**t * reward
             t += 1
             T += 1
-            timed_out = "TimeLimit.truncated" in info
+            timed_out = info.get("TimeLimit.truncated", False)
             if done:
                 print(".", end="")
                 episodes += 1
