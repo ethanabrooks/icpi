@@ -128,8 +128,8 @@ class Env(base.Environment):
 
 
 REWARDS = {
-    1.0: "success",
-    0.0: "failure",
+    1.0: "P.x==B.x, B.y==0, success",
+    0.0: "P.x!=B.x, B.y==0, failure",
 }
 
 
@@ -154,7 +154,7 @@ class Wrapper(gym.Wrapper, envs.base_env.Env[Obs, int]):
 
     @classmethod
     def quantify(cls, prompt: str, gamma: Optional[float]) -> float:
-        success = prompt.endswith(f"[{REWARDS[1.0]}].")
+        success = prompt.endswith(f"[{REWARDS[1.0]}];")
         value = gamma ** (prompt.count(":") - 1)
         return value if success else 0
 
@@ -162,11 +162,30 @@ class Wrapper(gym.Wrapper, envs.base_env.Env[Obs, int]):
         assert isinstance(self.env, Env)
         return self.env.reset().observation
 
+    @staticmethod
+    def state_stop() -> str:
+        return ";"
+
     @classmethod
     def _state_str(cls, obs: Obs) -> str:
         assert isinstance(obs, Obs)
         paddle_x, ball_x, ball_y = Obs(*obs)
-        return f"paddle=({paddle_x},0) ball=({ball_x},{ball_y})"
+        return f"P=({paddle_x},0) B=({ball_x},{ball_y}) [{cls._status(obs)}]"
+
+    @classmethod
+    def _status(cls, obs: Obs) -> str:
+        paddle_x, ball_x, ball_y = Obs(*obs)
+        x_status = "P.x==B.x" if paddle_x == ball_x else "P.x!=B.x"
+        y_status = "B.y==0" if ball_y == 0 else "B.y>0"
+        if ball_y == 0:
+            reward = (
+                "success"
+                if x_status == "P.x==B.x" and y_status == "B.y==0"
+                else "failure"
+            )
+        else:
+            reward = "in progress"
+        return f"{x_status}, {y_status}, {reward}"
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
         assert isinstance(self.env, Env)
@@ -184,6 +203,5 @@ class Wrapper(gym.Wrapper, envs.base_env.Env[Obs, int]):
     def ts_to_string(self, ts: TimeStep) -> str:
         description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"
         if ts.done:
-            state_str = self.state_str(ts.next_state).rstrip(self.state_stop())
-            description += f" {state_str} [{REWARDS[ts.reward]}]{self.state_stop()}"
+            description += f" {self.state_str(ts.next_state)}"
         return description
