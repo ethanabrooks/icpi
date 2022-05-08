@@ -23,6 +23,10 @@ def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
     return np.dot(a, b) / (norm(a) * norm(b))
 
 
+def sub_trajectories(*trajectories: List[TimeStep]) -> List[List[TimeStep]]:
+    return [t[i:] for t in trajectories for i in range(len(t))]
+
+
 @dataclass
 class Model(abc.ABC, Generic[ObsType, ActType]):
     buffer: Deque[List[TimeStep]]
@@ -82,7 +86,8 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         return [to_string(*t, env=self.env) for t in trajectories]
 
     def sample_best(self):
-        trajectories = sorted(self.success_buffer, key=self.get_value, reverse=True)
+        success_buffer = sub_trajectories(*self.success_buffer)
+        trajectories = sorted(success_buffer, key=self.get_value, reverse=True)
         unique = dict()
 
         for trajectory in trajectories:

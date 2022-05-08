@@ -14,7 +14,7 @@ import openai
 import umbrella
 from base_env import Env
 from gym.wrappers import TimeLimit
-from rl.model import GPT3, Pi, Q, TimeStep, get_value, to_string
+from rl.model import GPT3, Pi, Q, TimeStep, get_value, sub_trajectories, to_string
 from run_logger import HasuraLogger
 
 
@@ -124,7 +124,9 @@ def train(
             logger.log(**log)
 
     while T < total_steps:
-        use_model_prob = 1 / (1 + math.exp(2 * (min_successes - len(success_buffer))))
+        use_model_prob = 1 / (
+            1 + math.exp(2 * (min_successes - len(sub_trajectories(*success_buffer))))
+        )
 
         if eval_interval is not None and episodes % eval_interval == 0:
 
@@ -184,9 +186,7 @@ def train(
         trajectory = trajectory[-max_trajectory:]
         if not timed_out:
             buffer.append(trajectory)
-            while trajectory:
-                if get_value(*trajectory, gamma=1) > env.failure_threshold():
-                    success_buffer.append(trajectory)
-                head, *trajectory = trajectory
+            if get_value(*trajectory, gamma=1) > env.failure_threshold():
+                success_buffer.append(trajectory)
 
     print("done!")
