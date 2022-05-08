@@ -46,7 +46,3 @@ services:
       - "${TORCH_EXTENSIONS_HOST_DIR}:/root/.cache/torch_extensions"
     deploy:
       replicas: ${REPLICAS}
-      resources:
-        reservations:
-          devices:
-            - capabilities: [gpu]

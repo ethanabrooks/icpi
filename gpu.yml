@@ -7,3 +7,9 @@ services:
   run:
     build:
       dockerfile: Dockerfile.gpu
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - device_ids: ["4", "5", "6", "7"]
+              capabilities: [gpu]
