@@ -174,11 +174,16 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
     def state_stop() -> str:
         return ";"
 
+    @staticmethod
+    def _state_without_status_str(obs: Obs) -> str:
+        assert isinstance(obs, Obs)
+        paddle_x, ball_x, ball_y = Obs(*obs)
+        return f"P=({paddle_x},0) B=({ball_x},{ball_y})"
+
     @classmethod
     def _state_str(cls, obs: Obs) -> str:
         assert isinstance(obs, Obs)
-        paddle_x, ball_x, ball_y = Obs(*obs)
-        return f"P=({paddle_x},0) B=({ball_x},{ball_y}) [{cls._status(obs)}]"
+        return f"{cls._state_without_status_str(obs)} [{cls._status(obs)}]"
 
     @classmethod
     def _status(cls, obs: Obs) -> str:
