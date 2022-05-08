@@ -28,7 +28,6 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     buffer: Deque[List[TimeStep]]
     env: Env
     debug: int
-    delta: float
     gamma: float
     gpt3: GPT3
     max_steps: int
@@ -90,24 +89,8 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             if len(unique) == self.prompt_size:
                 break
 
-            def successor_representation(
-                *trajectory: TimeStep, gamma: float
-            ) -> np.ndarray:
-                representation = 0
-                for t, ts in enumerate(trajectory):
-                    representation += gamma**t * self.env.successor_feature(ts.state)
-                assert isinstance(representation, np.ndarray)
-                return representation
-
-            rep1 = successor_representation(*trajectory, gamma=self.gamma)
-            different = True
-            for rep2 in unique.values():
-                if cosine_similarity(rep1, rep2) > self.delta:
-                    different = False
-                    break
-            if different:
-                prompt = to_string(*trajectory, env=self.env)
-                unique[prompt] = rep1
+            prompt = to_string(*trajectory, env=self.env)
+            unique[prompt] = None
 
         prompts = list(unique)
         self.rng.shuffle(prompts)

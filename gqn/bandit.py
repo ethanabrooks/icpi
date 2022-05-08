@@ -90,9 +90,6 @@ class Env(BaseEnv[np.ndarray, int]):
         done = self.t == self.num_steps
         return self.distributions, reward, done, dict(optimal=optimal)
 
-    def successor_feature(self, obs: np.ndarray) -> np.ndarray:
-        return obs.flatten()
-
     def ts_to_string(self, ts: TimeStep) -> str:
         return f"{self.actions()[ts.action]}: {str(round(ts.reward, ndigits=2))}{self.state_stop()}"
 

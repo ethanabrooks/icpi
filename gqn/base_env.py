@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from typing import Generic, Optional
 
 import gym
-import numpy as np
 from gym.core import ActType, ObsType
 
 
@@ -68,9 +67,6 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     @classmethod
     @abc.abstractmethod
     def _state_str(cls, state: ObsType) -> str:
-        ...
-
-    def successor_feature(self, state: int) -> np.ndarray:
         ...
 
     def ts_to_string(self, ts: TimeStep) -> str:

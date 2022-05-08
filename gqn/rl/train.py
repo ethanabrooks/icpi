@@ -46,7 +46,6 @@ def make_env(env_id: str, gamma: float, seed: int, status: bool) -> Env:
 
 def train(
     debug: int,
-    delta: float,
     env_id: str,
     gamma: float,
     logprobs: int,
@@ -56,6 +55,7 @@ def train(
     prompt_size: int,
     seed: int,
     status: bool,
+    success_buffer_size: int,
     temperature: float,
     top_p: float,
     total_steps: int,
@@ -65,7 +65,7 @@ def train(
     env = make_env(env_id=env_id, gamma=gamma, seed=seed, status=status)
 
     buffer: Deque[List[TimeStep]] = deque()
-    success_buffer: Deque[List[TimeStep]] = deque()
+    success_buffer: Deque[List[TimeStep]] = deque(maxlen=success_buffer_size)
 
     gpt3 = GPT3(
         debug=debug,
@@ -78,7 +78,6 @@ def train(
     pi = Pi(
         buffer=buffer,
         debug=debug,
-        delta=delta,
         env=env,
         gamma=gamma,
         gpt3=gpt3,
@@ -90,7 +89,6 @@ def train(
     q = Q(
         buffer=buffer,
         debug=debug,
-        delta=delta,
         env=env,
         gamma=gamma,
         gpt3=gpt3,

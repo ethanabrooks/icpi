@@ -211,9 +211,6 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
             self.bsuite_info(),
         )
 
-    def successor_feature(self, obs: Obs) -> np.ndarray:
-        return np.array(obs)
-
     def ts_to_string(self, ts: TimeStep) -> str:
         description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"
         if ts.done:

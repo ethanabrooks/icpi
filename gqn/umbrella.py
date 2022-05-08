@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 import base_env
-import gym
 import numpy as np
 from base_env import TimeStep
 from gym.spaces import Discrete
@@ -87,12 +86,6 @@ class Env(base_env.Env[int, int]):
         except IndexError:
             success = action == self.first
             return self.last, float(success), True, dict(optimal=1)
-
-    def successor_feature(self, state: "int | tuple[int, int]") -> np.ndarray:
-        assert isinstance(self.observation_space, gym.spaces.Discrete)
-        one_hot = np.zeros(self.observation_space.n)
-        one_hot[state] = 1
-        return one_hot
 
     def ts_to_string(self, ts: TimeStep) -> str:
         description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"
