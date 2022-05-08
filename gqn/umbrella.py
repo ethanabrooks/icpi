@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 
 import base_env
+import gym
 import numpy as np
 from base_env import TimeStep
 from gym.spaces import Discrete
@@ -43,7 +44,10 @@ class Env(base_env.Env[int, int]):
         assert isinstance(self.action_space, Discrete)
         return [str(i) for i in range(self.action_space.n)]
 
-    def done(self, state_or_reward: str) -> bool:
+    def done(self, *completions: str) -> bool:
+        return len(completions) // 2 == self.num_steps
+
+    def partially_observable(self) -> bool:
         return True
 
     def quantify(self, prompt: str, gamma: Optional[float]) -> float:

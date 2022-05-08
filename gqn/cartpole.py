@@ -219,8 +219,12 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
     def actions(self) -> "list[str]":
         return ["Left", "Right"]
 
-    def done(self, state_or_reward: str) -> bool:
+    def done(self, *completions: str) -> bool:
+        *_, state_or_reward = completions
         return any([r in state_or_reward for r in REWARDS.values()])
+
+    def partially_observable(self) -> bool:
+        return False
 
     @classmethod
     def quantify(cls, value: str, gamma: Optional[float]) -> float:

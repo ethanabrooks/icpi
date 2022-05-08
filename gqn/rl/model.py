@@ -37,13 +37,13 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     rng: Generator
     success_buffer: Deque[List[TimeStep]]
 
-    def act(self, state: ObsType) -> ActType:
+    def act(self, trajectory: List[TimeStep], state: ObsType) -> ActType:
         if self.ready():
-            return self._act(state)
+            return self._act(trajectory, state)
         return self.env.action_space.sample()
 
     @abc.abstractmethod
-    def _act(self, state: ObsType) -> ActType:
+    def _act(self, trajectory: List[TimeStep], state: ObsType) -> ActType:
         ...
 
     def get_value(self, trajectory: List[TimeStep]) -> float:
@@ -117,13 +117,13 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
 
 @dataclass
 class Q(Model[ObsType, ActType]):
-    def _act(self, state: ObsType) -> ActType:
+    def _act(self, trajectory: List[TimeStep], state: ObsType) -> ActType:
         assert isinstance(self.env.action_space, Discrete)
         actions = range(self.env.action_space.n)
 
         def get_values():
-            for a in actions:
-                yield self.value(state, action=a)
+            for action in actions:
+                yield self.value(trajectory, state, action)
 
         values = list(get_values())
         action_values = list(zip(actions, values))
@@ -147,11 +147,13 @@ class Q(Model[ObsType, ActType]):
             breakpoint()
         return action
 
-    def value(self, state: ObsType, action: ActType) -> str:
+    def value(self, trajectory: List[TimeStep], state: ObsType, action: ActType) -> str:
         t = 0
         state_str = self.env.state_str(state)
         action_str = self.env.action_str(action)
         completions = [state_str, action_str]
+        if self.env.partially_observable():
+            completions = [self.env.ts_to_string(ts) for ts in trajectory] + completions
 
         while True:
             if t == self.max_steps:
@@ -172,11 +174,14 @@ class Q(Model[ObsType, ActType]):
             if self.debug >= 4:
                 breakpoint()
             completions.append(state_or_reward)
-            if self.env.done(state_or_reward):
+            if self.env.done(*completions):
                 break
-            state_str = state_or_reward
+            if self.env.partially_observable():
+                query = " ".join(completions)
+            else:
+                query = state_or_reward
             prompts = self.sample_best()
-            new_prompt = "\n".join([*prompts, state_str])
+            new_prompt = "\n".join([*prompts, query])
             if self.debug >= 2:
                 print("Q prompt:")
                 print(new_prompt)
@@ -197,7 +202,7 @@ class Q(Model[ObsType, ActType]):
 
 
 class Pi(Model[ObsType, ActType]):
-    def _act(self, state: ObsType) -> ActType:
+    def _act(self, trajectory: List[TimeStep], state: ObsType) -> ActType:
         state = self.env.state_str(state)
         action = None
         t = 0
@@ -205,7 +210,11 @@ class Pi(Model[ObsType, ActType]):
             if t > self.max_steps:
                 return self.env.action_space.sample()
             prompts = self.sample_best()
-            prompt = "\n".join([*prompts, state])
+            if self.env.partially_observable():
+                query = to_string(*trajectory, env=self.env)
+            else:
+                query = state
+            prompt = "\n".join([*prompts, query])
             if self.debug >= 1:
                 print("pi prompt:")
                 print(prompt)

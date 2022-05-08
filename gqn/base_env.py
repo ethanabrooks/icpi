@@ -43,7 +43,11 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
         ...
 
     @abc.abstractmethod
-    def done(self, state_or_reward: str) -> bool:
+    def done(self, *completions: str) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def partially_observable(self) -> bool:
         ...
 
     @abc.abstractmethod

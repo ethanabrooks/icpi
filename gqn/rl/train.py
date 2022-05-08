@@ -119,7 +119,7 @@ def train(
             model = pi if use_pi else q
             use_model = (rng.random() < use_model_prob) and model.ready()
             if use_model:
-                action = model.act(state)
+                action = model.act(trajectory, state)
             else:
                 action = env.action_space.sample()
             next_state, reward, done, info = env.step(action)

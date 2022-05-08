@@ -42,8 +42,12 @@ class Env(BaseEnv[np.ndarray, int]):
         assert isinstance(self.action_space, Discrete)
         return [str(i) for i in range(self.action_space.n)]
 
-    def done(self, state_or_reward: str) -> bool:
-        return state_or_reward.count(self.state_stop()) == self.num_steps
+    def done(self, *completions: str) -> bool:
+        trajectory_length = " ".join(completions).count(self.action_stop())
+        return trajectory_length >= self.num_steps
+
+    def partially_observable(self) -> bool:
+        return True
 
     def quantify(self, prompt: str, gamma: Optional[float]) -> float:
         rewards = re.findall(r"\d: ([.\d]+);", prompt)

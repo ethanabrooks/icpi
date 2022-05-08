@@ -41,8 +41,12 @@ class Env(base_env.Env[int, int]):
             "Right",
         ]
 
-    def done(self, state_or_reward: str) -> bool:
+    def done(self, *completions: str) -> bool:
+        *_, state_or_reward = completions
         return state_or_reward.rstrip(self.state_stop()) in REWARDS.values()
+
+    def partially_observable(self) -> bool:
+        return False
 
     @classmethod
     def quantify(cls, prompt: str, gamma: Optional[float]) -> float:
