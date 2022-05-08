@@ -5,3 +5,5 @@
 completions
 logs
 config.yml
+.auto.sh
+.rsyncignore
