@@ -14,7 +14,8 @@ import openai
 import umbrella
 from base_env import Env
 from gym.wrappers import TimeLimit
-from rl.model import GPT3, Pi, Q, TimeStep, get_value, to_string
+from rl.huggingface import HF_MODELS
+from rl.model import GPT3, HuggingFaceModel, Pi, Q, TimeStep, get_value, to_string
 from run_logger import HasuraLogger
 
 
@@ -42,8 +43,17 @@ def make_env(env_id: str, gamma: float, seed: int, status: bool) -> Env:
     return env
 
 
+def print_rank0(local_rank: Optional[int], *args, pretty=False, **kwargs):
+    if local_rank is None or local_rank == 0:
+        if pretty:
+            pprint(*args, **kwargs)
+        else:
+            print(*args, **kwargs)
+
+
 def train(
     debug: int,
+    model_name: str,
     env_id: str,
     eval_interval: Optional[int],
     failure_threshold: float,
@@ -60,6 +70,9 @@ def train(
     top_p: float,
     total_steps: int,
 ):
+    local_rank = os.getenv("LOCAL_RANK", None)
+    if local_rank is not None:
+        local_rank = int(local_rank)
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
     env = make_env(env_id=env_id, gamma=gamma, seed=seed, status=status)
@@ -67,21 +80,37 @@ def train(
     buffer: Deque[List[TimeStep]] = deque()
     success_buffer: Deque[List[TimeStep]] = deque(maxlen=success_buffer_size)
 
-    gpt3 = GPT3(
-        debug=debug,
-        logprobs=logprobs,
-        logger=logger,
-        stop=[env.action_stop(), env.state_stop()],
-        temperature=temperature,
-        top_p=top_p,
-    )
+    def make_lm(best_of: bool):
+        if model_name == "gpt3":
+            return GPT3(
+                best_of=1 if best_of else None,
+                debug=debug,
+                logprobs=logprobs,
+                logger=logger,
+                stop=[env.action_stop(), env.state_stop()],
+                temperature=temperature,
+                top_p=top_p,
+            )
+        elif model_name in HF_MODELS:
+            return HuggingFaceModel(
+                model_name=HF_MODELS[model_name],
+                best_of=1 if best_of else None,
+                debug=debug,
+                logprobs=logprobs,
+                logger=logger,
+                seed=seed,
+                stop=[env.action_stop(), env.state_stop()],
+                temperature=temperature,
+                top_p=top_p,
+            )
+
     pi = Pi(
         buffer=buffer,
         debug=debug,
         env=env,
         failure_threshold=failure_threshold,
         gamma=gamma,
-        gpt3=gpt3,
+        lm=make_lm(best_of=True),
         max_steps=max_trajectory,
         prompt_size=prompt_size,
         rng=rng,
@@ -94,7 +123,7 @@ def train(
         env=env,
         failure_threshold=failure_threshold,
         gamma=gamma,
-        gpt3=gpt3,
+        lm=make_lm(best_of=False),
         max_steps=max_trajectory,
         prompt_size=prompt_size,
         rng=rng,
@@ -118,7 +147,7 @@ def train(
                 "success buffer": len(success_buffer),
             }
         )
-        pprint(log)
+        print_rank0(local_rank, log, pretty=True)
         if logger.run_id is not None:
             logger.log(**log)
 
@@ -166,7 +195,7 @@ def train(
             T += 1
             timed_out = "TimeLimit.truncated" in info
             if done:
-                print(".", end="")
+                print_rank0(local_rank, ".", end="")
                 episodes += 1
                 make_log(r, "return", "regret")
             trajectory.append(step)
@@ -177,7 +206,7 @@ def train(
         value_from_prompt = env.quantify(prompt, gamma=gamma)
         value_from_trajectory = get_value(*trajectory, gamma=gamma)
         if not value_from_prompt == value_from_trajectory:
-            print(value_from_prompt, value_from_trajectory)
+            print_rank0(local_rank, value_from_prompt, value_from_trajectory)
             breakpoint()
             env.quantify(prompt, gamma=gamma)
             get_value(*trajectory, gamma=gamma)

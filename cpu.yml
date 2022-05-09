@@ -1,0 +1,9 @@
+version: "3.8"
+
+services:
+  sweep:
+    build:
+      dockerfile: Dockerfile.cpu
+  run:
+    build:
+      dockerfile: Dockerfile.cpu

@@ -20,7 +20,7 @@ DEFAULT_CONFIG = "config.yml"
 GRAPHQL_ENDPOINT = os.getenv("GRAPHQL_ENDPOINT")
 
 
-@tree.command()
+@tree.command(parsers=dict(local_rank=argument("local_rank").optional()))
 def no_logging(
     config: str = DEFAULT_CONFIG,
     debug: int = 0,
