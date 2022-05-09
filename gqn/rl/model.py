@@ -86,8 +86,8 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     def sample_best(self):
         trajectories = sub_trajectories(*self.success_buffer)
         self.rng.shuffle(trajectories)
-        unique = {to_string(*t, env=self.env): None for t in trajectories}
-        return list(unique)[: self.prompt_size]
+        prompts = [to_string(*t, env=self.env) for t in trajectories]
+        return list(prompts)[: self.prompt_size]
 
 
 @dataclass
