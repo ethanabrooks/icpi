@@ -160,7 +160,7 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
         return False
 
     def quantify(self, prompt: str) -> float:
-        success = prompt.endswith(f"[{self.rewards[1.0]}];")
+        success = prompt.endswith(f"[{self.rewards[1.0]}]{self.state_stop()}")
         value = self.gamma() ** (prompt.count(":") - 1)
         return value if success else 0
 
@@ -212,5 +212,12 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
     def ts_to_string(self, ts: TimeStep) -> str:
         description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"
         if ts.done:
-            description += f" {self.state_str(ts.next_state)}"
+            description += " "
+            if self.status:
+                description += self.state_str(ts.next_state)
+            else:
+                description += (
+                    self._state_without_status_str(ts.next_state)
+                    + f" [{self.rewards[ts.reward]}]{self.state_stop()}"
+                )
         return description
