@@ -263,7 +263,7 @@ def main(
     num_trajectories: int = 5,
     seed: int = 0,
 ):
-    env = catch.Wrapper(catch.Env(gamma=1.0, rows=ROWS, columns=COLUMNS, seed=seed))
+    env = catch.Wrapper(catch.Env(rows=ROWS, columns=COLUMNS, seed=seed))
     success_trajectories_by_feature = defaultdict(list)
     failure_trajectories_by_feature = defaultdict(list)
     all_states = [

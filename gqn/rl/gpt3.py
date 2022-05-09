@@ -53,6 +53,7 @@ class GPT3:
     top_p: float
     max_tokens: int = 100
     best_of: Optional[int] = None
+    require_cache: bool = False
     stop: Optional[List[str]] = None
 
     def __post_init__(self):
@@ -74,6 +75,10 @@ class GPT3:
                 if self.debug >= 0:
                     print(">", end="")
                 return completion
+            elif self.require_cache:
+                print("No completions found in cache for prompt:")
+                print(prompt)
+                breakpoint()
 
         self.print("Prompt:")
         self.print(prompt)

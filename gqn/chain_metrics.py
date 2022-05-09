@@ -162,7 +162,7 @@ def main(
     env = cast(
         chain.Env,
         TimeLimit(
-            chain.Env(gamma=1.0, goal=goal, n=n, random_seed=seed),
+            chain.Env(goal=goal, n=n, random_seed=seed),
             max_episode_steps=max_steps,
         ),
     )
