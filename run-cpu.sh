@@ -1,7 +1,7 @@
 #! /usr/bin/env bash
 mkdir -p logs completions
 name=$(basename "$PWD")_run
-docker build -t "$name" .
+docker build -f Dockerfile.cpu -t "$name" .
 docker run --rm -it \
 	--env-file .env \
 	-h="$(hostname -s)" \

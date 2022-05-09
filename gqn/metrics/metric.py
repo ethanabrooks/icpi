@@ -177,7 +177,7 @@ class ProbabilityMetric(Metric, abc.ABC):
             if debug >= 0:
                 print("<", end="")
             stop = [o[-1] for o in output]
-            completion = gpt3.get_full_completion(full_prompt, stop=stop)
+            completion = gpt3.get_full_completion(full_prompt, best_of=False, stop=stop)
             logprobs = completion["top_logprobs"]
             if debug >= 0:
                 print(">", end="")
@@ -368,7 +368,7 @@ class Episode(ActMetric):
                         if debug >= 0:
                             print("<", end="")
                         completion = gpt3.get_full_completion(
-                            prompt_with_query, stop=encoder.stop()
+                            prompt_with_query, best_of=False, stop=encoder.stop()
                         )
                         action_str = completion["completion"]
                         if debug >= 0:

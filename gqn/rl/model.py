@@ -1,6 +1,6 @@
 import abc
 from dataclasses import dataclass
-from typing import Deque, Generic, List
+from typing import Deque, Generic, List, Union
 
 import numpy as np
 from base_env import Env, TimeStep
@@ -9,6 +9,7 @@ from gym.spaces import Discrete
 from numpy.linalg import norm
 from numpy.random import Generator
 from rl.gpt3 import GPT3
+from rl.huggingface import HuggingFaceModel
 
 
 def to_string(*trajectory: TimeStep, env) -> str:
@@ -32,7 +33,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     buffer: Deque[List[TimeStep]]
     env: Env
     debug: int
-    gpt3: GPT3
+    lm: Union[GPT3, HuggingFaceModel]
     max_steps: int
     prompt_size: int
     rng: Generator
@@ -138,7 +139,9 @@ class Q(Model[ObsType, ActType]):
                 if self.debug >= 4:
                     breakpoint()
 
-                state_or_reward, *_ = self.gpt3(new_prompt).split(self.env.state_stop())
+                state_or_reward, *_ = self.lm(new_prompt, best_of=False).split(
+                    self.env.state_stop()
+                )
                 state_or_reward = state_or_reward.lstrip() + self.env.state_stop()
             if self.debug >= 2:
                 print("state/reward", state_or_reward)
@@ -159,7 +162,9 @@ class Q(Model[ObsType, ActType]):
             if self.debug >= 4:
                 breakpoint()
 
-            action_str, *_ = self.gpt3(new_prompt).split(self.env.state_stop())
+            action_str, *_ = self.lm(new_prompt, best_of=False).split(
+                self.env.state_stop()
+            )
             action_str = action_str.lstrip() + self.env.action_stop()
             t += 1
 
@@ -189,7 +194,9 @@ class Pi(Model[ObsType, ActType]):
             if self.debug >= 1:
                 print("pi prompt:")
                 print(prompt)
-            maybe_action, *_ = self.gpt3(prompt).lstrip().split(self.env.action_stop())
+            maybe_action, *_ = (
+                self.lm(prompt, best_of=True).lstrip().split(self.env.action_stop())
+            )
             if self.debug >= 1:
                 print("Action:", maybe_action)
             if self.debug >= 3:
