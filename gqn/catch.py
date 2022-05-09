@@ -125,12 +125,6 @@ class Env(base.Environment):
         return dict(optimal=self._optimal)
 
 
-REWARDS = {
-    1.0: "P.x==B.x, B.y==0, success",
-    0.0: "P.x!=B.x, B.y==0, failure",
-}
-
-
 class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
     def __init__(self, env: Env, status: bool):
         super().__init__(cast(gym.Env, env))
@@ -139,6 +133,10 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
         self.observation_space = MultiDiscrete(
             np.ones_like(env.observation_spec().shape), seed=env.random_seed
         )
+        self.rewards = {
+            1.0: "P.x==B.x, B.y==0, success" if status else "success",
+            0.0: "P.x!=B.x, B.y==0, failure" if status else "failure",
+        }
 
     def actions(self) -> "list[str]":
         return [
@@ -147,10 +145,9 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
             "Right",
         ]
 
-    @classmethod
-    def done(cls, *completions: str) -> bool:
+    def done(self, *completions: str) -> bool:
         *_, state_or_reward = completions
-        return any(r in state_or_reward for r in REWARDS.values())
+        return any(r in state_or_reward for r in self.rewards.values())
 
     def failure_threshold(self) -> float:
         return 0
@@ -162,10 +159,9 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
     def partially_observable(self) -> bool:
         return False
 
-    @classmethod
-    def quantify(cls, prompt: str) -> float:
-        success = prompt.endswith(f"[{REWARDS[1.0]}];")
-        value = cls.gamma() ** (prompt.count(":") - 1)
+    def quantify(self, prompt: str) -> float:
+        success = prompt.endswith(f"[{self.rewards[1.0]}];")
+        value = self.gamma() ** (prompt.count(":") - 1)
         return value if success else 0
 
     def reset(self):
