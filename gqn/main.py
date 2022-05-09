@@ -25,12 +25,13 @@ def no_logging(
     config: str = DEFAULT_CONFIG,
     debug: int = 0,
     load_id: Optional[int] = None,
+    require_cache: bool = False,
 ):
     logger = HasuraLogger(GRAPHQL_ENDPOINT)
     params = dict(get_config_params(config), debug=debug)
     if load_id is not None:
         params.update(run_logger.get_load_params(load_id=load_id, logger=logger))
-    train(**params, logger=logger)
+    train(**params, logger=logger, require_cache=require_cache)
 
 
 @tree.subcommand(parsers=dict(name=argument("name")))
@@ -38,6 +39,7 @@ def log(
     name: str,
     allow_dirty: bool = False,
     config: str = DEFAULT_CONFIG,
+    require_cache: bool = False,
     sweep_id: Optional[int] = None,
 ):
     repo = Repo(".")
@@ -73,7 +75,7 @@ def log(
         load_id=None,
         sweep_id=sweep_id,
     )
-    train(**params, debug=0, logger=logger)
+    train(**params, debug=0, logger=logger, require_cache=require_cache)
 
 
 if __name__ == "__main__":
