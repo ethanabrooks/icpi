@@ -55,24 +55,21 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         return len(self.success_buffer) > 0
 
     def sample(self):
-        successful = [
-            t for t in self.buffer if self.get_value(t) > self.env.failure_threshold()
-        ]
+        successful = list(self.success_buffer)
         unsuccessful = [
             t for t in self.buffer if self.get_value(t) <= self.env.failure_threshold()
         ]
-        half1 = self.prompt_size // 2
-        half2 = self.prompt_size - half1
+        half = min([self.prompt_size // 2, len(successful), len(unsuccessful)])
         successful_choices = [
             successful[i]
             for i in self.rng.choice(
-                len(successful), min(half1, len(successful)), replace=False
+                len(successful), min(half, len(successful)), replace=False
             )
         ]
         unsuccessful_choices = [
             unsuccessful[i]
             for i in self.rng.choice(
-                len(unsuccessful), min(half2, len(unsuccessful)), replace=False
+                len(unsuccessful), min(half, len(unsuccessful)), replace=False
             )
         ]
         trajectories = successful_choices + unsuccessful_choices
