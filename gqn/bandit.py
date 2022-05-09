@@ -48,10 +48,13 @@ class Env(BaseEnv[np.ndarray, int]):
     def failure_threshold(self) -> float:
         return 0.5 * self.num_steps
 
+    def gamma(self) -> float:
+        return 0.9
+
     def partially_observable(self) -> bool:
         return True
 
-    def quantify(self, prompt: str, gamma: Optional[float]) -> float:
+    def quantify(self, prompt: str) -> float:
         rewards = re.findall(r"\d: ([.\d]+);", prompt)
         rewards = rewards[: self.num_steps]
         return sum(map(float, rewards))

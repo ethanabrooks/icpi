@@ -32,7 +32,6 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     buffer: Deque[List[TimeStep]]
     env: Env
     debug: int
-    gamma: float
     gpt3: GPT3
     max_steps: int
     prompt_size: int
@@ -49,7 +48,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         ...
 
     def get_value(self, trajectory: List[TimeStep]) -> float:
-        return get_value(*trajectory, gamma=self.gamma)
+        return get_value(*trajectory, gamma=self.env.gamma())
 
     def ready(self) -> bool:
         return len(self.success_buffer) > 0
@@ -105,10 +104,7 @@ class Q(Model[ObsType, ActType]):
         self.rng.shuffle(action_values)
         action, value = max(
             action_values,
-            key=lambda x: (
-                self.env.quantify(x[1], gamma=self.gamma),
-                self.rng.random(),
-            ),
+            key=lambda x: (self.env.quantify(x[1]), self.rng.random()),
         )
 
         if self.debug >= 1:

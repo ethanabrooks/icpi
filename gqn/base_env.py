@@ -49,12 +49,17 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     def failure_threshold(self) -> float:
         ...
 
+    @staticmethod
+    @abc.abstractmethod
+    def gamma() -> float:
+        ...
+
     @abc.abstractmethod
     def partially_observable(self) -> bool:
         ...
 
     @abc.abstractmethod
-    def quantify(self, value: str, gamma: Optional[float]) -> float:
+    def quantify(self, value: str) -> float:
         ...
 
     @staticmethod
