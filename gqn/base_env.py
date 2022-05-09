@@ -1,6 +1,6 @@
 import abc
 from dataclasses import dataclass
-from typing import Generic, Optional
+from typing import Generic, Iterable, Optional
 
 import gym
 from gym.core import ActType, ObsType
@@ -65,6 +65,10 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     @staticmethod
     def state_stop() -> str:
         return "."
+
+    @abc.abstractmethod
+    def start_states(self) -> Optional[Iterable[ObsType]]:
+        ...
 
     def state_str(self, state: ObsType) -> str:
         return self._state_str(state) + self.state_stop()

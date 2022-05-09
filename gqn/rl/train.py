@@ -121,7 +121,7 @@ def train(
     episodes = 0
     start_time = time.time()
 
-    def make_log(return_: float, return_key: str, regret_key: str):
+    def make_log(info: dict, return_: float, return_key: str, regret_key: str):
         regret = info["optimal"] - return_
         log = dict(
             hours=(time.time() - start_time) / 3600,
@@ -138,27 +138,43 @@ def train(
         if logger.run_id is not None:
             logger.log(**log)
 
+    def evaluate():
+        start_states = env.start_states()
+        finite_start_states = start_states is not None
+        if finite_start_states:
+            start_states = list(start_states)
+        for _ in range(eval_interval):
+            state = env.reset()
+            if finite_start_states:
+                if not start_states:
+                    return
+                while state not in start_states:
+                    state = env.reset()
+                start_states.remove(state)
+            trajectory: List[TimeStep] = []
+            done = False
+            r = 0
+            t = 0
+            while not done:
+                action = pi.act(trajectory, state)
+                next_state, reward, done, info = env.step(action)
+                step = TimeStep(state, action, reward, done, next_state)
+                trajectory.append(step)
+                state = next_state
+                r += env.gamma() ** t * reward
+                t += 1
+                if done:
+                    make_log(
+                        info=info,
+                        return_=r,
+                        return_key="eval return",
+                        regret_key="eval regret",
+                    )
+
     while T < total_steps:
         use_model_prob = 1 / (1 + math.exp(2 * (min_successes - len(success_buffer))))
         if eval_interval is not None and episodes % eval_interval == 0:
-
-            # evaluate
-            for _ in range(eval_interval):
-                state = env.reset()
-                trajectory: List[TimeStep] = []
-                done = False
-                r = 0
-                t = 0
-                while not done:
-                    action = pi.act(trajectory, state)
-                    next_state, reward, done, info = env.step(action)
-                    step = TimeStep(state, action, reward, done, next_state)
-                    trajectory.append(step)
-                    state = next_state
-                    r += env.gamma() ** t * reward
-                    t += 1
-                    if done:
-                        make_log(r, "eval return", "eval regret")
+            evaluate()
 
         done = False
         state = env.reset()
@@ -181,7 +197,12 @@ def train(
             if done:
                 print_rank0(local_rank, ".", end="")
                 episodes += 1
-                make_log(r, "return", "regret")
+                make_log(
+                    info=info,
+                    return_=r,
+                    return_key="return",
+                    regret_key="regret",
+                )
             trajectory.append(step)
             state = next_state
 

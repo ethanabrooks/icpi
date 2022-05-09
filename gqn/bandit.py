@@ -19,7 +19,7 @@ Rewards are [0, 0.1, .. 1] assigned randomly to 11 arms and deterministic
 """
 import re
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Iterable, Optional, Tuple
 
 import numpy as np
 from base_env import Env as BaseEnv
@@ -73,6 +73,9 @@ class Env(BaseEnv[np.ndarray, int]):
         self.rng.shuffle(self.distributions)
         self.t = 0
         return self.distributions
+
+    def start_states(self) -> Optional[Iterable[np.ndarray]]:
+        return None
 
     @staticmethod
     def state_stop() -> str:

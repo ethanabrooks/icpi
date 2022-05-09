@@ -6,7 +6,6 @@ import gym
 import gym.spaces
 import numpy as np
 from base_env import TimeStep
-from gym.core import ObsType
 
 REWARDS = {
     1.0: "Success",
@@ -78,7 +77,7 @@ class Env(base_env.Env[int, int]):
         self._state = self._start_state = self.random.choice(self.n)
         return self._start_state
 
-    def start_states(self) -> Iterable[ObsType]:
+    def start_states(self) -> Optional[Iterable[int]]:
         return range(self.n)
 
     def _state_str(self, state: int) -> str:

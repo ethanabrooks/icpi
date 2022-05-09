@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Iterable, Optional, Tuple
 
 import base_env
 import numpy as np
@@ -77,6 +77,9 @@ class Env(base_env.Env[int, int]):
 
     def start_state(self) -> np.ndarray:
         return self.first
+
+    def start_states(self) -> Optional[Iterable[np.ndarray]]:
+        return None
 
     @classmethod
     def _state_str(cls, obs: int) -> str:
