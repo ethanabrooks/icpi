@@ -17,7 +17,6 @@ REWARDS = {
 @dataclass
 class Env(base_env.Env[int, int]):
 
-    gamma: float
     goal: int
     n: int
     random_seed: int
@@ -48,14 +47,18 @@ class Env(base_env.Env[int, int]):
     def failure_threshold(self) -> float:
         return 0
 
+    @staticmethod
+    def gamma() -> float:
+        return 0.9
+
     def partially_observable(self) -> bool:
         return False
 
     @classmethod
-    def quantify(cls, prompt: str, gamma: Optional[float]) -> float:
+    def quantify(cls, prompt: str) -> float:
         success = prompt.endswith(REWARDS[1.0] + cls.state_stop())
         length = prompt.count(cls.action_stop()) - 1
-        value = gamma**length
+        value = cls.gamma() ** length
         if success:
             return value
         elif prompt.endswith(REWARDS[0.0] + cls.state_stop()):
@@ -85,7 +88,7 @@ class Env(base_env.Env[int, int]):
         return f"{state} [{status}]"
 
     def step(self, action: int) -> Tuple[int, float, bool, dict]:
-        optimal = self.gamma ** abs(self._start_state - self.goal)
+        optimal = self.gamma() ** abs(self._start_state - self.goal)
         info = dict(optimal=optimal)
         self._state += action - 1
         self._state = np.clip(self._state, 0, self.n - 1)

@@ -226,13 +226,17 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
     def failure_threshold(self) -> float:
         return 0
 
+    @staticmethod
+    def gamma() -> float:
+        return 1
+
     def partially_observable(self) -> bool:
         return False
 
     @classmethod
-    def quantify(cls, value: str, gamma: Optional[float]) -> float:
+    def quantify(cls, value: str) -> float:
         success = value.endswith(REWARDS[1.0] + ";")
-        value = gamma ** value.count(";")
+        value = cls.gamma() ** value.count(";")
         return value if success else 0
 
     @classmethod

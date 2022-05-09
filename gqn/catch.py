@@ -55,9 +55,7 @@ class Env(base.Environment):
     """
 
     # noinspection PyMissingConstructor
-    def __init__(
-        self, gamma: float, rows: int = 10, columns: int = 5, seed: Optional[int] = None
-    ):
+    def __init__(self, rows: int = 10, columns: int = 5, seed: Optional[int] = None):
         """Initializes a new Catch environment.
 
         Args:
@@ -74,7 +72,7 @@ class Env(base.Environment):
         self._paddle_x = None
         self._paddle_y = None
         self.bsuite_num_episodes = sweep.NUM_EPISODES
-        self._optimal = gamma**rows
+        self._optimal = 1
 
     def render(self, mode="human"):
         pass
@@ -157,13 +155,17 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
     def failure_threshold(self) -> float:
         return 0
 
+    @staticmethod
+    def gamma() -> float:
+        return 1
+
     def partially_observable(self) -> bool:
         return False
 
     @classmethod
-    def quantify(cls, prompt: str, gamma: Optional[float]) -> float:
+    def quantify(cls, prompt: str) -> float:
         success = prompt.endswith(f"[{REWARDS[1.0]}];")
-        value = gamma ** (prompt.count(":") - 1)
+        value = cls.gamma() ** (prompt.count(":") - 1)
         return value if success else 0
 
     def reset(self):

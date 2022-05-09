@@ -18,26 +18,19 @@ from rl.model import GPT3, Pi, Q, TimeStep, get_value, to_string
 from run_logger import HasuraLogger
 
 
-def make_env(env_id: str, gamma: float, seed: int, status: bool) -> Env:
+def make_env(env_id: str, seed: int, status: bool) -> Env:
     if env_id == "bandit":
-        assert gamma == 1.0
         env = bandit.Env(num_steps=5, random_seed=seed)
     elif env_id == "cartpole":
-        env = cartpole.Wrapper(
-            cartpole.Env(gamma=gamma, max_episode_steps=5, seed=seed)
-        )
+        env = cartpole.Wrapper(cartpole.Env(max_episode_steps=5, seed=seed))
     elif env_id == "catch":
-        assert gamma == 1.0
-        env = catch.Wrapper(
-            catch.Env(columns=4, gamma=gamma, rows=5, seed=seed), status=status
-        )
+        env = catch.Wrapper(catch.Env(columns=4, rows=5, seed=seed), status=status)
     elif env_id == "chain":
         env = TimeLimit(
-            chain.Env(gamma=gamma, goal=4, n=8, random_seed=seed, status=status),
+            chain.Env(goal=4, n=8, random_seed=seed, status=status),
             max_episode_steps=8,
         )
     elif env_id == "umbrella":
-        assert gamma == 1.0
         env = umbrella.Env(num_colors=2, num_steps=2, random_seed=seed)
     else:
         raise RuntimeError()
@@ -48,7 +41,6 @@ def train(
     debug: int,
     env_id: str,
     eval_interval: Optional[int],
-    gamma: float,
     logprobs: int,
     logger: HasuraLogger,
     max_trajectory: int,
@@ -63,7 +55,7 @@ def train(
 ):
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
-    env = make_env(env_id=env_id, gamma=gamma, seed=seed, status=status)
+    env = make_env(env_id=env_id, seed=seed, status=status)
 
     buffer: Deque[List[TimeStep]] = deque()
     success_buffer: Deque[List[TimeStep]] = deque(maxlen=success_buffer_size)
@@ -83,7 +75,6 @@ def train(
         buffer=buffer,
         debug=debug,
         env=env,
-        gamma=gamma,
         gpt3=make_gpt3(best_of=True),
         max_steps=max_trajectory,
         prompt_size=prompt_size,
@@ -94,7 +85,6 @@ def train(
         buffer=buffer,
         debug=debug,
         env=env,
-        gamma=gamma,
         gpt3=make_gpt3(best_of=False),
         max_steps=max_trajectory,
         prompt_size=prompt_size,
@@ -140,7 +130,7 @@ def train(
                     step = TimeStep(state, action, reward, done, next_state)
                     trajectory.append(step)
                     state = next_state
-                    r += gamma**t * reward
+                    r += env.gamma() ** t * reward
                     t += 1
                     if done:
                         make_log(r, "eval return", "eval regret")
@@ -159,7 +149,7 @@ def train(
                 action = env.action_space.sample()
             next_state, reward, done, info = env.step(action)
             step = TimeStep(state, action, reward, done, next_state)
-            r += gamma**t * reward
+            r += env.gamma() ** t * reward
             t += 1
             T += 1
             timed_out = info.get("TimeLimit.truncated", False)
@@ -172,18 +162,18 @@ def train(
 
         # quantify unittest
         prompt = to_string(*trajectory, env=env)
-        value_from_prompt = env.quantify(prompt, gamma=gamma)
-        value_from_trajectory = get_value(*trajectory, gamma=gamma)
+        value_from_prompt = env.quantify(prompt)
+        value_from_trajectory = get_value(*trajectory, gamma=env.gamma())
         if not value_from_prompt == value_from_trajectory:
             print(value_from_prompt, value_from_trajectory)
             breakpoint()
-            env.quantify(prompt, gamma=gamma)
-            get_value(*trajectory, gamma=gamma)
+            env.quantify(prompt)
+            get_value(*trajectory, gamma=env.gamma())
 
         trajectory = trajectory[-max_trajectory:]
         if not timed_out:
             buffer.append(trajectory)
-            if get_value(*trajectory, gamma=1) > env.failure_threshold():
+            if get_value(*trajectory, gamma=env.gamma()) > env.failure_threshold():
                 success_buffer.append(trajectory)
 
     print("done!")

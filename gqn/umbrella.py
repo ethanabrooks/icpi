@@ -49,10 +49,13 @@ class Env(base_env.Env[int, int]):
     def failure_threshold(self) -> float:
         return 0
 
+    def gamma(self) -> float:
+        return 1.0
+
     def partially_observable(self) -> bool:
         return True
 
-    def quantify(self, prompt: str, gamma: Optional[float]) -> float:
+    def quantify(self, prompt: str) -> float:
         return prompt.endswith("Success.")
 
     def render(self, mode="human"):
