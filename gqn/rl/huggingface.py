@@ -178,6 +178,7 @@ class HuggingFaceModel:
     def get_full_completion(
         self, prompt, best_of: bool, stop: Optional[List[str]], use_cache: bool = True
     ):
+        best_of = 1 if best_of else None
         self.print("<", end="")
 
         if use_cache and self.local_rank == 0:
