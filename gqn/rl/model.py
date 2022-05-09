@@ -83,6 +83,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             ]
         ):
             assert len(trajectories) == self.prompt_size
+        self.rng.shuffle(trajectories)
         return [to_string(*t, env=self.env) for t in trajectories]
 
     def sample_best(self):
