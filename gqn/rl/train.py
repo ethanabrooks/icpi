@@ -48,13 +48,13 @@ def print_rank0(local_rank: Optional[int], *args, pretty=False, **kwargs):
 
 def train(
     debug: int,
-    model_name: str,
     env_id: str,
     eval_interval: Optional[int],
     logprobs: int,
     logger: HasuraLogger,
     max_trajectory: int,
     min_successes: int,
+    model_name: str,
     prompt_size: int,
     require_cache: bool,
     seed: int,
@@ -95,6 +95,8 @@ def train(
             temperature=temperature,
             top_p=top_p,
         )
+    else:
+        raise RuntimeError(f"Unknown model {model_name}")
 
     pi = Pi(
         buffer=buffer,
@@ -132,7 +134,7 @@ def train(
                 regret_key: regret,
                 "run ID": logger.run_id,
                 "success buffer": len(success_buffer),
-            }
+            },
         )
         print_rank0(local_rank, log, pretty=True)
         if logger.run_id is not None:
