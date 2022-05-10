@@ -10,6 +10,7 @@ from numpy.linalg import norm
 from numpy.random import Generator
 from rl.gpt3 import GPT3
 from rl.huggingface import HuggingFaceModel
+from util import Colorize
 
 
 def to_string(*trajectory: TimeStep, env) -> str:
@@ -109,12 +110,16 @@ class Q(Model[ObsType, ActType]):
         )
 
         if self.debug >= 1:
-            print("Q")
-            print("state", state)
+            print()
+            Colorize.print_header("Q prompts")
+            Colorize.print_blue("state", end=" ")
+            Colorize.print_cyan(state)
             for a, v in zip(actions, values):
-                print("action", a)
+                Colorize.print_blue("action", end=" ")
+                Colorize.print_cyan(a)
                 print("value", v)
-            print("chosen", action)
+            Colorize.print_blue("chosen", end=" ")
+            Colorize.print_cyan(action)
         if self.debug >= 3:
             breakpoint()
         return action
@@ -127,6 +132,12 @@ class Q(Model[ObsType, ActType]):
         if self.env.partially_observable():
             completions = [self.env.ts_to_string(ts) for ts in trajectory] + completions
 
+        if self.debug >= 2:
+            print()
+            Colorize.print_header(
+                "Computing value for state", state, "and action", action
+            )
+
         while True:
             if t == self.max_steps:
                 break
@@ -134,7 +145,7 @@ class Q(Model[ObsType, ActType]):
                 prompts = self.sample()
                 new_prompt = "\n".join([*prompts, " ".join(completions)])
                 if self.debug >= 2:
-                    print("Q prompt:")
+                    print()
                     print(new_prompt)
                 if self.debug >= 4:
                     breakpoint()
@@ -144,7 +155,8 @@ class Q(Model[ObsType, ActType]):
                 )
                 state_or_reward = state_or_reward.lstrip() + self.env.state_stop()
             if self.debug >= 2:
-                print("state/reward", state_or_reward)
+                Colorize.print_blue("state/reward", end=" ")
+                Colorize.print_cyan(state_or_reward)
             if self.debug >= 4:
                 breakpoint()
             completions.append(state_or_reward)
@@ -157,7 +169,7 @@ class Q(Model[ObsType, ActType]):
             prompts = self.sample_best()
             new_prompt = "\n".join([*prompts, query])
             if self.debug >= 2:
-                print("Q prompt:")
+                Colorize.print_bold("Q prompt:")
                 print(new_prompt)
             if self.debug >= 4:
                 breakpoint()
@@ -169,7 +181,8 @@ class Q(Model[ObsType, ActType]):
             t += 1
 
             if self.debug >= 2:
-                print("action", action_str)
+                Colorize.print_blue("action", end=" ")
+                Colorize.print_cyan(action_str)
             if self.debug >= 4:
                 breakpoint()
             completions.append(action_str)
@@ -188,17 +201,21 @@ class Pi(Model[ObsType, ActType]):
             prompts = self.sample_best()
             if self.env.partially_observable():
                 query = to_string(*trajectory, env=self.env)
+                if query:
+                    query += " "
+                query += state
             else:
                 query = state
             prompt = "\n".join([*prompts, query])
             if self.debug >= 1:
-                print("pi prompt:")
+                Colorize.print_header("pi prompt:")
                 print(prompt)
             maybe_action, *_ = (
                 self.lm(prompt, best_of=True).lstrip().split(self.env.action_stop())
             )
             if self.debug >= 1:
-                print("Action:", maybe_action)
+                Colorize.print_blue("Action:", end=" ")
+                Colorize.print_cyan(maybe_action)
             if self.debug >= 3:
                 breakpoint()
 
