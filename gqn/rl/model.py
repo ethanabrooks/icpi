@@ -31,6 +31,7 @@ def sub_trajectories(*trajectories: List[TimeStep]) -> List[List[TimeStep]]:
 
 @dataclass
 class Model(abc.ABC, Generic[ObsType, ActType]):
+    balance_successful_and_failed: bool
     buffer: Deque[List[TimeStep]]
     env: Env
     debug: int
@@ -60,7 +61,9 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         unsuccessful = [
             t for t in self.buffer if self.get_value(t) <= self.env.failure_threshold()
         ]
-        half = min([self.prompt_size // 2, len(successful), len(unsuccessful)])
+        half = self.prompt_size // 2
+        if self.balance_successful_and_failed:
+            half = min([half, len(successful), len(unsuccessful)])
         successful_choices = [
             successful[i]
             for i in self.rng.choice(
@@ -85,7 +88,9 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         return [to_string(*t, env=self.env) for t in trajectories]
 
     def sample_best(self):
-        trajectories = sub_trajectories(*self.success_buffer)
+        trajectories = list(self.success_buffer)
+        if not self.env.partially_observable():
+            trajectories = sub_trajectories(*trajectories)
         self.rng.shuffle(trajectories)
         prompts = [to_string(*t, env=self.env) for t in trajectories]
         return list(prompts)[: self.prompt_size]

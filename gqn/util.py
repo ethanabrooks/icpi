@@ -8,6 +8,7 @@ import bandit
 import cartpole
 import catch
 import chain
+import space_invaders
 import umbrella
 from base_env import Env
 from gym.wrappers import TimeLimit
@@ -65,6 +66,19 @@ def make_env(env_id: str, seed: int, status: bool) -> Env:
         env = TimeLimit(
             chain.Env(goal=4, n=8, random_seed=seed, status=status),
             max_episode_steps=8,
+        )
+    elif env_id == "space-invaders":
+        max_step = 8
+        env = TimeLimit(
+            space_invaders.Env(
+                width=3,
+                height=4,
+                max_aliens=2,
+                max_step=max_step,
+                random_seed=seed,
+                status=status,
+            ),
+            max_episode_steps=max_step,
         )
     elif env_id == "umbrella":
         env = umbrella.Env(num_colors=2, num_steps=2, random_seed=seed)

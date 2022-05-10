@@ -13,6 +13,7 @@ from util import make_env, print_rank0
 
 
 def train(
+    balance_successful_and_failed: bool,
     debug: int,
     env_id: str,
     eval_interval: Optional[int],
@@ -65,6 +66,7 @@ def train(
         raise RuntimeError(f"Unknown model {model_name}")
 
     pi = Pi(
+        balance_successful_and_failed=balance_successful_and_failed,
         buffer=buffer,
         debug=debug,
         env=env,
@@ -75,6 +77,7 @@ def train(
         success_buffer=success_buffer,
     )
     q = Q(
+        balance_successful_and_failed=balance_successful_and_failed,
         buffer=buffer,
         debug=debug,
         env=env,
