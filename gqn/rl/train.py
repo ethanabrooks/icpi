@@ -146,6 +146,8 @@ def train(
                         rewards=rewards,
                         evaluation=True,
                     )
+                    if pi.ready() and debug >= 3:
+                        breakpoint()
 
     while T < total_steps:
         use_model_prob = 1 / (1 + math.exp(2 * (min_successes - len(success_buffer))))
