@@ -79,7 +79,7 @@ class Env(gym.Env[np.ndarray, Union[int, Obs]]):
 
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 50}
 
-    def __init__(self, gamma: float, max_episode_steps: int, seed: int):
+    def __init__(self, max_episode_steps: int, seed: int):
         self.max_episode_steps = max_episode_steps
         self.gravity = 9.8
         self.masscart = 1.0
@@ -94,7 +94,7 @@ class Env(gym.Env[np.ndarray, Union[int, Obs]]):
         # Angle at which to fail the episode
         self.theta_threshold_radians = 12 * 2 * math.pi / 360
         self.x_threshold = 2.4
-        self._optimal = gamma**max_episode_steps
+        self._optimal = 0.99**max_episode_steps
 
         # Angle limit set to 2 * theta_threshold_radians so failing observation
         # is still within bounds.
