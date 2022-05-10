@@ -32,6 +32,7 @@ def no_logging(
     params = dict(get_config_params(config), debug=debug)
     if load_id is not None:
         params.update(run_logger.get_load_params(load_id=load_id, logger=logger))
+
     train(**params, logger=logger, require_cache=require_cache)
 
 
@@ -76,7 +77,10 @@ def log(
         load_id=None,
         sweep_id=sweep_id,
     )
-    train(**params, debug=0, logger=logger, require_cache=require_cache)
+    if require_cache not in params:
+        params.update(require_cache=require_cache)
+
+    train(**params, debug=0, logger=logger)
 
 
 if __name__ == "__main__":
