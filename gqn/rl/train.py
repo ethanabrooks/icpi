@@ -2,48 +2,14 @@ import math
 import os
 import time
 from collections import deque
-from pprint import pprint
 from typing import Deque, List, Optional
 
-import bandit
-import cartpole
-import catch
-import chain
 import numpy as np
 import openai
-import umbrella
-from base_env import Env
-from gym.wrappers import TimeLimit
 from rl.huggingface import HF_MODELS
 from rl.model import GPT3, HuggingFaceModel, Pi, Q, TimeStep, get_value, to_string
 from run_logger import HasuraLogger
-
-
-def make_env(env_id: str, seed: int, status: bool) -> Env:
-    if env_id == "bandit":
-        env = bandit.Env(num_steps=5, random_seed=seed)
-    elif env_id == "cartpole":
-        env = cartpole.Wrapper(cartpole.Env(max_episode_steps=5, seed=seed))
-    elif env_id == "catch":
-        env = catch.Wrapper(catch.Env(columns=4, rows=5, seed=seed), status=status)
-    elif env_id == "chain":
-        env = TimeLimit(
-            chain.Env(goal=4, n=8, random_seed=seed, status=status),
-            max_episode_steps=8,
-        )
-    elif env_id == "umbrella":
-        env = umbrella.Env(num_colors=2, num_steps=2, random_seed=seed)
-    else:
-        raise RuntimeError()
-    return env
-
-
-def print_rank0(local_rank: Optional[int], *args, pretty=False, **kwargs):
-    if local_rank is None or local_rank == 0:
-        if pretty:
-            pprint(*args, **kwargs)
-        else:
-            print(*args, **kwargs)
+from util import make_env, print_rank0
 
 
 def train(
