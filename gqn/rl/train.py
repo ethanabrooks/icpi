@@ -123,15 +123,21 @@ def train(
     episodes = 0
     start_time = time.time()
 
-    def make_log(info: dict, return_: float, return_key: str, regret_key: str):
-        regret = info["optimal"] - return_
+    def make_log(info: dict, rewards: List[float], evaluation: bool):
+        discounted = sum([env.gamma() ** t * r for t, r in enumerate(rewards)])
+        undiscounted = sum(rewards)
+        regret = info["optimal"] - discounted
+
+        prefix = "eval " if evaluation else ""
+
         log = dict(
             hours=(time.time() - start_time) / 3600,
             step=T,
             use_model_prob=use_model_prob,
             **{
-                return_key: return_,
-                regret_key: regret,
+                prefix + "return": discounted,
+                prefix + "undiscounted return": undiscounted,
+                prefix + "regret": regret,
                 "run ID": logger.run_id,
                 "success buffer": len(success_buffer),
             },
@@ -155,7 +161,7 @@ def train(
                 start_states.remove(state)
             trajectory: List[TimeStep] = []
             done = False
-            r = 0
+            rewards = []
             t = 0
             while not done:
                 action = pi.act(trajectory, state)
@@ -163,14 +169,13 @@ def train(
                 step = TimeStep(state, action, reward, done, next_state)
                 trajectory.append(step)
                 state = next_state
-                r += env.gamma() ** t * reward
+                rewards.append(reward)
                 t += 1
                 if done:
                     make_log(
                         info=info,
-                        return_=r,
-                        return_key="eval return",
-                        regret_key="eval regret",
+                        rewards=rewards,
+                        evaluation=True,
                     )
 
     while T < total_steps:
@@ -183,7 +188,7 @@ def train(
         trajectory: List[TimeStep] = []
         timed_out = False
         t = 0
-        r = 0
+        rewards = []
         while not done:
             use_model = (rng.random() < use_model_prob) and q.ready()
             if use_model:
@@ -192,7 +197,7 @@ def train(
                 action = env.action_space.sample()
             next_state, reward, done, info = env.step(action)
             step = TimeStep(state, action, reward, done, next_state)
-            r += env.gamma() ** t * reward
+            rewards.append(reward)
             t += 1
             T += 1
             timed_out = info.get("TimeLimit.truncated", False)
@@ -201,9 +206,8 @@ def train(
                 episodes += 1
                 make_log(
                     info=info,
-                    return_=r,
-                    return_key="return",
-                    regret_key="regret",
+                    rewards=rewards,
+                    evaluation=False,
                 )
             trajectory.append(step)
             state = next_state
