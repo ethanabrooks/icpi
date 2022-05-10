@@ -117,12 +117,26 @@ class Q(Model[ObsType, ActType]):
         if self.debug >= 1:
             print()
             Colorize.print_header("Q prompts")
-            Colorize.print_blue("state", end=" ")
+            Colorize.print_blue("state:", end=" ")
             Colorize.print_cyan(state)
             for a, v in zip(actions, values):
-                Colorize.print_blue("action", end=" ")
+                Colorize.print_blue("action:", end=" ")
                 Colorize.print_cyan(a)
-                print("value", v)
+                trajectory_strings = [
+                    self.env.state_str(state),
+                    self.env.action_str(a),
+                ]
+                if trajectory:
+                    trajectory_strings = [
+                        to_string(*trajectory, env=self.env),
+                        *trajectory_strings,
+                    ]
+                trajectory_str = " ".join(trajectory_strings)
+                print("value:", trajectory_str, end="")
+                if not v.startswith(trajectory_str):
+                    print(trajectory_str)
+                    breakpoint()
+                Colorize.print_cyan(v[len(trajectory_str) :])
             Colorize.print_blue("chosen", end=" ")
             Colorize.print_cyan(action)
         if self.debug >= 3:
@@ -182,6 +196,12 @@ class Q(Model[ObsType, ActType]):
             action_str, *_ = self.lm(new_prompt, best_of=False).split(
                 self.env.state_stop()
             )
+            if self.env.action(action_str) is None and self.debug >= 3:
+                print(self.env.actions())
+                print(action_str)
+                breakpoint()
+                break
+
             action_str = action_str.lstrip() + self.env.action_stop()
             t += 1
 
@@ -221,7 +241,7 @@ class Pi(Model[ObsType, ActType]):
             if self.debug >= 1:
                 Colorize.print_blue("Action:", end=" ")
                 Colorize.print_cyan(maybe_action)
-            if self.debug >= 3:
+            if self.debug >= 4:
                 breakpoint()
 
             action = self.env.action(maybe_action)

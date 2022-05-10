@@ -16,13 +16,14 @@ class TimeStep(Generic[ObsType, ActType]):
 
 
 class Env(gym.Env[ObsType, ActType], abc.ABC):
-    def action(self, action_str: str) -> Optional[ActType]:
+    def action(self, action_str: Optional[str]) -> Optional[ActType]:
         try:
-            [action] = [
+            actions = [
                 a
                 for a, _action_str in enumerate(self.actions())
                 if _action_str == action_str
             ]
+            [action] = actions
             return action
         except ValueError:
             return None
