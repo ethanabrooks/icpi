@@ -36,7 +36,7 @@ class Encoder(BaseEncoder):
     def hint(state: Obs) -> str:
         hint = ", ".join(
             [
-                f"ship==alien{a.i}_x" if a.x == state.agent else f"ship!=alien{a.i}_x"
+                f"ship==alien{a.i}_x" if a.over(state.agent) else f"ship!=alien{a.i}_x"
                 for a in state.aliens
             ]
         )
@@ -47,7 +47,9 @@ class Encoder(BaseEncoder):
 
     def name(self) -> str:
         return self.time_step_str(
-            TimeStep(Obs(1, (Alien(1, 1, 2),)), 1, 1, False, Obs(1, ()))
+            TimeStep(
+                Obs(1, (Alien(1, space_invaders.Coord(1, 2)),)), 1, 1, False, Obs(1, ())
+            )
         )
 
     def nonterminal_reward_str(self, ts: TimeStep[Obs, int]) -> str:
@@ -55,7 +57,7 @@ class Encoder(BaseEncoder):
             return ""
         if ts.reward == 0:
             return "missed;"
-        in_range = [a.i for a in ts.state.aliens if a.x == ts.state.agent]
+        in_range = [a.i for a in ts.state.aliens if a.over(ts.state.agent)]
         aliens_hit = " and ".join([f"alien{i}" for i in in_range])
         return f"hit {aliens_hit};"
 
@@ -63,7 +65,7 @@ class Encoder(BaseEncoder):
         return self.action_query(ts.state) + " " + self.action_str(ts.action)
 
     def state_str(self, state: Obs) -> str:
-        aliens = ", ".join([f"alien{a.i}={(a.x, a.y)}" for a in state.aliens])
+        aliens = ", ".join([f"alien{a.i}={(a.xy.x, a.xy.y)}" for a in state.aliens])
         # ship = f"ship={(state.agent, 0)}"
         # aliens = ", ".join([f"alien{a.i}={a.x}" for a in state.aliens])
         ship = f"ship={state.agent}"
@@ -73,7 +75,7 @@ class Encoder(BaseEncoder):
         return [":", ";", "."]
 
     def terminal_reward_str(self, ts: TimeStep[Obs, int]) -> str:
-        landed = [a.i for a in ts.next_state.aliens if a.y == 0]
+        landed = [a.i for a in ts.next_state.aliens if a.landed()]
         if landed:
             return " and ".join([f"alien{i}" for i in landed]) + " landed."
         else:
@@ -158,7 +160,7 @@ class Transition(BaseTransition):
 
 
 def hopeless(s: Obs) -> bool:
-    return any([abs(s.agent - a.x) > a.y for a in s.aliens])
+    return any([abs(s.agent - a.xy.x) > a.xy.y for a in s.aliens])
 
 
 def collect_trajectory(
@@ -229,7 +231,7 @@ def main(
                 failure_trajectories,
             ]
         ]
-        + [len(envs_by_first_state) < len(list(env.start_states()))]
+        # + [len(envs_by_first_state) < len(list(env.start_states()))]
     ):
         # print(
         #     [
@@ -238,7 +240,7 @@ def main(
         #             trajectories_by_last_state_action,
         #             success_trajectories,
         #             failure_trajectories,
-        #             envs_by_first_state,
+        #             # envs_by_first_state,
         #         ]
         #     ]
         # )
