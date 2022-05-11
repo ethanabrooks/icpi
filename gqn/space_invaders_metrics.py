@@ -27,7 +27,7 @@ class Encoder(BaseEncoder):
         return range(3)
 
     def action_str(self, state: Obs, action: int) -> str:
-        return f"ship, aliens, reward = {ACTIONS[action]}(ship, aliens)\n"
+        return f"{self.ship()}, {self.alien()}, reward = {ACTIONS[action]}({self.ship()}, {self.alien()})\n"
 
     def action_query(self, state: Obs) -> str:
         hint = self.hint(state)
@@ -38,12 +38,15 @@ class Encoder(BaseEncoder):
             return query + hint
 
     @staticmethod
-    def hint(state: Obs) -> str:
+    def alien() -> str:
+        return "alien"
+
+    def hint(self, state: Obs) -> str:
         hint = " and ".join(
             [
-                f"ship == alien[{i}][0]"
+                f"{self.ship()} == {self.alien()}[{i}][0]"
                 if a.over(state.agent)
-                else f"ship != alien[{i}][0]"
+                else f"{self.ship()} != {self.alien()}[{i}][0]"
                 for i, a in enumerate(state.aliens)
             ]
         )
@@ -72,8 +75,12 @@ class Encoder(BaseEncoder):
     def reward_query(self, ts: TimeStep[Obs, int]) -> str:
         return self.action_query(ts.state) + self.action_str(ts.state, ts.action)
 
+    @staticmethod
+    def ship() -> str:
+        return "ship"
+
     def state_str(self, state: Obs) -> str:
-        return f"assert ship == {state.agent} and aliens == {[tuple(a.xy) for a in state.aliens]}\n"
+        return f"assert {self.ship()} == {state.agent} and {self.alien()} == {[tuple(a.xy) for a in state.aliens]}\n"
         #     + " and ".join(
         #         [ship]
         #         + [f"aliens == {(a.xy.x, a.xy.y)}" for i, a in enumerate(state.aliens)]
@@ -87,11 +94,7 @@ class Encoder(BaseEncoder):
         return [":", ";", "."]
 
     def terminal_reward_str(self, ts: TimeStep[Obs, int]) -> str:
-        landed = [a.i for a in ts.next_state.aliens if a.landed()]
-        if landed:
-            return " and ".join([f"alien{i}" for i in landed]) + " landed."
-        else:
-            return "survived."
+        raise RuntimeError("Not implemented")
 
     def transition_query(self, ts: TimeStep[Obs, int]) -> str:
         assert not ts.done
@@ -116,12 +119,32 @@ class Encoder(BaseEncoder):
         return "\n".join(
             [
                 "\n".join(
-                    ["# new episode", "ship, aliens = reset()"]
+                    ["# new episode", f"{self.ship()}, {self.alien()} = reset()"]
                     + [self.time_step_str(ts) for ts in trajectory]
                 )
                 for trajectory in trajectories
             ]
         )
+
+
+class Terse(Encoder):
+    @staticmethod
+    def alien() -> str:
+        return "a"
+
+    @staticmethod
+    def ship() -> str:
+        return "s"
+
+
+class WithNamedTuple(Encoder):
+    @staticmethod
+    def alien() -> str:
+        return "a"
+
+    @staticmethod
+    def ship() -> str:
+        return "s"
 
 
 @dataclass
@@ -304,7 +327,7 @@ def main(
     TestRunner().run(
         debug=debug,
         encoder_str=encoder,
-        encoders=[Encoder()],
+        encoders=[Terse()],
         failure_trajectories=[failure_trajectories],
         filename="logs/space-invader-metrics.html",
         logprobs=logprobs,
