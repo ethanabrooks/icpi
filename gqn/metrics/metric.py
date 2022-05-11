@@ -2,7 +2,7 @@ import abc
 import itertools
 import re
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Generic, Iterator, List, Tuple
+from typing import Any, Callable, Dict, Generic, Iterator, List, Optional, Tuple
 
 import numpy as np
 from base_env import Env, TimeStep
@@ -176,7 +176,7 @@ class ProbabilityMetric(Metric, abc.ABC):
                 success_trajectories=success_trajectories,
             )
             query = self.get_query(encoder, get_trajectory(trajectory))
-            full_prompt = f"{prompt}\n{query}"
+            full_prompt = f"{prompt}\n{query}".rstrip("\n")
             if debug >= 1:
                 print(full_prompt)
                 print()
@@ -189,12 +189,18 @@ class ProbabilityMetric(Metric, abc.ABC):
                 continue
             if debug >= 0:
                 print("<", end="")
-            stop = [o[-1] for o in output]
+            stop = [o[-1] + "\n" for o in output]
             completion = gpt3.get_full_completion(full_prompt, best_of=False, stop=stop)
             logprobs = completion["top_logprobs"]
             if debug >= 0:
                 print(">", end="")
-            prob = self.get_prob(debug, encoder, logprobs, output)
+            possible_outputs = self.get_possible_outputs(encoder, trajectory[-1])
+            prob = self.get_prob(
+                debug=debug,
+                logprobs=logprobs,
+                output=output,
+                possible_outputs=possible_outputs,
+            )
             if debug >= 1:
                 print(prob)
                 breakpoint()
@@ -204,19 +210,28 @@ class ProbabilityMetric(Metric, abc.ABC):
     @staticmethod
     def get_prob(
         debug: int,
-        encoder: Encoder,
         logprobs: List[Dict[str, float]],
         output: List[str],
+        possible_outputs: Optional[List[str]],
     ):
-        output_probs = [get_prob(" " + o, logprobs) for o in output]
+        output_probs = [get_prob("\n" + o, logprobs) for o in output]
         if debug >= 2:
             print(output_probs)
             breakpoint()
-        return sum(output_probs)
+        prob = sum(output_probs)
+        if possible_outputs is None:
+            return prob
+        all_probs = [get_prob("\n" + o, logprobs) for o in possible_outputs]
+        return prob / sum(all_probs)
 
     @abc.abstractmethod
     def get_output(self, encoder: Encoder, last_step: TimeStepWithActions) -> List[str]:
         ...
+
+    def get_possible_outputs(
+        self, encoder: Encoder, last_step: TimeStepWithActions
+    ) -> Optional[List[str]]:
+        return None
 
 
 @dataclass
@@ -262,7 +277,7 @@ class ModelMetric(ProbabilityMetric, abc.ABC):
         *rest, last = trajectory
         query = encoder.get_prompt([rest])
         if query:
-            query += " "
+            query += "\n"
         return query + cls._get_query(encoder, last)
 
     def prompt_trajectory_generator(
@@ -296,25 +311,16 @@ class Action(ProbabilityMetric, ActMetric):
                 yield query
 
     def get_output(self, encoder: Encoder, last_step: TimeStepWithActions) -> list[str]:
-        return [encoder.action_str(a) for a in last_step.actions]
-
-    def get_prob(
-        self,
-        debug: int,
-        encoder: Encoder,
-        logprobs: List[Dict[str, float]],
-        output: List[str],
-    ):
-
-        prob = super().get_prob(
-            debug=debug, encoder=encoder, logprobs=logprobs, output=output
-        )
-        all_probs = [
-            get_prob(" " + encoder.action_str(a), logprobs) for a in self.actions()
+        return [
+            encoder.action_str(last_step.time_step.state, a) for a in last_step.actions
         ]
-        if sum(all_probs) > 1:
-            breakpoint()
-        return prob / sum(all_probs)
+
+    def get_possible_outputs(
+        self, encoder: Encoder, last_step: TimeStepWithActions
+    ) -> Optional[List[str]]:
+        return [
+            encoder.action_str(last_step.time_step.state, a) for a in self.actions()
+        ]
 
     def _remove_query_prefix(self) -> bool:
         return self.remove_query_prefix

@@ -19,28 +19,35 @@ from metrics.test_runner import TestRunner
 from rl.model import get_value
 from space_invaders import Alien, Obs
 
-ACTIONS = ["Left", "Shoot", "Right"]
+ACTIONS = ["left", "shoot", "right"]
 
 
 class Encoder(BaseEncoder):
     def actions(self):
         return range(3)
 
-    def action_str(self, action: int) -> str:
-        return f"{ACTIONS[action]}:"
+    def action_str(self, state: Obs, action: int) -> str:
+        args = ["ship"] + [f"alien{a.i}" for a in state.aliens]
+        args = ", ".join(args)
+        return f"reward = {ACTIONS[action]}({args})\n"
 
     def action_query(self, state: Obs) -> str:
-        return self.hint_query(state) + " " + self.hint(state)
+        hint = self.hint(state)
+        if hint != "\n":
+            hint = f"\n{hint}"
+        return self.hint_query(state) + hint
 
     @staticmethod
     def hint(state: Obs) -> str:
-        hint = ", ".join(
+        hint = "\n".join(
             [
-                f"ship==alien{a.i}_x" if a.over(state.agent) else f"ship!=alien{a.i}_x"
+                f"assert ship == alien{a.i}[0]"
+                if a.over(state.agent)
+                else f"assert ship != alien{a.i}[0]"
                 for a in state.aliens
             ]
         )
-        return f"[{hint}]."
+        return f"{hint}\n"
 
     def hint_query(self, state: Obs) -> str:
         return self.state_str(state)
@@ -56,20 +63,20 @@ class Encoder(BaseEncoder):
         if ts.action != 1:
             return ""
         if ts.reward == 0:
-            return "missed;"
-        in_range = [a.i for a in ts.state.aliens if a.over(ts.state.agent)]
-        aliens_hit = " and ".join([f"alien{i}" for i in in_range])
-        return f"hit {aliens_hit};"
+            return "assert reward == 0\n"
+        reward = len([a.i for a in ts.state.aliens if a.over(ts.state.agent)])
+        return f"assert reward == {reward}\n"
 
     def reward_query(self, ts: TimeStep[Obs, int]) -> str:
-        return self.action_query(ts.state) + " " + self.action_str(ts.action)
+        return self.action_query(ts.state) + self.action_str(ts.state, ts.action)
 
     def state_str(self, state: Obs) -> str:
-        aliens = ", ".join([f"alien{a.i}={(a.xy.x, a.xy.y)}" for a in state.aliens])
+        ship = f"ship = {state.agent}"
+        return "\n".join(
+            [ship] + [f"alien{a.i} = {(a.xy.x, a.xy.y)}" for a in state.aliens]
+        )
         # ship = f"ship={(state.agent, 0)}"
         # aliens = ", ".join([f"alien{a.i}={a.x}" for a in state.aliens])
-        ship = f"ship={state.agent}"
-        return f"{ship}, {aliens}" if aliens else ship
 
     def stop(self) -> List[str]:
         return [":", ";", "."]
@@ -86,14 +93,16 @@ class Encoder(BaseEncoder):
         reward_str = self.nonterminal_reward_str(ts)
         query = self.reward_query(ts)
         if reward_str:
-            return query + " " + reward_str
-        return query
+            return query + reward_str
+        else:
+            return query
 
     def time_step_str(self, ts: TimeStep[Obs, int]) -> str:
         if ts.done:
-            return self.reward_query(ts)  # TODO: + " " + self.terminal_reward_str(ts)
+            s = self.reward_query(ts)  # TODO: + " " + self.terminal_reward_str(ts)
         else:
-            return self.transition_query(ts)
+            s = self.transition_query(ts)
+        return s
 
 
 @dataclass

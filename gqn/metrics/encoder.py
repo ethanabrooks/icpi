@@ -21,7 +21,7 @@ class Encoder(Generic[ObsType, ActType], abc.ABC):
         ...
 
     @abc.abstractmethod
-    def action_str(self, action: int) -> str:
+    def action_str(self, state: ObsType, action: int) -> str:
         ...
 
     def name(self) -> str:
@@ -60,7 +60,9 @@ class Encoder(Generic[ObsType, ActType], abc.ABC):
     ) -> str:
         return "\n".join(
             [
-                " ".join([self.time_step_str(ts) for ts in trajectory])
+                "\n".join(
+                    ["# new episode"] + [self.time_step_str(ts) for ts in trajectory]
+                )
                 for trajectory in trajectories
             ]
         )
