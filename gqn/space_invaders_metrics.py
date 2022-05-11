@@ -31,21 +31,25 @@ class Encoder(BaseEncoder):
 
     def action_query(self, state: Obs) -> str:
         hint = self.hint(state)
-        if hint != "\n":
-            hint = f"\n{hint}"
-        return self.hint_query(state) + hint
+        query = self.hint_query(state)
+        if hint == "\n":
+            return query
+        else:
+            return query + hint
 
     @staticmethod
     def hint(state: Obs) -> str:
-        hint = "\n".join(
+        hint = " and ".join(
             [
-                f"assert ship == alien[{i}][0]"
+                f"ship == alien[{i}][0]"
                 if a.over(state.agent)
-                else f"assert ship != alien[{i}][0]"
+                else f"ship != alien[{i}][0]"
                 for i, a in enumerate(state.aliens)
             ]
         )
-        return f"{hint}\n"
+        if hint:
+            return f"assert {hint}\n"
+        return "\n"
 
     def hint_query(self, state: Obs) -> str:
         return self.state_str(state)
@@ -69,13 +73,17 @@ class Encoder(BaseEncoder):
         return self.action_query(ts.state) + self.action_str(ts.state, ts.action)
 
     def state_str(self, state: Obs) -> str:
-        ship = f"assert ship == {state.agent}"
-        return "\n".join(
-            [ship]
-            + [
-                f"assert aliens[{i}] == {(a.xy.x, a.xy.y)}"
-                for i, a in enumerate(state.aliens)
-            ]
+        ship = f"ship == {state.agent}"
+        return (
+            "assert "
+            + " and ".join(
+                [ship]
+                + [
+                    f"aliens[{i}] == {(a.xy.x, a.xy.y)}"
+                    for i, a in enumerate(state.aliens)
+                ]
+            )
+            + "\n"
         )
         # ship = f"ship={(state.agent, 0)}"
         # aliens = ", ".join([f"alien{a.i}={a.x}" for a in state.aliens])
@@ -105,6 +113,20 @@ class Encoder(BaseEncoder):
         else:
             s = self.transition_query(ts)
         return s
+
+    def get_prompt(
+        self,
+        trajectories: "list[list[TimeStep]]",
+    ) -> str:
+        return "\n".join(
+            [
+                "\n".join(
+                    ["# new episode", "ship, aliens = reset()"]
+                    + [self.time_step_str(ts) for ts in trajectory]
+                )
+                for trajectory in trajectories
+            ]
+        )
 
 
 @dataclass
@@ -297,7 +319,7 @@ def main(
             HitReward(queries),
             MissReward(queries),
             Hint(queries),
-            # Transition(queries),
+            Transition(queries),
         ],
         prompt_sizes=list(prompt_sizes),
         seed=seed,

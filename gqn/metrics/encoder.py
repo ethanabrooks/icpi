@@ -60,9 +60,7 @@ class Encoder(Generic[ObsType, ActType], abc.ABC):
     ) -> str:
         return "\n".join(
             [
-                "\n".join(
-                    ["# new episode"] + [self.time_step_str(ts) for ts in trajectory]
-                )
+                "\n".join([self.time_step_str(ts) for ts in trajectory])
                 for trajectory in trajectories
             ]
         )

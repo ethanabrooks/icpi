@@ -8,7 +8,7 @@ from run_logger import HasuraLogger
 
 from gql import gql
 
-ENGINE = "text-davinci-002"
+ENGINE = "code-davinci-002"
 
 
 def post_completion(
@@ -103,9 +103,10 @@ class GPT3:
                     temperature=0.1,
                     stop=stop,
                 ).choices
+                time.sleep(4)
             except openai.error.RateLimitError as e:
                 print(e)
-                time.sleep(1)
+                time.sleep(4)
                 continue
             except openai.error.InvalidRequestError as e:
                 print(e)

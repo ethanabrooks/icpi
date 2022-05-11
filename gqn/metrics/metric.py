@@ -176,7 +176,7 @@ class ProbabilityMetric(Metric, abc.ABC):
                 success_trajectories=success_trajectories,
             )
             query = self.get_query(encoder, get_trajectory(trajectory))
-            full_prompt = f"{prompt}\n{query}".rstrip("\n")
+            full_prompt = f"{prompt}\n{query}"
             if debug >= 1:
                 print(full_prompt)
                 print()
