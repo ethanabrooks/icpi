@@ -12,7 +12,7 @@ from gym.wrappers import TimeLimit
 DEAD = "dead"
 
 
-class Coord(NamedTuple):
+class C(NamedTuple):
     x: int
     y: int
 
@@ -22,7 +22,7 @@ class Coord(NamedTuple):
 
 class Alien(NamedTuple):
     i: int
-    xy: Optional[Coord]
+    xy: Optional[C]
 
     def dead(self) -> bool:
         return self.xy is None
@@ -101,9 +101,7 @@ class Env(base_env.Env[Obs, int]):
         num_aliens = 1 + self.random.choice(self.max_aliens)
         self.reward = 0
         self.agent, *alien_xs = self.random.choice(self.width, size=1 + num_aliens)
-        self.aliens = [
-            Alien(i + 1, Coord(x, self.height)) for i, x in enumerate(alien_xs)
-        ]
+        self.aliens = [Alien(i + 1, C(x, self.height)) for i, x in enumerate(alien_xs)]
         return Obs(self.agent, tuple(self.aliens))
 
     def state_stop(self) -> str:
@@ -134,7 +132,7 @@ class Env(base_env.Env[Obs, int]):
     def start_states(self) -> Optional[Iterable[Obs]]:
         for agent in range(self.width):
             for xs in itertools.product(range(self.width), repeat=self.max_aliens):
-                aliens = [Alien(i + 1, Coord(x, self.height)) for i, x in enumerate(xs)]
+                aliens = [Alien(i + 1, C(x, self.height)) for i, x in enumerate(xs)]
                 yield Obs(agent, tuple(aliens))
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
@@ -147,7 +145,7 @@ class Env(base_env.Env[Obs, int]):
                 i for i in range(1, 1 + self.max_aliens) if i not in alien_ids
             )
             self.aliens.append(
-                Alien(alien_id, Coord(self.random.choice(self.width), self.height))
+                Alien(alien_id, C(self.random.choice(self.width), self.height))
             )
         # else:
         #     if not reward_:
@@ -160,14 +158,12 @@ class Env(base_env.Env[Obs, int]):
         if action == 1:
             num_aliens = len(self.aliens)
             self.aliens = [
-                Alien(i, Coord(xy.x, xy.y))
-                for i, xy in self.aliens
-                if xy.x != self.agent
+                Alien(i, C(xy.x, xy.y)) for i, xy in self.aliens if xy.x != self.agent
             ]
             self.reward = num_aliens - len(self.aliens)
         else:
             self.reward = 0
-        self.aliens = [Alien(i, Coord(xy.x, xy.y - 1)) for i, xy in self.aliens]
+        self.aliens = [Alien(i, C(xy.x, xy.y - 1)) for i, xy in self.aliens]
         info = dict(optimal=self.max_step)
         self.agent += action - 1
         self.agent = int(np.clip(self.agent, 0, self.width - 1))

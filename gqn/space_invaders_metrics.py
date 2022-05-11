@@ -17,7 +17,7 @@ from metrics.metric import Transition as BaseTransition
 from metrics.metric import get_trajectory
 from metrics.test_runner import TestRunner
 from rl.model import get_value
-from space_invaders import Alien, Obs
+from space_invaders import Alien, C, Obs
 
 ACTIONS = ["left", "shoot", "right"]
 
@@ -44,9 +44,9 @@ class Encoder(BaseEncoder):
     def hint(self, state: Obs) -> str:
         hint = " and ".join(
             [
-                f"{self.ship()} == {self.alien()}[{i}][0]"
+                f"{self.ship()}.x == {self.alien()}[{i}].x"
                 if a.over(state.agent)
-                else f"{self.ship()} != {self.alien()}[{i}][0]"
+                else f"{self.ship()}.x != {self.alien()}[{i}].x"
                 for i, a in enumerate(state.aliens)
             ]
         )
@@ -59,9 +59,7 @@ class Encoder(BaseEncoder):
 
     def name(self) -> str:
         return self.time_step_str(
-            TimeStep(
-                Obs(1, (Alien(1, space_invaders.Coord(1, 2)),)), 1, 1, False, Obs(1, ())
-            )
+            TimeStep(Obs(1, (Alien(1, C(1, 2)),)), 1, 1, False, Obs(1, ()))
         )
 
     def nonterminal_reward_str(self, ts: TimeStep[Obs, int]) -> str:
@@ -80,7 +78,8 @@ class Encoder(BaseEncoder):
         return "ship"
 
     def state_str(self, state: Obs) -> str:
-        return f"assert {self.ship()} == {state.agent} and {self.alien()} == {[tuple(a.xy) for a in state.aliens]}\n"
+        aliens = ", ".join([f"C{tuple(a.xy)}" for a in state.aliens])
+        return f"assert {self.ship()} == C{(state.agent, 0)} and {self.alien()} == [{aliens}]\n"
         #     + " and ".join(
         #         [ship]
         #         + [f"aliens == {(a.xy.x, a.xy.y)}" for i, a in enumerate(state.aliens)]
@@ -327,7 +326,7 @@ def main(
     TestRunner().run(
         debug=debug,
         encoder_str=encoder,
-        encoders=[Terse()],
+        encoders=[Encoder()],
         failure_trajectories=[failure_trajectories],
         filename="logs/space-invader-metrics.html",
         logprobs=logprobs,
