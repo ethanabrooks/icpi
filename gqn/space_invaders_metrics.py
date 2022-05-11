@@ -1,3 +1,4 @@
+from abc import ABC
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Iterator, List, Optional, Tuple
@@ -147,7 +148,17 @@ class WithNamedTuple(Encoder):
 
 
 @dataclass
-class Hint(ModelMetric):
+class AllSuccess(ModelMetric, ABC):
+    def prompt_trajectory_generator(
+        self,
+        failure_trajectories: List[List[Trajectory]],
+        success_trajectories: List[List[Trajectory]],
+    ) -> Iterator[List[Trajectory]]:
+        yield from success_trajectories
+
+
+@dataclass
+class Hint(AllSuccess, ModelMetric):
     @classmethod
     def _get_query(cls, encoder: Encoder, last_step: TimeStep) -> str:
         return encoder.hint_query(last_step.state)
@@ -162,7 +173,7 @@ class Hint(ModelMetric):
 
 
 @dataclass
-class HitReward(ModelMetric):
+class HitReward(AllSuccess, ModelMetric):
     @classmethod
     def _get_query(cls, encoder: Encoder, last_step: TimeStep) -> str:
         return encoder.reward_query(last_step)
@@ -180,7 +191,7 @@ class HitReward(ModelMetric):
 
 
 @dataclass
-class MissReward(ModelMetric):
+class MissReward(AllSuccess, ModelMetric):
     @classmethod
     def _get_query(cls, encoder: Encoder, last_step: TimeStep) -> str:
         return encoder.reward_query(last_step)
@@ -198,7 +209,7 @@ class MissReward(ModelMetric):
 
 
 @dataclass
-class Transition(BaseTransition):
+class Transition(AllSuccess, BaseTransition):
     def _get_query_trajectories(
         self, queries: List[TrajectoryWithActions]
     ) -> Iterator[Trajectory]:
