@@ -89,7 +89,6 @@ class Encoder(BaseEncoder):
         raise RuntimeError("Not implemented")
 
     def transition_query(self, ts: TimeStep[Obs, int]) -> str:
-        assert not ts.done
         reward_str = self.nonterminal_reward_str(ts)
         query = self.reward_query(ts)
         if reward_str:
@@ -201,14 +200,38 @@ class MissReward(AllSuccess, ModelMetric):
 
 
 @dataclass
-class Transition(AllSuccess, BaseTransition):
+class HitTransition(AllSuccess, BaseTransition):
     def _get_query_trajectories(
         self, queries: List[TrajectoryWithActions]
     ) -> Iterator[Trajectory]:
         for query in queries:
             last_step = query[-1].time_step
             spawned = len(last_step.state.aliens) < len(last_step.next_state.aliens)
-            if not last_step.done and not spawned:
+            if last_step.reward > 0 and not spawned:
+                yield query
+
+
+@dataclass
+class MissTransition(AllSuccess, BaseTransition):
+    def _get_query_trajectories(
+        self, queries: List[TrajectoryWithActions]
+    ) -> Iterator[Trajectory]:
+        for query in queries:
+            last_step = query[-1].time_step
+            spawned = len(last_step.state.aliens) < len(last_step.next_state.aliens)
+            if last_step.reward == 0 and last_step.action == 1 and not spawned:
+                yield query
+
+
+@dataclass
+class MoveTransition(AllSuccess, BaseTransition):
+    def _get_query_trajectories(
+        self, queries: List[TrajectoryWithActions]
+    ) -> Iterator[Trajectory]:
+        for query in queries:
+            last_step = query[-1].time_step
+            spawned = len(last_step.state.aliens) < len(last_step.next_state.aliens)
+            if last_step.action != 1 and not spawned:
                 yield query
 
 
@@ -342,7 +365,9 @@ def main(
             HitReward(queries),
             MissReward(queries),
             Hint(queries),
-            Transition(queries),
+            HitTransition(queries),
+            MissTransition(queries),
+            MoveTransition(queries),
         ],
         prompt_sizes=list(prompt_sizes),
         require_cache=require_cache,
