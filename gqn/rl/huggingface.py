@@ -30,6 +30,7 @@ HF_MODELS = {
     "gptj": "EleutherAI/gpt-j-6B",
     "gptneo": "EleutherAI/gpt-neo-1.3B",
     "fairseq13b": "KoboldAI/fairseq-dense-13B",
+    "incoder6b": "facebook/incoder-6B",
 }
 
 
