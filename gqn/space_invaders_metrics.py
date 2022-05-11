@@ -238,7 +238,9 @@ def main(
     logprobs: int = 5,
     metric: Optional[str] = None,
     max_aliens: int = 1,
+    max_logprobs: int = 30,
     num_trajectories: int = 30,
+    require_cache: bool = False,
     seed: int = 0,
     width: int = 3,
 ):
@@ -311,6 +313,7 @@ def main(
         failure_trajectories=[failure_trajectories],
         filename="logs/space-invader-metrics.html",
         logprobs=logprobs,
+        max_logprobs=max_logprobs,
         metric_str=metric,
         metrics=[
             # Action(queries, num_actions=action_space.n),
@@ -322,6 +325,7 @@ def main(
             Transition(queries),
         ],
         prompt_sizes=list(prompt_sizes),
+        require_cache=require_cache,
         seed=seed,
         success_trajectories=[success_trajectories],
         title="Space Invaders",

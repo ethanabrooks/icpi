@@ -106,6 +106,7 @@ class Metric(abc.ABC):
         debug: int,
         encoder: Encoder,
         gpt3: GPT3,
+        max_logprobs: int,
         prompt_size: int,
         rng: np.random.Generator,
         failure_trajectories: List[List[Trajectory]],
@@ -158,6 +159,7 @@ class ProbabilityMetric(Metric, abc.ABC):
         debug: int,
         encoder: Encoder,
         gpt3: GPT3,
+        max_logprobs: int,
         prompt_size: int,
         rng: np.random.Generator,
         failure_trajectories: List[List[Trajectory]],
@@ -197,7 +199,7 @@ class ProbabilityMetric(Metric, abc.ABC):
             possible_outputs = self.get_possible_outputs(encoder, trajectory[-1])
             prob = self.get_prob(
                 debug=debug,
-                logprobs=logprobs,
+                logprobs=logprobs[:max_logprobs],
                 output=output,
                 possible_outputs=possible_outputs,
             )
@@ -348,6 +350,7 @@ class Episode(ActMetric):
         debug: int,
         encoder: Encoder,
         gpt3: GPT3,
+        max_logprobs: int,
         prompt_size: int,
         rng: np.random.Generator,
         failure_trajectories: List[List[Trajectory]],
