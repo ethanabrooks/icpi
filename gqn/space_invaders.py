@@ -1,6 +1,6 @@
 import itertools
 from dataclasses import dataclass
-from typing import Iterable, List, NamedTuple, Optional, Tuple
+from typing import Iterable, NamedTuple, Optional, Tuple
 
 import base_env
 import gym
@@ -20,7 +20,7 @@ class Alien(NamedTuple):
 
 class Obs(NamedTuple):
     agent: int
-    aliens: List[Alien]
+    aliens: Tuple[Alien, ...]
 
 
 @dataclass
@@ -86,7 +86,7 @@ class Env(base_env.Env[Obs, int]):
         self.reward = 0
         self.agent, *alien_xs = self.random.choice(self.width, size=1 + num_aliens)
         self.aliens = [Alien(i + 1, x, self.height) for i, x in enumerate(alien_xs)]
-        return Obs(self.agent, self.aliens)
+        return Obs(self.agent, tuple(self.aliens))
 
     def state_stop(self) -> str:
         return ";"
@@ -114,12 +114,10 @@ class Env(base_env.Env[Obs, int]):
         )
 
     def start_states(self) -> Optional[Iterable[Obs]]:
-        for n_aliens in range(self.max_aliens + 1):
-            for agent in range(self.width):
-                for xs in itertools.product(range(self.width), repeat=n_aliens):
-                    yield Obs(
-                        agent, [Alien(i + 1, x, self.height) for i, x in enumerate(xs)]
-                    )
+        for agent in range(self.width):
+            for xs in itertools.product(range(self.width), repeat=self.max_aliens):
+                aliens = [Alien(i + 1, x, self.height) for i, x in enumerate(xs)]
+                yield Obs(agent, tuple(aliens))
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
         reward_ = self.reward == 0
@@ -152,7 +150,7 @@ class Env(base_env.Env[Obs, int]):
         self.agent += action - 1
         self.agent = int(np.clip(self.agent, 0, self.width - 1))
         done = any(y == 0 for *_, y in self.aliens)
-        state = Obs(self.agent, self.aliens)
+        state = Obs(self.agent, tuple(self.aliens))
         return state, self.reward, done, info
 
     def ts_to_string(self, ts: TimeStep) -> str:

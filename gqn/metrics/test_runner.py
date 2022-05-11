@@ -65,12 +65,11 @@ class TestRunner(Generic[ObsType, ActType]):
 
         logger = HasuraLogger(graphql_endpoint=os.getenv("GRAPHQL_ENDPOINT"))
         gpt3 = GPT3(
-            best_of=1,
             debug=-1,
             logprobs=logprobs,
             logger=logger,
             stop=None,
-            temperature=0.1,
+            temperature=0,
             top_p=1,
         )
         rng = np.random.default_rng(seed)
