@@ -204,7 +204,7 @@ def main(
     height: int = 4,
     logprobs: int = 5,
     metric: Optional[str] = None,
-    max_aliens: int = 1,
+    max_aliens: int = 2,
     max_logprobs: int = 30,
     num_trajectories: int = 30,
     require_cache: bool = False,
