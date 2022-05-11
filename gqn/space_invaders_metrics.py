@@ -18,7 +18,7 @@ from metrics.metric import Transition as BaseTransition
 from metrics.metric import get_trajectory
 from metrics.test_runner import TestRunner
 from rl.model import get_value
-from space_invaders import Alien, C, Obs
+from space_invaders import Alien, Obs
 
 ACTIONS = ["left", "shoot", "right"]
 
@@ -60,7 +60,7 @@ class Encoder(BaseEncoder):
 
     def name(self) -> str:
         return self.time_step_str(
-            TimeStep(Obs(1, (Alien(C(1, 2)),)), 1, 1, False, Obs(1, ()))
+            TimeStep(Obs(1, (Alien(1, 2),)), 1, 1, False, Obs(1, ()))
         )
 
     def nonterminal_reward_str(self, ts: TimeStep[Obs, int]) -> str:
@@ -79,16 +79,8 @@ class Encoder(BaseEncoder):
         return "ship"
 
     def state_str(self, state: Obs) -> str:
-        aliens = ", ".join([f"C{tuple(a.xy)}" for a in state.aliens])
+        aliens = ", ".join([f"C{tuple(a)}" for a in state.aliens])
         return f"assert {self.ship()} == C{(state.agent, 0)} and {self.alien()} == [{aliens}]\n"
-        #     + " and ".join(
-        #         [ship]
-        #         + [f"aliens == {(a.xy.x, a.xy.y)}" for i, a in enumerate(state.aliens)]
-        #     )
-        #     + "\n"
-        # )
-        # ship = f"ship={(state.agent, 0)}"
-        # aliens = ", ".join([f"alien{a.i}={a.x}" for a in state.aliens])
 
     def stop(self) -> List[str]:
         return [":", ";", "."]
@@ -221,7 +213,7 @@ class Transition(AllSuccess, BaseTransition):
 
 
 def hopeless(s: Obs) -> bool:
-    return any([abs(s.agent - a.xy.x) > a.xy.y for a in s.aliens])
+    return any([abs(s.agent - a.x) > a.y for a in s.aliens])
 
 
 def collect_trajectory(

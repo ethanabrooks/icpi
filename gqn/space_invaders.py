@@ -12,25 +12,15 @@ from gym.wrappers import TimeLimit
 DEAD = "dead"
 
 
-class C(NamedTuple):
+class Alien(NamedTuple):
     x: int
     y: int
 
-    def aligned_with(self, x: int) -> bool:
-        return self.x == x
-
-
-class Alien(NamedTuple):
-    xy: Optional[C]
-
-    def dead(self) -> bool:
-        return self.xy is None
-
     def landed(self) -> bool:
-        return not self.dead() and self.xy.y == 0
+        return self.y == 0
 
     def over(self, x: int) -> bool:
-        return not self.dead() and self.xy.aligned_with(x)
+        return self.x == x
 
 
 class Obs(NamedTuple):
@@ -100,7 +90,7 @@ class Env(base_env.Env[Obs, int]):
         num_aliens = 1 + self.random.choice(self.max_aliens)
         self.reward = 0
         self.agent, *alien_xs = self.random.choice(self.width, size=1 + num_aliens)
-        self.aliens = [Alien(C(x, self.height)) for i, x in enumerate(alien_xs)]
+        self.aliens = [Alien(x, self.height) for i, x in enumerate(alien_xs)]
         return Obs(self.agent, tuple(self.aliens))
 
     def state_stop(self) -> str:
@@ -131,7 +121,7 @@ class Env(base_env.Env[Obs, int]):
     def start_states(self) -> Optional[Iterable[Obs]]:
         for agent in range(self.width):
             for xs in itertools.product(range(self.width), repeat=self.max_aliens):
-                aliens = [Alien(C(x, self.height)) for i, x in enumerate(xs)]
+                aliens = [Alien(x, self.height) for i, x in enumerate(xs)]
                 yield Obs(agent, tuple(aliens))
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
@@ -140,21 +130,15 @@ class Env(base_env.Env[Obs, int]):
             and len(self.aliens) < self.max_aliens
             and self.random.choice(2)
         ):
-            self.aliens.append(Alien(C(self.random.choice(self.width), self.height)))
+            self.aliens.append(Alien(self.random.choice(self.width), self.height))
 
         if action == 1:
             num_aliens = len(self.aliens)
-            self.aliens = [
-                Alien(None if a.xy is None else C(a.xy.x, a.xy.y))
-                for a in self.aliens
-                if a.xy.x != self.agent
-            ]
+            self.aliens = [Alien(a.x, a.y) for a in self.aliens if a.x != self.agent]
             self.reward = num_aliens - len(self.aliens)
         else:
             self.reward = 0
-        self.aliens = [
-            Alien(None if a.xy is None else C(a.xy.x, a.xy.y - 1)) for a in self.aliens
-        ]
+        self.aliens = [Alien(a.x, a.y - 1) for a in self.aliens]
         info = dict(optimal=self.max_step)
         self.agent += action - 1
         self.agent = int(np.clip(self.agent, 0, self.width - 1))
