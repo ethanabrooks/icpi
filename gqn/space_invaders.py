@@ -115,7 +115,7 @@ class Env(base_env.Env[Obs, int]):
 
     @staticmethod
     def _status_str(state: Obs) -> str:
-        in_range = [i for i, _ in enumerate(state.aliens) if a.over(state.agent)]
+        in_range = [i for i, a in enumerate(state.aliens) if a.over(state.agent)]
         statuses = []
         if in_range:
             statuses.append("C.x=" + "=".join(f"A{i}.x" for i in in_range))
@@ -135,21 +135,26 @@ class Env(base_env.Env[Obs, int]):
                 yield Obs(agent, tuple(aliens))
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
-        reward_ = self.reward == 0
-        max_aliens = len(self.aliens) < self.max_aliens
-        choice = self.random.choice(2)
-        if reward_ and max_aliens and choice:
+        if (
+            self.reward == 0
+            and len(self.aliens) < self.max_aliens
+            and self.random.choice(2)
+        ):
             self.aliens.append(Alien(C(self.random.choice(self.width), self.height)))
 
         if action == 1:
             num_aliens = len(self.aliens)
             self.aliens = [
-                Alien(C(xy.x, xy.y)) for i, xy in self.aliens if xy.x != self.agent
+                Alien(None if a.xy is None else C(a.xy.x, a.xy.y))
+                for a in self.aliens
+                if a.xy.x != self.agent
             ]
             self.reward = num_aliens - len(self.aliens)
         else:
             self.reward = 0
-        self.aliens = [Alien(C(xy.x, xy.y - 1)) for i, xy in self.aliens]
+        self.aliens = [
+            Alien(None if a.xy is None else C(a.xy.x, a.xy.y - 1)) for a in self.aliens
+        ]
         info = dict(optimal=self.max_step)
         self.agent += action - 1
         self.agent = int(np.clip(self.agent, 0, self.width - 1))
