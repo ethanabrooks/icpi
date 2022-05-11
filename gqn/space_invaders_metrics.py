@@ -73,18 +73,13 @@ class Encoder(BaseEncoder):
         return self.action_query(ts.state) + self.action_str(ts.state, ts.action)
 
     def state_str(self, state: Obs) -> str:
-        ship = f"ship == {state.agent}"
-        return (
-            "assert "
-            + " and ".join(
-                [ship]
-                + [
-                    f"aliens[{i}] == {(a.xy.x, a.xy.y)}"
-                    for i, a in enumerate(state.aliens)
-                ]
-            )
-            + "\n"
-        )
+        return f"assert ship == {state.agent} and aliens == {[tuple(a.xy) for a in state.aliens]}\n"
+        #     + " and ".join(
+        #         [ship]
+        #         + [f"aliens == {(a.xy.x, a.xy.y)}" for i, a in enumerate(state.aliens)]
+        #     )
+        #     + "\n"
+        # )
         # ship = f"ship={(state.agent, 0)}"
         # aliens = ", ".join([f"alien{a.i}={a.x}" for a in state.aliens])
 
