@@ -36,7 +36,7 @@ class Encoder(BaseEncoder):
     def hint(state: Obs) -> str:
         hint = ", ".join(
             [
-                f"ship==alien{a.i}" if a.x == state.agent else f"ship!=alien{a.i}"
+                f"ship==alien{a.i}_x" if a.x == state.agent else f"ship!=alien{a.i}_x"
                 for a in state.aliens
             ]
         )
