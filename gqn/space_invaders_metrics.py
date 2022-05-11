@@ -27,9 +27,7 @@ class Encoder(BaseEncoder):
         return range(3)
 
     def action_str(self, state: Obs, action: int) -> str:
-        args = ["ship"] + [f"alien{a.i}" for a in state.aliens]
-        args = ", ".join(args)
-        return f"reward = {ACTIONS[action]}({args})\n"
+        return f"ship, aliens, reward = {ACTIONS[action]}(ship, aliens)\n"
 
     def action_query(self, state: Obs) -> str:
         hint = self.hint(state)
@@ -41,10 +39,10 @@ class Encoder(BaseEncoder):
     def hint(state: Obs) -> str:
         hint = "\n".join(
             [
-                f"assert ship == alien{a.i}[0]"
+                f"assert ship == alien[{i}][0]"
                 if a.over(state.agent)
-                else f"assert ship != alien{a.i}[0]"
-                for a in state.aliens
+                else f"assert ship != alien[{i}][0]"
+                for i, a in enumerate(state.aliens)
             ]
         )
         return f"{hint}\n"
@@ -60,20 +58,24 @@ class Encoder(BaseEncoder):
         )
 
     def nonterminal_reward_str(self, ts: TimeStep[Obs, int]) -> str:
-        if ts.action != 1:
-            return ""
-        if ts.reward == 0:
-            return "assert reward == 0\n"
-        reward = len([a.i for a in ts.state.aliens if a.over(ts.state.agent)])
-        return f"assert reward == {reward}\n"
+        string = f"assert reward == {ts.reward}\n"
+        # if ts.action == 1:
+        #     hit = [a.i for a in ts.state.aliens if a.over(ts.state.agent)]
+        #     for i in hit:
+        #         string += f"assert alien[{i}] == None\n"
+        return string
 
     def reward_query(self, ts: TimeStep[Obs, int]) -> str:
         return self.action_query(ts.state) + self.action_str(ts.state, ts.action)
 
     def state_str(self, state: Obs) -> str:
-        ship = f"ship = {state.agent}"
+        ship = f"assert ship == {state.agent}"
         return "\n".join(
-            [ship] + [f"alien{a.i} = {(a.xy.x, a.xy.y)}" for a in state.aliens]
+            [ship]
+            + [
+                f"assert aliens[{i}] == {(a.xy.x, a.xy.y)}"
+                for i, a in enumerate(state.aliens)
+            ]
         )
         # ship = f"ship={(state.agent, 0)}"
         # aliens = ", ".join([f"alien{a.i}={a.x}" for a in state.aliens])
@@ -295,7 +297,7 @@ def main(
             HitReward(queries),
             MissReward(queries),
             Hint(queries),
-            Transition(queries),
+            # Transition(queries),
         ],
         prompt_sizes=list(prompt_sizes),
         seed=seed,
