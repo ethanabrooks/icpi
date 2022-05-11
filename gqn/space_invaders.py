@@ -12,10 +12,26 @@ from gym.wrappers import TimeLimit
 DEAD = "dead"
 
 
-class Alien(NamedTuple):
-    i: int
+class Coord(NamedTuple):
     x: int
     y: int
+
+    def aligned_with(self, x: int) -> bool:
+        return self.x == x
+
+
+class Alien(NamedTuple):
+    i: int
+    xy: Optional[Coord]
+
+    def dead(self) -> bool:
+        return self.xy is None
+
+    def landed(self) -> bool:
+        return not self.dead() and self.xy.y == 0
+
+    def over(self, x: int) -> bool:
+        return not self.dead() and self.xy.aligned_with(x)
 
 
 class Obs(NamedTuple):
@@ -82,10 +98,11 @@ class Env(base_env.Env[Obs, int]):
         return_info: bool = False,
         options: Optional[dict] = None,
     ) -> Obs:
-        num_aliens = 1 + self.random.choice(self.max_aliens)
-        self.reward = 0
+        num_aliens = self.max_aliens
         self.agent, *alien_xs = self.random.choice(self.width, size=1 + num_aliens)
-        self.aliens = [Alien(i + 1, x, self.height) for i, x in enumerate(alien_xs)]
+        self.aliens = [
+            Alien(i + 1, Coord(x, self.height)) for i, x in enumerate(alien_xs)
+        ]
         return Obs(self.agent, tuple(self.aliens))
 
     def state_stop(self) -> str:
@@ -100,7 +117,7 @@ class Env(base_env.Env[Obs, int]):
 
     @staticmethod
     def _status_str(state: Obs) -> str:
-        in_range = [i for i, x, y in state.aliens if x == state.agent]
+        in_range = [a.i for a in state.aliens if a.over(state.agent)]
         statuses = []
         if in_range:
             statuses.append("C.x=" + "=".join(f"A{i}.x" for i in in_range))
@@ -116,42 +133,38 @@ class Env(base_env.Env[Obs, int]):
     def start_states(self) -> Optional[Iterable[Obs]]:
         for agent in range(self.width):
             for xs in itertools.product(range(self.width), repeat=self.max_aliens):
-                aliens = [Alien(i + 1, x, self.height) for i, x in enumerate(xs)]
+                aliens = [Alien(i + 1, Coord(x, self.height)) for i, x in enumerate(xs)]
                 yield Obs(agent, tuple(aliens))
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
-        reward_ = self.reward == 0
-        max_aliens = len(self.aliens) < self.max_aliens
-        choice = self.random.choice(2)
-        if reward_ and max_aliens and choice:
-            alien_ids = [i for i, *_ in self.aliens]
-            alien_id = next(
-                i for i in range(1, 1 + self.max_aliens) if i not in alien_ids
-            )
-            self.aliens.append(
-                Alien(alien_id, self.random.choice(self.width), self.height)
-            )
-        # else:
-        #     if not reward_:
-        #         print(f"reward={self.reward}")
-        #     elif not max_aliens:
-        #         print(f"self.aliens={self.aliens}")
-        #     elif not choice:
-        #         print(f"choice={choice}")
-
         if action == 1:
-            num_aliens = len(self.aliens)
-            self.aliens = [Alien(i, x, y) for i, x, y in self.aliens if x != self.agent]
-            self.reward = num_aliens - len(self.aliens)
+            reward = sum(a.over(self.agent) for a in self.aliens)
+            self.aliens = [
+                Alien(a.i, None if a.over(self.agent) else a.xy) for a in self.aliens
+            ]
         else:
-            self.reward = 0
-        self.aliens = [Alien(i, x, y - 1) for i, x, y in self.aliens]
+            reward = 0
+        dead = [a for a in self.aliens if a.dead()]
+        if reward == 0 and dead:
+            occupied = {a.xy.x for a in self.aliens if not a.dead()}
+            available = set(range(self.width)) - occupied
+            available = sorted(available)
+            xs = self.random.choice(available, size=len(dead))
+            self.aliens = [a for a in self.aliens if not a.dead()] + [
+                Alien(a.i, Coord(x, self.height)) for a, x in zip(dead, xs)
+            ]
+            assert len(self.aliens) == self.max_aliens
+
+        self.aliens = [
+            Alien(a.i, None if a.dead() else Coord(a.xy.x, a.xy.y - 1))
+            for a in self.aliens
+        ]
         info = dict(optimal=self.max_step)
         self.agent += action - 1
         self.agent = int(np.clip(self.agent, 0, self.width - 1))
-        done = any(y == 0 for *_, y in self.aliens)
+        done = any(a.landed() for a in self.aliens)
         state = Obs(self.agent, tuple(self.aliens))
-        return state, self.reward, done, info
+        return state, reward, done, info
 
     def ts_to_string(self, ts: TimeStep) -> str:
         description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"

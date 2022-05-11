@@ -2,7 +2,7 @@ import abc
 import itertools
 import re
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Generic, Iterator, List, Optional
+from typing import Any, Callable, Dict, Generic, Iterator, List, Tuple
 
 import numpy as np
 from base_env import Env, TimeStep
@@ -11,11 +11,9 @@ from metrics.encoder import Encoder
 from rl.gpt3 import GPT3
 
 
-def get_prob(target: str, logprobs: List[Dict[str, float]]) -> Optional[float]:
-    if not target:
-        return 1
-    if not logprobs:
-        return 0
+def _get_prob(target: str, logprobs: List[Dict[str, float]]) -> Tuple[float, str]:
+    if not target or not logprobs:
+        return 1, target
 
     def get_prob_rec(logprobs):
         while logprobs:
@@ -23,13 +21,28 @@ def get_prob(target: str, logprobs: List[Dict[str, float]]) -> Optional[float]:
             for token, lp in head.items():
                 prob = np.exp(lp)
                 if target.startswith(token):
-                    yield prob * get_prob(target[len(token) :], logprobs)
-            logprobs = [
-                {k: v for k, v in lp.items() if k not in head} for lp in logprobs
-            ]
+                    prob_rest, leftover = _get_prob(target[len(token) :], logprobs)
+                    yield prob * prob_rest, leftover
+            # logprobs = [
+            #     {k: v for k, v in lp.items() if k not in head} for lp in logprobs
+            # ]
 
     rec = list(get_prob_rec(logprobs))
-    return max(rec, default=0)
+    if not rec:
+        return 0, target
+    if all([leftover for prob, leftover in rec]):
+        smallest_leftover = min([leftover for prob, leftover in rec], key=len)
+        probs = [
+            (prob, leftover) for prob, leftover in rec if leftover == smallest_leftover
+        ]
+    else:
+        probs = [(prob, leftover) for prob, leftover in rec if not leftover]
+    return max(probs)
+
+
+def get_prob(target: str, logprobs: List[Dict[str, float]]) -> float:
+    prob, leftover = _get_prob(target, logprobs)
+    return prob
 
 
 Trajectory = List[TimeStep[ObsType, ActType]]

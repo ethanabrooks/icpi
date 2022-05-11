@@ -17,7 +17,7 @@ from metrics.metric import Transition as BaseTransition
 from metrics.metric import get_trajectory
 from metrics.test_runner import TestRunner
 from rl.model import get_value
-from space_invaders import Alien, Obs
+from space_invaders import Alien, Coord, Obs
 
 ACTIONS = ["Left", "Shoot", "Right"]
 
@@ -30,24 +30,21 @@ class Encoder(BaseEncoder):
         return f"{ACTIONS[action]}:"
 
     def action_query(self, state: Obs) -> str:
-        return self.hint_query(state) + " " + self.hint(state)
+        return self.state_str(state)
 
     @staticmethod
-    def hint(state: Obs) -> str:
-        hint = ", ".join(
-            [
-                f"ship==alien{a.i}_x" if a.x == state.agent else f"ship!=alien{a.i}_x"
-                for a in state.aliens
-            ]
+    def hint(agent: int, alien: Alien) -> str:
+        return (
+            "alien_x==ship"
+            if alien.over(agent) and not alien.dead()
+            else "alien_x!=ship"
         )
-        return f"[{hint}]."
-
-    def hint_query(self, state: Obs) -> str:
-        return self.state_str(state)
 
     def name(self) -> str:
         return self.time_step_str(
-            TimeStep(Obs(1, (Alien(1, 1, 2),)), 1, 1, False, Obs(1, ()))
+            TimeStep(
+                Obs(1, (Alien(1, Coord(1, 2)),)), 1, 1, False, Obs(1, (Alien(1, None),))
+            )
         )
 
     def nonterminal_reward_str(self, ts: TimeStep[Obs, int]) -> str:
@@ -55,27 +52,32 @@ class Encoder(BaseEncoder):
             return ""
         if ts.reward == 0:
             return "missed;"
-        in_range = [a.i for a in ts.state.aliens if a.x == ts.state.agent]
-        aliens_hit = " and ".join([f"alien{i}" for i in in_range])
-        return f"hit {aliens_hit};"
+        else:
+            return "hit alien;"
 
     def reward_query(self, ts: TimeStep[Obs, int]) -> str:
         return self.action_query(ts.state) + " " + self.action_str(ts.action)
 
     def state_str(self, state: Obs) -> str:
-        aliens = ", ".join([f"alien{a.i}={(a.x, a.y)}" for a in state.aliens])
-        # ship = f"ship={(state.agent, 0)}"
-        # aliens = ", ".join([f"alien{a.i}={a.x}" for a in state.aliens])
+        aliens = ", ".join(
+            [
+                f"alien={'dead' if a.xy is None else (a.xy.x, a.xy.y)} [{self.hint(state.agent, a)}]"
+                for a in state.aliens
+            ]
+        )
         ship = f"ship={state.agent}"
-        return f"{ship}, {aliens}" if aliens else ship
+        state_str = f"{ship}, {aliens}" if aliens else ship
+        return state_str + "."
 
     def stop(self) -> List[str]:
         return [":", ";", "."]
 
     def terminal_reward_str(self, ts: TimeStep[Obs, int]) -> str:
-        landed = [a.i for a in ts.next_state.aliens if a.y == 0]
+        landed = [
+            a.i for a in ts.next_state.aliens if (a.xy is not None and a.xy.y == 0)
+        ]
         if landed:
-            return " and ".join([f"alien{i}" for i in landed]) + " landed."
+            return "alien landed."
         else:
             return "survived."
 
@@ -85,7 +87,8 @@ class Encoder(BaseEncoder):
         query = self.reward_query(ts)
         if reward_str:
             return query + " " + reward_str
-        return query
+        else:
+            return query
 
     def time_step_str(self, ts: TimeStep[Obs, int]) -> str:
         if ts.done:
@@ -94,19 +97,32 @@ class Encoder(BaseEncoder):
             return self.transition_query(ts)
 
 
-@dataclass
-class Hint(ModelMetric):
-    @classmethod
-    def _get_query(cls, encoder: Encoder, last_step: TimeStep) -> str:
-        return encoder.hint_query(last_step.state)
-
-    def _get_query_trajectories(
-        self, queries: List[TrajectoryWithActions]
-    ) -> Iterator[Trajectory]:
-        yield from queries
-
-    def get_output(self, encoder: Encoder, last_step: TimeStepWithActions) -> list[str]:
-        return [encoder.hint(last_step.time_step.state)]
+# @dataclass
+# class Hint(ModelMetric):
+#     @classmethod
+#     def _get_query(cls, encoder: Encoder, last_step: TimeStep) -> str:
+#         return encoder.hint_query(last_step.state)
+#
+#     def _get_query_trajectories(
+#         self, queries: List[TrajectoryWithActions]
+#     ) -> Iterator[Trajectory]:
+#         yield from queries
+#
+#     def get_output(self, encoder: Encoder, last_step: TimeStepWithActions) -> list[str]:
+#         return [encoder.hint(last_step.time_step.state)]
+#
+#     @staticmethod
+#     def get_prob(
+#         debug: int,
+#         encoder: Encoder,
+#         logprobs: List[Dict[str, float]],
+#         output: List[str],
+#     ):
+#         output_probs = [get_prob(o, logprobs) for o in output]
+#         if debug >= 2:
+#             print(output_probs)
+#             breakpoint()
+#         return sum(output_probs)
 
 
 @dataclass
@@ -158,7 +174,7 @@ class Transition(BaseTransition):
 
 
 def hopeless(s: Obs) -> bool:
-    return any([abs(s.agent - a.x) > a.y for a in s.aliens])
+    return any([abs(s.agent - a.xy.x) > a.xy.y for a in s.aliens if a.xy is not None])
 
 
 def collect_trajectory(
@@ -202,7 +218,7 @@ def main(
     height: int = 4,
     logprobs: int = 5,
     metric: Optional[str] = None,
-    max_aliens: int = 1,
+    max_aliens: int = 2,
     num_trajectories: int = 30,
     seed: int = 0,
     width: int = 3,
@@ -229,7 +245,7 @@ def main(
                 failure_trajectories,
             ]
         ]
-        + [len(envs_by_first_state) < len(list(env.start_states()))]
+        # + [len(envs_by_first_state) < len(list(env.start_states()))]
     ):
         # print(
         #     [
@@ -238,7 +254,7 @@ def main(
         #             trajectories_by_last_state_action,
         #             success_trajectories,
         #             failure_trajectories,
-        #             envs_by_first_state,
+        #             # envs_by_first_state,
         #         ]
         #     ]
         # )
@@ -283,7 +299,7 @@ def main(
             # FailureReward(queries),
             HitReward(queries),
             MissReward(queries),
-            Hint(queries),
+            # Hint(queries),
             Transition(queries),
         ],
         prompt_sizes=list(prompt_sizes),
