@@ -104,7 +104,7 @@ class Encoder(BaseEncoder):
 
     def time_step_str(self, ts: TimeStep[Obs, int]) -> str:
         if ts.done:
-            s = self.reward_query(ts)  # TODO: + " " + self.terminal_reward_str(ts)
+            s = self.reward_query(ts) + self.nonterminal_reward_str(ts)
         else:
             s = self.transition_query(ts)
         return s
