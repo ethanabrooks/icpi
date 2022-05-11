@@ -40,7 +40,7 @@ class Encoder(BaseEncoder):
 
     @staticmethod
     def alien() -> str:
-        return "alien"
+        return "aliens"
 
     def hint(self, state: Obs) -> str:
         hint = " and ".join(
