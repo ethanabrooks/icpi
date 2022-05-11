@@ -21,7 +21,6 @@ class C(NamedTuple):
 
 
 class Alien(NamedTuple):
-    i: int
     xy: Optional[C]
 
     def dead(self) -> bool:
@@ -101,7 +100,7 @@ class Env(base_env.Env[Obs, int]):
         num_aliens = 1 + self.random.choice(self.max_aliens)
         self.reward = 0
         self.agent, *alien_xs = self.random.choice(self.width, size=1 + num_aliens)
-        self.aliens = [Alien(i + 1, C(x, self.height)) for i, x in enumerate(alien_xs)]
+        self.aliens = [Alien(C(x, self.height)) for i, x in enumerate(alien_xs)]
         return Obs(self.agent, tuple(self.aliens))
 
     def state_stop(self) -> str:
@@ -116,7 +115,7 @@ class Env(base_env.Env[Obs, int]):
 
     @staticmethod
     def _status_str(state: Obs) -> str:
-        in_range = [a.i for a in state.aliens if a.over(state.agent)]
+        in_range = [i for i, _ in enumerate(state.aliens) if a.over(state.agent)]
         statuses = []
         if in_range:
             statuses.append("C.x=" + "=".join(f"A{i}.x" for i in in_range))
@@ -132,7 +131,7 @@ class Env(base_env.Env[Obs, int]):
     def start_states(self) -> Optional[Iterable[Obs]]:
         for agent in range(self.width):
             for xs in itertools.product(range(self.width), repeat=self.max_aliens):
-                aliens = [Alien(i + 1, C(x, self.height)) for i, x in enumerate(xs)]
+                aliens = [Alien(C(x, self.height)) for i, x in enumerate(xs)]
                 yield Obs(agent, tuple(aliens))
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
@@ -140,30 +139,17 @@ class Env(base_env.Env[Obs, int]):
         max_aliens = len(self.aliens) < self.max_aliens
         choice = self.random.choice(2)
         if reward_ and max_aliens and choice:
-            alien_ids = [i for i, *_ in self.aliens]
-            alien_id = next(
-                i for i in range(1, 1 + self.max_aliens) if i not in alien_ids
-            )
-            self.aliens.append(
-                Alien(alien_id, C(self.random.choice(self.width), self.height))
-            )
-        # else:
-        #     if not reward_:
-        #         print(f"reward={self.reward}")
-        #     elif not max_aliens:
-        #         print(f"self.aliens={self.aliens}")
-        #     elif not choice:
-        #         print(f"choice={choice}")
+            self.aliens.append(Alien(C(self.random.choice(self.width), self.height)))
 
         if action == 1:
             num_aliens = len(self.aliens)
             self.aliens = [
-                Alien(i, C(xy.x, xy.y)) for i, xy in self.aliens if xy.x != self.agent
+                Alien(C(xy.x, xy.y)) for i, xy in self.aliens if xy.x != self.agent
             ]
             self.reward = num_aliens - len(self.aliens)
         else:
             self.reward = 0
-        self.aliens = [Alien(i, C(xy.x, xy.y - 1)) for i, xy in self.aliens]
+        self.aliens = [Alien(C(xy.x, xy.y - 1)) for i, xy in self.aliens]
         info = dict(optimal=self.max_step)
         self.agent += action - 1
         self.agent = int(np.clip(self.agent, 0, self.width - 1))

@@ -60,7 +60,7 @@ class Encoder(BaseEncoder):
 
     def name(self) -> str:
         return self.time_step_str(
-            TimeStep(Obs(1, (Alien(1, C(1, 2)),)), 1, 1, False, Obs(1, ()))
+            TimeStep(Obs(1, (Alien(C(1, 2)),)), 1, 1, False, Obs(1, ()))
         )
 
     def nonterminal_reward_str(self, ts: TimeStep[Obs, int]) -> str:
