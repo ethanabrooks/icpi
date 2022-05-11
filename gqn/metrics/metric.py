@@ -106,6 +106,7 @@ class Metric(abc.ABC):
         debug: int,
         encoder: Encoder,
         gpt3: GPT3,
+        max_logprobs: int,
         prompt_size: int,
         rng: np.random.Generator,
         failure_trajectories: List[List[Trajectory]],
@@ -158,6 +159,7 @@ class ProbabilityMetric(Metric, abc.ABC):
         debug: int,
         encoder: Encoder,
         gpt3: GPT3,
+        max_logprobs: int,
         prompt_size: int,
         rng: np.random.Generator,
         failure_trajectories: List[List[Trajectory]],
@@ -194,7 +196,7 @@ class ProbabilityMetric(Metric, abc.ABC):
             logprobs = completion["top_logprobs"]
             if debug >= 0:
                 print(">", end="")
-            prob = self.get_prob(debug, encoder, logprobs, output)
+            prob = self.get_prob(debug, encoder, logprobs[:max_logprobs], output)
             if debug >= 1:
                 print(prob)
                 breakpoint()
@@ -342,6 +344,7 @@ class Episode(ActMetric):
         debug: int,
         encoder: Encoder,
         gpt3: GPT3,
+        max_logprobs: int,
         prompt_size: int,
         rng: np.random.Generator,
         failure_trajectories: List[List[Trajectory]],
