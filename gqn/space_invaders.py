@@ -12,10 +12,26 @@ from gym.wrappers import TimeLimit
 DEAD = "dead"
 
 
-class Alien(NamedTuple):
-    i: int
+class Coord(NamedTuple):
     x: int
     y: int
+
+    def aligned_with(self, x: int) -> bool:
+        return self.x == x
+
+
+class Alien(NamedTuple):
+    i: int
+    xy: Optional[Coord]
+
+    def dead(self) -> bool:
+        return self.xy is None
+
+    def landed(self) -> bool:
+        return not self.dead() and self.xy.y == 0
+
+    def over(self, x: int) -> bool:
+        return not self.dead() and self.xy.aligned_with(x)
 
 
 class Obs(NamedTuple):
@@ -85,7 +101,9 @@ class Env(base_env.Env[Obs, int]):
         num_aliens = 1 + self.random.choice(self.max_aliens)
         self.reward = 0
         self.agent, *alien_xs = self.random.choice(self.width, size=1 + num_aliens)
-        self.aliens = [Alien(i + 1, x, self.height) for i, x in enumerate(alien_xs)]
+        self.aliens = [
+            Alien(i + 1, Coord(x, self.height)) for i, x in enumerate(alien_xs)
+        ]
         return Obs(self.agent, tuple(self.aliens))
 
     def state_stop(self) -> str:
@@ -100,7 +118,7 @@ class Env(base_env.Env[Obs, int]):
 
     @staticmethod
     def _status_str(state: Obs) -> str:
-        in_range = [i for i, x, y in state.aliens if x == state.agent]
+        in_range = [a.i for a in state.aliens if a.over(state.agent)]
         statuses = []
         if in_range:
             statuses.append("C.x=" + "=".join(f"A{i}.x" for i in in_range))
@@ -116,7 +134,7 @@ class Env(base_env.Env[Obs, int]):
     def start_states(self) -> Optional[Iterable[Obs]]:
         for agent in range(self.width):
             for xs in itertools.product(range(self.width), repeat=self.max_aliens):
-                aliens = [Alien(i + 1, x, self.height) for i, x in enumerate(xs)]
+                aliens = [Alien(i + 1, Coord(x, self.height)) for i, x in enumerate(xs)]
                 yield Obs(agent, tuple(aliens))
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
@@ -129,7 +147,7 @@ class Env(base_env.Env[Obs, int]):
                 i for i in range(1, 1 + self.max_aliens) if i not in alien_ids
             )
             self.aliens.append(
-                Alien(alien_id, self.random.choice(self.width), self.height)
+                Alien(alien_id, Coord(self.random.choice(self.width), self.height))
             )
         # else:
         #     if not reward_:
@@ -141,15 +159,19 @@ class Env(base_env.Env[Obs, int]):
 
         if action == 1:
             num_aliens = len(self.aliens)
-            self.aliens = [Alien(i, x, y) for i, x, y in self.aliens if x != self.agent]
+            self.aliens = [
+                Alien(i, Coord(xy.x, xy.y))
+                for i, xy in self.aliens
+                if xy.x != self.agent
+            ]
             self.reward = num_aliens - len(self.aliens)
         else:
             self.reward = 0
-        self.aliens = [Alien(i, x, y - 1) for i, x, y in self.aliens]
+        self.aliens = [Alien(i, Coord(xy.x, xy.y - 1)) for i, xy in self.aliens]
         info = dict(optimal=self.max_step)
         self.agent += action - 1
         self.agent = int(np.clip(self.agent, 0, self.width - 1))
-        done = any(y == 0 for *_, y in self.aliens)
+        done = any(a.landed() for a in self.aliens)
         state = Obs(self.agent, tuple(self.aliens))
         return state, self.reward, done, info
 
