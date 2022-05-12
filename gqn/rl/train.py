@@ -32,7 +32,6 @@ def train(
     temperature: float,
     top_p: float,
     total_steps: int,
-    wait_time: int,
 ):
     local_rank = os.getenv("LOCAL_RANK", None)
     if local_rank is not None:
@@ -53,7 +52,6 @@ def train(
             require_cache=require_cache,
             stop=[env.action_stop(), env.state_stop()],
             top_p=top_p,
-            wait_time=wait_time,
         )
     elif model_name in HF_MODELS:
         lm = HuggingFaceModel(
