@@ -59,7 +59,7 @@ class Env(base_env.Env[Obs, int]):
 
     def done(self, *completions: str) -> bool:
         *_, state_or_reward = completions
-        return bool(re.findall(r"\[C\(\d, 0\)", state_or_reward))
+        return bool(re.findall(r"aliens == \[.*C\(\d, 0\).*] and", state_or_reward))
 
     def failure_threshold(self) -> float:
         return 0
