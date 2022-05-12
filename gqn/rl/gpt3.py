@@ -83,7 +83,6 @@ class GPT3:
             if len(tokens) <= MAX_TOKENS:
                 break
             _, *prompts = prompt.split("\n")
-            print("Setting prompt to length:", len(prompt))
             prompt = "\n".join(prompts)
 
         if use_cache:
