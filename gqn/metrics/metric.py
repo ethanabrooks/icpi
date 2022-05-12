@@ -216,14 +216,14 @@ class ProbabilityMetric(Metric, abc.ABC):
         output: List[str],
         possible_outputs: Optional[List[str]],
     ):
-        output_probs = [get_prob("\n" + o, logprobs) for o in output]
+        output_probs = [get_prob(o, logprobs) for o in output]
         if debug >= 2:
             print(output_probs)
             breakpoint()
         prob = sum(output_probs)
         if possible_outputs is None:
             return prob
-        all_probs = [get_prob("\n" + o, logprobs) for o in possible_outputs]
+        all_probs = [get_prob(o, logprobs) for o in possible_outputs]
         return prob / sum(all_probs)
 
     @abc.abstractmethod

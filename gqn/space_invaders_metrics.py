@@ -178,7 +178,7 @@ class Hint(AllSuccess, ModelMetric):
                 yield query
 
     def get_output(self, encoder: Encoder, last_step: TimeStepWithActions) -> list[str]:
-        return [encoder.hint(last_step.time_step.state)]
+        return [" " + encoder.hint(last_step.time_step.state)]
 
 
 @dataclass
@@ -196,7 +196,7 @@ class HitReward(AllSuccess, ModelMetric):
                 yield query
 
     def get_output(self, encoder: Encoder, last_step: TimeStepWithActions) -> list[str]:
-        return [encoder.nonterminal_reward_str(last_step.time_step)]
+        return ["\n" + encoder.nonterminal_reward_str(last_step.time_step)]
 
 
 @dataclass
@@ -214,7 +214,7 @@ class MissReward(AllSuccess, ModelMetric):
                 yield query
 
     def get_output(self, encoder: Encoder, last_step: TimeStepWithActions) -> list[str]:
-        return [encoder.nonterminal_reward_str(last_step.time_step)]
+        return ["\n" + encoder.nonterminal_reward_str(last_step.time_step)]
 
 
 @dataclass
