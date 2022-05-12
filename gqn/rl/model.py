@@ -1,5 +1,6 @@
 import abc
 import itertools
+import math
 from dataclasses import dataclass
 from typing import Callable, Deque, Generic, List, Optional, Union
 
@@ -56,6 +57,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         self,
         completions: List[str],
         get_prompts: Callable[[], List[str]],
+        max_prompts: int,
         name: str,
         stop: str,
         valid: Callable[[str], bool],
@@ -63,7 +65,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         previous_prompts = set()
         for _ in range(self.max_resamples):
             prompts = get_prompts()
-            while "".join(prompts) in previous_prompts:
+            while "".join(prompts) in previous_prompts and len(prompts) < max_prompts:
                 prompts = get_prompts()
             previous_prompts.add("".join(prompts))
 
@@ -148,6 +150,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     def generate_action(self, completions):
         maybe_action = self.predict(
             completions,
+            max_prompts=math.factorial(len(self.success_buffer)),
             name="action",
             stop=self.env.action_stop(),
             get_prompts=self.sample_best,
@@ -220,12 +223,14 @@ class Q(Model[ObsType, ActType]):
                 "Computing value for state", state, "and action", action
             )
 
+        max_prompts = math.factorial(len(self.sample()))
         while True:
             if t == self.max_steps:
                 break
             if self.env.reward_stop():
                 reward_str = self.predict(
                     completions,
+                    max_prompts=max_prompts,
                     name="reward",
                     get_prompts=self.sample,
                     stop=self.env.reward_stop(),
@@ -236,6 +241,7 @@ class Q(Model[ObsType, ActType]):
                 completions.append(reward_str)
             state_str = self.predict(
                 completions,
+                max_prompts=max_prompts,
                 name="state",
                 get_prompts=self.sample,
                 stop=self.env.state_stop(),
