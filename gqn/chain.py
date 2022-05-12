@@ -28,20 +28,20 @@ class Env(base_env.Env[int, int]):
         )
         self.observation_space = gym.spaces.Discrete(self.n)
 
-    @staticmethod
-    def action_stop() -> str:
-        return ":"
+    def action_str(self, action: int) -> str:
+        return f"state, reward = {self.actions()[action]}(state){self.action_stop()}"
 
     def actions(self):
         return [
-            "Left",
-            "Try goal",
-            "Right",
+            "left",
+            "try_goal",
+            "right",
         ]
 
     def done(self, *completions: str) -> bool:
         *_, state_or_reward = completions
-        return state_or_reward.rstrip(self.state_stop()) in REWARDS.values()
+        breakpoint()
+        return "try_goal" in state_or_reward
 
     def failure_threshold(self) -> float:
         return 0
@@ -50,19 +50,17 @@ class Env(base_env.Env[int, int]):
     def gamma() -> float:
         return 0.9
 
-    def partially_observable(self) -> bool:
-        return False
+    def _hint_str(self, state: int) -> str:
+        return (
+            "assert state " + ("==" if state == self.goal else "!=") + f" {self.goal}"
+        )
 
     @classmethod
-    def quantify(cls, prompt: str) -> float:
-        success = prompt.endswith(REWARDS[1.0] + cls.state_stop())
-        length = prompt.count(cls.action_stop()) - 1
-        value = cls.gamma() ** length
-        if success:
-            return value
-        elif prompt.endswith(REWARDS[0.0] + cls.state_stop()):
-            return 0
-        return 0
+    def initial_str(cls) -> str:
+        return "state = reset()\n"
+
+    def partially_observable(self) -> bool:
+        return False
 
     def render(self, mode="human"):
         pass
@@ -81,10 +79,7 @@ class Env(base_env.Env[int, int]):
         return range(self.n)
 
     def _state_str(self, state: int) -> str:
-        if not self.status:
-            return str(state)
-        status = f"at {self.goal}" if state == self.goal else f"not at {self.goal}"
-        return f"{state} [{status}]"
+        return f"assert state == {state}"
 
     def step(self, action: int) -> Tuple[int, float, bool, dict]:
         optimal = self.gamma() ** abs(self._start_state - self.goal)
@@ -97,7 +92,18 @@ class Env(base_env.Env[int, int]):
         return state, float(success), done, info
 
     def ts_to_string(self, ts: TimeStep) -> str:
-        description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"
-        if ts.done:
-            description += " " + REWARDS[ts.reward] + self.state_stop()
-        return description
+        s = "".join(
+            [
+                self.state_str(ts.state),
+                self._hint_str(ts.state),
+                self.hint_stop(),
+                self.action_str(ts.action),
+                f"assert reward == {ts.reward}",
+                self.reward_stop(),
+            ]
+        )
+        if ts.reward == 1 and f"state == {self.goal}" not in s:
+            breakpoint()
+        if ts.action == 1 and ts.reward == 0 and f"state != {self.goal}" in s:
+            breakpoint()
+        return s
