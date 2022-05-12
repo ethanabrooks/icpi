@@ -102,6 +102,7 @@ class Env(base_env.Env[Obs, int]):
         self.agent, *alien_xs = self.random.choice(self.width, size=1 + num_aliens)
         self.aliens = [Alien(x, self.height) for i, x in enumerate(alien_xs)]
         self.optimal = num_aliens
+        self.t = 0
         return Obs(self.agent, tuple(self.aliens))
 
     @staticmethod
@@ -129,9 +130,12 @@ class Env(base_env.Env[Obs, int]):
         if reward == 0 and len(self.aliens) < self.max_aliens and self.random.choice(2):
             alien = Alien(self.random.choice(self.width), self.height)
             self.aliens.append(alien)
+            if abs(alien.x - self.agent) < (self.max_step - self.t):
+                self.optimal += 1
 
+        self.t += 1
         self.aliens = [Alien(a.x, a.y - 1) for a in self.aliens]
-        info = dict(optimal=self.max_step)
+        info = dict(optimal=self.optimal)
         self.agent += action - 1
         self.agent = int(np.clip(self.agent, 0, self.width - 1))
         done = any(a.landed() for a in self.aliens)
