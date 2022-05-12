@@ -6,7 +6,6 @@ from typing import List, Optional
 import openai
 from run_logger import HasuraLogger
 from transformers import GPT2TokenizerFast
-from util import Colorize
 
 from gql import gql
 
@@ -120,10 +119,10 @@ class GPT3:
                     temperature=0.1,
                     stop=stop,
                 ).choices
-                if not choice.text:
-                    print(prompt)
-                    Colorize.print_warning("Empty completion!")
-                    breakpoint()
+                # if not choice.text:
+                #     print(prompt)
+                #     Colorize.print_warning("Empty completion!")
+                #     breakpoint()
             except openai.error.RateLimitError as e:
                 print("Rate limit error:")
                 print(e)
