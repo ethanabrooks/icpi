@@ -60,15 +60,17 @@ class Encoder(BaseEncoder):
     def hint_query(self, state: Obs) -> str:
         return self.state_str(state)
 
-    def name(self) -> str:
-        return self.time_step_str(
-            TimeStep(
-                Obs(1, (Alien.spawn(1, 2),)),
-                1,
-                1,
-                False,
-                Obs(1, (Alien.dead(),)),
-            )
+    def name(self) -> tuple[str, ...]:
+        return tuple(
+            self.time_step_str(
+                TimeStep(
+                    Obs(1, (Alien.spawn(1, 2),)),
+                    1,
+                    1,
+                    False,
+                    Obs(1, (Alien.dead(),)),
+                )
+            ).split("\n")
         )
 
     def nonterminal_reward_str(self, ts: TimeStep[Obs, int]) -> str:

@@ -86,7 +86,7 @@ class TestRunner(Generic[ObsType, ActType]):
                     and encoder.__class__.__name__ != encoder_str
                 ):
                     continue
-                name = (encoder.name(), f"prompt size: {prompt_size}")
+                name = encoder.name()
                 print(name)
                 loop: Metric
                 for metric in metrics:
