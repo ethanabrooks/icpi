@@ -86,6 +86,9 @@ class Encoder(BaseEncoder):
             )
         return reward_str
 
+    def reset_str(self) -> str:
+        return f"\n{self.ship()}, {self.alien()} = reset()"
+
     def reward_query(self, ts: TimeStep[Obs, int]) -> str:
         return self.action_query(ts.state) + self.action_str(ts.state, ts.action)
 
@@ -125,10 +128,17 @@ class Encoder(BaseEncoder):
         return "\n".join(
             [
                 "\n".join(
-                    [f"\n{self.ship()}, {self.alien()} = reset()"]
+                    [self.reset_str()]
                     + [self.time_step_str(ts) for ts in trajectory]
+                    + [
+                        self.time_step_str(last)
+                        + "\n"
+                        + self.state_str(last.next_state)
+                        + " "
+                        + self.hint(last.next_state)
+                    ]
                 )
-                for trajectory in trajectories
+                for *trajectory, last in trajectories
             ]
         )
 

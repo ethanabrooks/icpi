@@ -170,12 +170,26 @@ class ProbabilityMetric(Metric, abc.ABC):
             output = self.get_output(encoder, trajectory[-1])
             if not output:
                 continue
+
+            def filter_trajectories(
+                trajectories: List[List[Trajectory]],
+            ) -> List[List[Trajectory]]:
+                return [
+                    [
+                        [ts]
+                        for t in subset
+                        for ts in t
+                        if ts.action == trajectory[-1].time_step.action
+                    ]
+                    for subset in trajectories
+                ]
+
             prompt = self.get_prompt(
                 encoder=encoder,
-                failure_trajectories=failure_trajectories,
+                failure_trajectories=filter_trajectories(failure_trajectories),
                 prompt_size=prompt_size,
                 rng=rng,
-                success_trajectories=success_trajectories,
+                success_trajectories=filter_trajectories(success_trajectories),
             )
             query = self.get_query(encoder, get_trajectory(trajectory))
             full_prompt = f"{prompt}\n{query}"
@@ -277,10 +291,10 @@ class ModelMetric(ProbabilityMetric, abc.ABC):
     @classmethod
     def get_query(cls, encoder: Encoder, trajectory: Trajectory) -> str:
         *rest, last = trajectory
-        query = encoder.get_prompt([rest])
-        if query:
-            query += "\n"
-        return query + cls._get_query(encoder, last)
+        reset_str = encoder.reset_str()
+        if reset_str is not None:
+            reset_str += "\n"
+        return reset_str + cls._get_query(encoder, last)
 
     def prompt_trajectory_generator(
         self,

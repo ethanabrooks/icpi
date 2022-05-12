@@ -32,6 +32,10 @@ class Encoder(Generic[ObsType, ActType], abc.ABC):
         ...
 
     @abc.abstractmethod
+    def reset_str(self) -> str:
+        ...
+
+    @abc.abstractmethod
     def reward_query(self, ts: TimeStep[ObsType, ActType]) -> str:
         ...
 
