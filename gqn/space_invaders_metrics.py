@@ -264,7 +264,7 @@ def collect_trajectory(
     parsers=dict(
         prompt_sizes=option(
             "prompt_sizes",
-            default=(7,),
+            default=(8,),
             type=lambda s: tuple(map(int, s.split(","))),
         )
     )
@@ -348,7 +348,7 @@ def main(
     TestRunner().run(
         debug=debug,
         encoder_str=encoder,
-        encoders=[Encoder()],
+        encoders=[Terse()],
         failure_trajectories=[failure_trajectories],
         filename="logs/space-invader-metrics.html",
         logprobs=logprobs,
