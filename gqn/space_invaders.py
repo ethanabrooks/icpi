@@ -13,15 +13,39 @@ from gym.wrappers import TimeLimit
 DEAD = "dead"
 
 
-class Alien(NamedTuple):
+class C(NamedTuple):
     x: int
     y: int
 
+
+class Alien(NamedTuple):
+    xy: Optional[C]
+
+    def is_dead(self) -> bool:
+        return self.xy is None
+
+    @classmethod
+    def dead(cls) -> "Alien":
+        return cls(None)
+
+    def descend(self) -> "Alien":
+        return self if self.is_dead() else Alien(C(self.xy.x, self.xy.y - 1))
+
     def landed(self) -> bool:
-        return self.y == 0
+        return not self.is_dead() and self.xy.y == 0
 
     def over(self, x: int) -> bool:
-        return self.x == x
+        return not self.is_dead() and self.xy.x == x
+
+    def __str__(self) -> str:
+        return str(None) if self.is_dead() else f"C{tuple(self.xy)}"
+
+    @classmethod
+    def spawn(cls, x: int, y: int) -> "Alien":
+        return cls(C(x, y))
+
+    def take_fire(self, ship: int) -> "Alien":
+        return Alien(None if self.over(ship) else self.xy)
 
 
 class Obs(NamedTuple):
@@ -97,8 +121,11 @@ class Env(base_env.Env[Obs, int]):
         options: Optional[dict] = None,
     ) -> Obs:
         num_aliens = 1 + self.random.choice(self.max_aliens)
-        self.agent, *alien_xs = self.random.choice(self.width, size=1 + num_aliens)
-        self.aliens = [Alien(x, self.height) for i, x in enumerate(alien_xs)]
+        self.agent, *alien_xs = self.random.choice(self.width, size=1 + self.max_aliens)
+        self.aliens = [
+            (Alien.spawn(x, self.height) if i < num_aliens else Alien.dead())
+            for i, x in enumerate(alien_xs)
+        ]
         self.optimal = num_aliens
         self.t = 0
         return Obs(self.agent, tuple(self.aliens))
@@ -108,7 +135,7 @@ class Env(base_env.Env[Obs, int]):
         return "ship"
 
     def _state_str(self, state: Obs) -> str:
-        aliens = ", ".join([f"C{tuple(a)}" for a in state.aliens])
+        aliens = ", ".join([f"{a}" for a in state.aliens])
         return f"assert {self.ship()} == C{(state.agent, 0)} and {self.alien()} == [{aliens}]"
 
     def state_str(self, state: Obs) -> str:
@@ -120,25 +147,26 @@ class Env(base_env.Env[Obs, int]):
     def start_states(self) -> Optional[Iterable[Obs]]:
         for agent in range(self.width):
             for xs in itertools.product(range(self.width), repeat=self.max_aliens):
-                aliens = [Alien(x, self.height) for x in xs]
+                aliens = [Alien.spawn(x, self.height) for x in xs]
                 yield Obs(agent, tuple(aliens))
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
         if action == 1:
-            num_aliens = len(self.aliens)
-            self.aliens = [Alien(a.x, a.y) for a in self.aliens if a.x != self.agent]
-            reward = num_aliens - len(self.aliens)
+            reward = sum(a.over(self.agent) for a in self.aliens)
+            self.aliens = [a.take_fire(self.agent) for a in self.aliens]
         else:
             reward = 0
 
-        if reward == 0 and len(self.aliens) < self.max_aliens and self.random.choice(2):
-            alien = Alien(self.random.choice(self.width), self.height)
-            self.aliens.append(alien)
-            if abs(alien.x - self.agent) < (self.max_step - self.t):
+        dead = [a.is_dead() for a in self.aliens]
+        if reward == 0 and any(dead) and self.random.choice(2):
+            i = dead.index(True)
+            alien = self.aliens[i]
+            self.aliens[i] = alien.spawn(self.random.choice(self.width), self.height)
+            if abs(self.aliens[i].xy.x - self.agent) < (self.max_step - self.t):
                 self.optimal += 1
 
         self.t += 1
-        self.aliens = [Alien(a.x, a.y - 1) for a in self.aliens]
+        self.aliens = [a.descend() for a in self.aliens]
         info = dict(optimal=self.optimal)
         self.agent += action - 1
         self.agent = int(np.clip(self.agent, 0, self.width - 1))
