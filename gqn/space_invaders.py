@@ -81,7 +81,7 @@ class Env(base_env.Env[Obs, int]):
 
     @classmethod
     def initial_str(cls) -> str:
-        return f"{cls.ship()}, {cls.alien()} = reset()\n"
+        return f"\n{cls.ship()}, {cls.alien()} = reset()\n"
 
     def partially_observable(self) -> bool:
         return False
