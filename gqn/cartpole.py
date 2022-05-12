@@ -195,7 +195,8 @@ class Env(gym.Env):
         return_info: bool = False,
         options: Optional[dict] = None,
     ):
-        super().reset(seed=seed)
+        super().reset()
+        super().seed()
         self.steps_to_go = self.max_episode_steps
         self.state = self.np_random.uniform(low=-0.05, high=0.05, size=(4,))
         self.steps_beyond_done = None

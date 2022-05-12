@@ -10,6 +10,7 @@ import run_logger
 from dollar_lambda import CommandTree, argument
 from git import Repo
 from rl.train import train
+from rl.baseline import deep_baseline 
 from run_logger import HasuraLogger
 from run_logger.main import get_config_params
 from vega_charts import line
@@ -32,8 +33,10 @@ def no_logging(
     params = dict(get_config_params(config), debug=debug)
     if load_id is not None:
         params.update(run_logger.get_load_params(load_id=load_id, logger=logger))
-
-    train(**params, logger=logger, require_cache=require_cache)
+    main_fn = train
+    if params["model_name"].startswith("baseline"):
+       main_fn = deep_baseline 
+    main_fn(**params, logger=logger, require_cache=require_cache)
 
 
 @tree.subcommand(parsers=dict(name=argument("name")))
@@ -79,8 +82,12 @@ def log(
     )
     if require_cache not in params:
         params.update(require_cache=require_cache)
+    
+    main_fn = train
+    if params["model_name"].startswith("baseline"):
+       main_fn = deep_baseline
 
-    train(**params, debug=0, logger=logger)
+    main_fn(**params, debug=0, logger=logger)
 
 
 if __name__ == "__main__":
