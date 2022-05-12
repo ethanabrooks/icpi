@@ -207,9 +207,10 @@ class Q(Model[ObsType, ActType]):
 
     def value(self, trajectory: List[TimeStep], state: ObsType, action: ActType) -> str:
         t = 0
+        initial_str = self.env.initial_str()
         state_str = self.env.state_str(state)
         action_str = self.env.action_str(action)
-        completions = [s for s in [state_str, action_str] if s]
+        completions = [s for s in [initial_str, state_str, action_str] if s]
         if self.env.partially_observable():
             completions = [self.env.ts_to_string(ts) for ts in trajectory] + completions
 
