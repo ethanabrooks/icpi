@@ -188,6 +188,7 @@ class Q(Model[ObsType, ActType]):
                 Colorize.print_blue("action:", end=" ")
                 Colorize.print_cyan(a)
                 trajectory_strings = [
+                    self.env.initial_str(),
                     self.env.state_str(state),
                     self.env.action_str(a),
                 ]
