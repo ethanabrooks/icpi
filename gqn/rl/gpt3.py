@@ -52,6 +52,7 @@ class GPT3:
     logger: HasuraLogger
     logprobs: int
     top_p: float
+    wait_time: int
     max_tokens: int = 100
     require_cache: bool = False
     stop: Optional[List[str]] = None
@@ -92,10 +93,12 @@ class GPT3:
         self.print(prompt)
         if self.debug >= 5:
             breakpoint()
+        wait_time = self.wait_time
         while True:
             # print("Prompt:", prompt.split("\n")[-1])
             sys.stdout.flush()
             try:
+                time.sleep(wait_time)
                 choice, *_ = openai.Completion.create(
                     engine=ENGINE,
                     max_tokens=self.max_tokens,
@@ -108,11 +111,10 @@ class GPT3:
                     print(prompt)
                     Colorize.print_warning("Empty completion!")
                     breakpoint()
-                time.sleep(4)
             except openai.error.RateLimitError as e:
                 print("Rate limit error:")
                 print(e)
-                time.sleep(8)
+                wait_time **= 2
                 continue
             except openai.error.InvalidRequestError as e:
                 print("Invalid request error:")
