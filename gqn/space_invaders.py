@@ -162,6 +162,12 @@ class Env(base_env.Env[Obs, int]):
             breakpoint()
         return s
 
+    def valid_reward(self, reward_str: str) -> bool:
+        return bool(re.match(r"assert reward == [0-9]+", reward_str))
+
+    def valid_state(self, state_str: str) -> bool:
+        return bool(state_str.startswith(f"assert {self.ship()} == C("))
+
 
 if __name__ == "__main__":
     max_step = 8

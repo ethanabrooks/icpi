@@ -1,7 +1,7 @@
 import abc
 import itertools
 from dataclasses import dataclass
-from typing import Deque, Generic, List, Union
+from typing import Callable, Deque, Generic, List, Optional, Union
 
 import numpy as np
 from base_env import Env, TimeStep
@@ -33,6 +33,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     env: Env
     debug: int
     lm: Union[GPT3, HuggingFaceModel]
+    max_resamples: int
     max_steps: int
     prompt_size: int
     rng: Generator
@@ -51,23 +52,46 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     def get_value(self, trajectory: List[TimeStep]) -> float:
         return get_value(*trajectory, gamma=self.env.gamma())
 
-    def predict(self, completions: List[str], name: str, prompts: List[str], stop: str):
-        new_prompt = "".join([*prompts, "".join(completions)])
-        if self.debug >= 2:
-            print()
-            print(new_prompt)
-        if self.debug >= 4:
-            breakpoint()
-        completion = self.lm(
-            new_prompt, stop=[stop], temperature=self.temperature, use_cache=True
-        )
+    def predict(
+        self,
+        completions: List[str],
+        get_prompts: Callable[[], List[str]],
+        name: str,
+        stop: str,
+        valid: Callable[[str], bool],
+    ) -> Optional[str]:
+        previous_prompts = set()
+        for _ in range(self.max_resamples):
+            prompts = get_prompts()
+            while "".join(prompts) in previous_prompts:
+                prompts = get_prompts()
+            previous_prompts.add("".join(prompts))
 
-        if self.debug >= 2:
-            Colorize.print_blue(name, end=" ")
-            Colorize.print_cyan(completion)
-        if self.debug >= 4:
-            breakpoint()
-        return completion + stop
+            new_prompt = "".join([*prompts, "".join(completions)])
+            if self.debug >= 2:
+                print()
+                print(new_prompt)
+            if self.debug >= 4:
+                breakpoint()
+            completion = self.lm(
+                new_prompt, stop=[stop], temperature=self.temperature, use_cache=True
+            )
+
+            if self.debug >= 2:
+                Colorize.print_blue(name, end=" ")
+                Colorize.print_cyan(completion)
+            if self.debug >= 4:
+                breakpoint()
+            completion += stop
+            if valid(completion):
+                return completion
+            else:
+                if self.debug >= 3:
+                    Colorize.print_warning(f"Invalid {name}:", end=" ")
+                    Colorize.print_cyan(completion)
+                    breakpoint()
+                    valid(completion)
+        return None
 
     def ready(self) -> bool:
         return len(self.success_buffer) > 0
@@ -119,6 +143,18 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         self.rng.shuffle(trajectories)
         prompts = [to_string(*t, env=self.env) for t in trajectories]
         return list(prompts)[: self.prompt_size]
+
+    def generate_action(self, completions):
+        maybe_action = self.predict(
+            completions,
+            name="action",
+            stop=self.env.action_stop(),
+            get_prompts=self.sample_best,
+            valid=lambda s: self.env.action(s) is not None,
+        )
+        if maybe_action is None:
+            return self.env.action_str(self.env.action_space.sample())
+        return maybe_action
 
 
 @dataclass
@@ -189,28 +225,28 @@ class Q(Model[ObsType, ActType]):
                 reward_str = self.predict(
                     completions,
                     name="reward",
+                    get_prompts=self.sample,
                     stop=self.env.reward_stop(),
-                    prompts=self.sample(),
+                    valid=self.env.valid_reward,
                 )
+                if reward_str is None:
+                    break
                 completions.append(reward_str)
             state_str = self.predict(
                 completions,
                 name="state",
-                prompts=self.sample(),
+                get_prompts=self.sample,
                 stop=self.env.state_stop(),
+                valid=self.env.valid_state,
             )
+            if state_str is None:
+                break
             completions.append(state_str)
             if self.env.done(*completions):
                 break
 
-            action_str = self.predict(
-                completions,
-                name="action",
-                stop=self.env.action_stop(),
-                prompts=self.sample_best(),
-            )
+            action_str = self.generate_action(completions)
             completions.append(action_str)
-
             t += 1
 
         return "".join(completions)
@@ -219,8 +255,6 @@ class Q(Model[ObsType, ActType]):
 class Pi(Model[ObsType, ActType]):
     def _act(self, trajectory: List[TimeStep], state: ObsType) -> ActType:
         state = self.env.state_str(state)
-        action = None
-        t = 0
 
         completions = (
             [self.env.ts_to_string(ts) for ts in trajectory]
@@ -228,18 +262,9 @@ class Pi(Model[ObsType, ActType]):
             else []
         ) + [state]
 
-        while action is None:
-            if t > self.max_steps:
-                return self.env.action_space.sample()
-            if self.debug >= 1:
-                Colorize.print_header("pi prompt:")
-            maybe_action = self.predict(
-                completions,
-                name="action",
-                prompts=self.sample_best(),
-                stop=self.env.action_stop(),
-            )
-            action = self.env.action(maybe_action)
-            t += 1
-
+        if self.debug >= 1:
+            Colorize.print_header("pi prompt:")
+        action_str = self.generate_action(completions)
+        action = self.env.action(action_str)
+        assert action is not None
         return action

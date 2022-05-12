@@ -24,8 +24,8 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
         try:
             actions = [
                 a
-                for a, _action_str in enumerate(self.actions())
-                if _action_str == action_str
+                for a in range(self.action_space.n)
+                if self.action_str(a) == action_str
             ]
             [action] = actions
             return action
@@ -96,4 +96,12 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
         ...
 
     def ts_to_string(self, ts: TimeStep) -> str:
+        ...
+
+    @abc.abstractmethod
+    def valid_reward(self, reward_str: str) -> bool:
+        ...
+
+    @abc.abstractmethod
+    def valid_state(self, state_str: str) -> bool:
         ...
