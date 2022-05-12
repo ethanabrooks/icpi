@@ -1,8 +1,7 @@
 import abc
 from typing import Generic, List
 
-from base_env import TimeStep
-from gym.core import ActType, ObsType
+from base_env import TimeStep, ActType, ObsType
 
 
 class Encoder(Generic[ObsType, ActType], abc.ABC):

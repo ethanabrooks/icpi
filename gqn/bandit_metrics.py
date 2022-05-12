@@ -5,10 +5,9 @@ from typing import List, Optional
 
 import bandit
 import numpy as np
-from base_env import TimeStep
+from base_env import TimeStep, ActType, ObsType
 from catch import Env
 from dollar_lambda import command
-from gym.core import ActType, ObsType
 from metrics.encoder import Encoder as BaseEncoder
 from metrics.metric import Actions as BaseActions
 from metrics.test_runner import TestRunner as BaseTestRunner

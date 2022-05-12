@@ -18,7 +18,7 @@ class Obs(NamedTuple):
     steps_to_go: int
 
 
-class Env(gym.Env[np.ndarray, Union[int, Obs]]):
+class Env(gym.Env):
     """
     ### Description
 
