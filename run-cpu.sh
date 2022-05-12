@@ -8,4 +8,5 @@ docker run --rm -it \
 	-e TERM=xterm-256color \
 	-v "$(pwd)/logs:/root/logs" \
 	-v "$(pwd)/completions:/root/completions" \
+	-v "$HUGGINGFACE_CACHE_DIR:/root/.cache/huggingface/" \
 	"$name" "${@:1}"

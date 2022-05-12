@@ -5,6 +5,7 @@ from typing import List, Optional
 
 import openai
 from run_logger import HasuraLogger
+from transformers import GPT2TokenizerFast
 from util import Colorize
 
 from gql import gql
@@ -46,6 +47,9 @@ mutation post_completion($prompt: String!, $completion: String!, $temperature: n
     )
 
 
+MAX_TOKENS = 3900
+
+
 @dataclass
 class GPT3:
     debug: int
@@ -58,20 +62,29 @@ class GPT3:
     stop: Optional[List[str]] = None
 
     def __post_init__(self):
+        self.tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
         assert self.logprobs <= 5
 
     def __call__(
-        self, prompt, stop: List[str], temperature: float, use_cache: bool = True
+        self, prompt: str, stop: List[str], temperature: float, use_cache: bool = True
     ):
         return self.get_full_completion(
             prompt, stop=stop, temperature=temperature, use_cache=use_cache
         )["completion"]
 
     def get_full_completion(
-        self, prompt, stop: list[str], temperature: float, use_cache: bool = True
+        self, prompt: str, stop: list[str], temperature: float, use_cache: bool = True
     ):
         if self.debug >= 0:
             print("<", end="")
+
+        while True:
+            tokens = self.tokenizer(prompt)["input_ids"]
+            if len(tokens) <= MAX_TOKENS:
+                break
+            _, *prompts = prompt.split("\n")
+            print("Setting prompt to length:", len(prompt))
+            prompt = "\n".join(prompts)
 
         if use_cache:
             completions = self.get_completions(
@@ -119,8 +132,7 @@ class GPT3:
             except openai.error.InvalidRequestError as e:
                 print("Invalid request error:")
                 print(e)
-                _, *prompts = prompt.split("\n")
-                prompt = "\n".join(prompts)
+                breakpoint()
                 continue
 
             top_logprobs = [l.to_dict() for l in choice.logprobs.top_logprobs]
