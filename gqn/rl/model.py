@@ -147,7 +147,7 @@ class Q(Model[ObsType, ActType]):
                     self.env.state_str(state),
                     self.env.action_str(a),
                 ]
-                if trajectory:
+                if trajectory and self.env.partially_observable():
                     trajectory_strings = [
                         to_string(*trajectory, env=self.env),
                         *trajectory_strings,
