@@ -77,9 +77,7 @@ class Env(base_env.Env[Obs, int]):
                 for i, a in enumerate(state.aliens)
             ]
         )
-        if hint:
-            return f"assert {hint}"
-        return ""
+        return hint
 
     @classmethod
     def initial_str(cls) -> str:
@@ -112,6 +110,12 @@ class Env(base_env.Env[Obs, int]):
     def _state_str(self, state: Obs) -> str:
         aliens = ", ".join([f"C{tuple(a)}" for a in state.aliens])
         return f"assert {self.ship()} == C{(state.agent, 0)} and {self.alien()} == [{aliens}]"
+
+    def state_str(self, state: Obs) -> str:
+        state_str = self._state_str(state)
+        if self.hint:
+            state_str += f" and {self._hint_str(state)}"
+        return state_str + self.state_stop()
 
     def start_states(self) -> Optional[Iterable[Obs]]:
         for agent in range(self.width):
@@ -147,7 +151,6 @@ class Env(base_env.Env[Obs, int]):
         s = "".join(
             [
                 self.state_str(ts.state),
-                *([self._hint_str(ts.state), self.hint_stop()] if self.hint else []),
                 self.action_str(ts.action),
                 f"assert reward == {ts.reward}",
                 self.reward_stop(),

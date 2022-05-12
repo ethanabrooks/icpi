@@ -198,14 +198,6 @@ class Q(Model[ObsType, ActType]):
             completions.append(state_str)
             if self.env.done(*completions):
                 break
-            if self.env.hint_stop() is not None:
-                hint = self.predict(
-                    completions,
-                    name="hint",
-                    stop=self.env.hint_stop(),
-                    prompts=self.sample(),
-                )
-                completions.append(hint)
 
             action_str = self.predict(
                 completions,
