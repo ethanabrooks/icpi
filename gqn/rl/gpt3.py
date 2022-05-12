@@ -103,12 +103,14 @@ class GPT3:
                     temperature=0.1,
                     stop=stop,
                 ).choices
-                time.sleep(4)
+                time.sleep(8)
             except openai.error.RateLimitError as e:
+                print("Rate limit error:")
                 print(e)
-                time.sleep(4)
+                time.sleep(8)
                 continue
             except openai.error.InvalidRequestError as e:
+                print("Invalid request error:")
                 print(e)
                 _, *prompts = prompt.split("\n")
                 prompt = "\n".join(prompts)
