@@ -58,6 +58,7 @@ class TestRunner(Generic[ObsType, ActType]):
         max_logprobs: int,
         metric_str: Optional[str],
         metrics: List[Metric],
+        model_name: str,
         prompt_sizes: List[int],
         require_cache: bool,
         seed: int,
@@ -70,10 +71,10 @@ class TestRunner(Generic[ObsType, ActType]):
             debug=-1,
             logprobs=logprobs,
             logger=logger,
+            model_name=model_name,
             require_cache=require_cache,
             stop=None,
             top_p=1,
-            wait_time=4,
         )
         rng = np.random.default_rng(seed)
 

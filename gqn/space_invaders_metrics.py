@@ -1,4 +1,4 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Iterator, List, Optional, Tuple
@@ -33,10 +33,9 @@ class Encoder(BaseEncoder):
     def action_query(self, state: Obs) -> str:
         hint = self.hint(state)
         query = self.hint_query(state)
-        if hint == "\n":
-            return query
-        else:
-            return query + hint
+        if hint:
+            query += " " + hint
+        return query + "\n"
 
     @staticmethod
     def alien() -> str:
@@ -45,27 +44,45 @@ class Encoder(BaseEncoder):
     def hint(self, state: Obs) -> str:
         hint = " and ".join(
             [
-                f"{self.ship()}.x == {self.alien()}[{i}].x"
-                if a.over(state.agent)
-                else f"{self.ship()}.x != {self.alien()}[{i}].x"
+                (
+                    f"{self.ship()}.x == {self.alien()}[{i}].x"
+                    if a.over(state.agent)
+                    else f"{self.ship()}.x != {self.alien()}[{i}].x"
+                )
                 for i, a in enumerate(state.aliens)
+                if not a.is_dead()
             ]
-            + [f"len({self.alien()}) == {len(state.aliens)}"]
         )
         if hint:
-            return f"assert {hint}\n"
-        return "\n"
+            hint = f"and {hint}"
+        return hint
 
     def hint_query(self, state: Obs) -> str:
         return self.state_str(state)
 
     def name(self) -> str:
         return self.time_step_str(
-            TimeStep(Obs(1, (Alien(1, 2),)), 1, 1, False, Obs(1, ()))
+            TimeStep(
+                Obs(1, (Alien.spawn(1, 2),)),
+                1,
+                1,
+                False,
+                Obs(1, (Alien.dead(),)),
+            )
         )
 
     def nonterminal_reward_str(self, ts: TimeStep[Obs, int]) -> str:
-        return f"assert reward == {ts.reward} and len({self.alien()}) == {len(ts.state.aliens)}\n"
+        reward_str = f"assert reward == {ts.reward}"
+        if ts.reward == 1:
+            reward_str += " and ".join(
+                [""]
+                + [
+                    f"alien[{i}] is None"
+                    for i, a in enumerate(ts.next_state.aliens)
+                    if a.dead()
+                ]
+            )
+        return reward_str
 
     def reward_query(self, ts: TimeStep[Obs, int]) -> str:
         return self.action_query(ts.state) + self.action_str(ts.state, ts.action)
@@ -75,8 +92,8 @@ class Encoder(BaseEncoder):
         return "ship"
 
     def state_str(self, state: Obs) -> str:
-        aliens = ", ".join([f"C{tuple(a)}" for a in state.aliens])
-        return f"assert {self.ship()} == C{(state.agent, 0)} and {self.alien()} == [{aliens}]\n"
+        aliens = ", ".join([str(a) for a in state.aliens])
+        return f"assert {self.ship()} == C{(state.agent, 0)} and {self.alien()} == [{aliens}]"
 
     def stop(self) -> List[str]:
         return [":", ";", "."]
@@ -106,7 +123,7 @@ class Encoder(BaseEncoder):
         return "\n".join(
             [
                 "\n".join(
-                    [f"{self.ship()}, {self.alien()} = reset()"]
+                    [f"\n{self.ship()}, {self.alien()} = reset()"]
                     + [self.time_step_str(ts) for ts in trajectory]
                 )
                 for trajectory in trajectories
@@ -153,7 +170,10 @@ class Hint(AllSuccess, ModelMetric):
     def _get_query_trajectories(
         self, queries: List[TrajectoryWithActions]
     ) -> Iterator[Trajectory]:
-        yield from queries
+        for query in queries:
+            last_step = query[-1].time_step
+            if not all(a.is_dead() for a in last_step.state.aliens):
+                yield query
 
     def get_output(self, encoder: Encoder, last_step: TimeStepWithActions) -> list[str]:
         return [encoder.hint(last_step.time_step.state)]
@@ -196,43 +216,50 @@ class MissReward(AllSuccess, ModelMetric):
 
 
 @dataclass
-class HitTransition(AllSuccess, BaseTransition):
+class Transition(AllSuccess, BaseTransition):
     def _get_query_trajectories(
         self, queries: List[TrajectoryWithActions]
     ) -> Iterator[Trajectory]:
         for query in queries:
-            last_step = query[-1].time_step
-            spawned = len(last_step.state.aliens) < len(last_step.next_state.aliens)
-            if last_step.reward > 0 and not spawned:
+            ts = query[-1].time_step
+
+            spawned = False
+            for a1, a2 in zip(ts.state.aliens, ts.next_state.aliens):
+                if a1.is_dead() and not a2.is_dead():
+                    spawned = True
+
+            if not spawned and self.condition(ts):
                 yield query
+
+    @staticmethod
+    @abstractmethod
+    def condition(ts: TimeStep) -> bool:
+        ...
 
 
 @dataclass
-class MissTransition(AllSuccess, BaseTransition):
-    def _get_query_trajectories(
-        self, queries: List[TrajectoryWithActions]
-    ) -> Iterator[Trajectory]:
-        for query in queries:
-            last_step = query[-1].time_step
-            spawned = len(last_step.state.aliens) < len(last_step.next_state.aliens)
-            if last_step.reward == 0 and last_step.action == 1 and not spawned:
-                yield query
+class HitTransition(Transition):
+    @staticmethod
+    def condition(ts: TimeStep) -> bool:
+        return ts.reward > 0
 
 
 @dataclass
-class MoveTransition(AllSuccess, BaseTransition):
-    def _get_query_trajectories(
-        self, queries: List[TrajectoryWithActions]
-    ) -> Iterator[Trajectory]:
-        for query in queries:
-            last_step = query[-1].time_step
-            spawned = len(last_step.state.aliens) < len(last_step.next_state.aliens)
-            if last_step.action != 1 and not spawned:
-                yield query
+class MissTransition(Transition):
+    @staticmethod
+    def condition(ts: TimeStep) -> bool:
+        return ts.action == 1 and ts.reward == 0
+
+
+@dataclass
+class MoveTransition(Transition):
+    @staticmethod
+    def condition(ts: TimeStep) -> bool:
+        return ts.action != 1
 
 
 def hopeless(s: Obs) -> bool:
-    return any([abs(s.agent - a.x) > a.y for a in s.aliens])
+    return any([a.escaped(s.agent) for a in s.aliens])
 
 
 def collect_trajectory(
@@ -278,6 +305,7 @@ def main(
     metric: Optional[str] = None,
     max_aliens: int = 2,
     max_logprobs: int = 30,
+    model_name: str = "code-davinci-002",
     num_trajectories: int = 30,
     require_cache: bool = False,
     seed: int = 0,
@@ -289,7 +317,7 @@ def main(
         max_aliens=max_aliens,
         max_step=8,
         random_seed=seed,
-        status=True,
+        hint=True,
     )
     success_trajectories = []
     failure_trajectories = []
@@ -348,7 +376,7 @@ def main(
     TestRunner().run(
         debug=debug,
         encoder_str=encoder,
-        encoders=[Terse()],
+        encoders=[Encoder()],
         failure_trajectories=[failure_trajectories],
         filename="logs/space-invader-metrics.html",
         logprobs=logprobs,
@@ -365,6 +393,7 @@ def main(
             MissTransition(queries),
             MoveTransition(queries),
         ],
+        model_name=model_name,
         prompt_sizes=list(prompt_sizes),
         require_cache=require_cache,
         seed=seed,

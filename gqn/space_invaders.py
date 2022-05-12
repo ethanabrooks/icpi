@@ -31,6 +31,11 @@ class Alien(NamedTuple):
     def descend(self) -> "Alien":
         return self if self.is_dead() else Alien(C(self.xy.x, self.xy.y - 1))
 
+    def escaped(self, ship: int) -> bool:
+        if self.is_dead():
+            return False
+        return abs(ship - self.xy.x) > self.xy.y
+
     def landed(self) -> bool:
         return not self.is_dead() and self.xy.y == 0
 
