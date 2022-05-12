@@ -2,49 +2,14 @@ import math
 import os
 import time
 from collections import deque
-from pprint import pprint
 from typing import Deque, List, Optional
 
-import bandit
-import cartpole
-import catch
-import chain
 import numpy as np
 import openai
-import umbrella
-from base_env import Env
-from gym.wrappers import TimeLimit
+from rl.common import evaluate, make_env, make_log, print_rank0
 from rl.huggingface import HF_MODELS
 from rl.model import GPT3, HuggingFaceModel, Pi, Q, TimeStep, get_value, to_string
 from run_logger import HasuraLogger
-
-
-def make_env(env_id: str, seed: int, status: bool) -> Env:
-    if env_id == "bandit":
-        env = bandit.Env(num_steps=5, random_seed=seed)
-    elif env_id == "cartpole":
-        env = cartpole.Wrapper(cartpole.Env(max_episode_steps=5, seed=seed))
-    elif env_id == "catch":
-        env = catch.Wrapper(catch.Env(columns=4, rows=5, seed=seed), status=status)
-    elif env_id == "chain":
-        env = TimeLimit(
-            chain.Env(goal=4, n=8, random_seed=seed, status=status),
-            max_episode_steps=8,
-        )
-    elif env_id == "umbrella":
-        env = umbrella.Env(num_colors=2, num_steps=2, random_seed=seed)
-    else:
-        raise RuntimeError()
-    return env
-
-
-def print_rank0(local_rank: Optional[int], *args, pretty=False, **kwargs):
-    if local_rank is None or local_rank == 0:
-        if pretty:
-            pprint(*args, **kwargs)
-        else:
-            print(*args, **kwargs)
-
 
 def train(
     debug: int,
@@ -123,65 +88,24 @@ def train(
     episodes = 0
     start_time = time.time()
 
-    def make_log(info: dict, rewards: List[float], evaluation: bool):
-        discounted = sum([env.gamma() ** t * r for t, r in enumerate(rewards)])
-        undiscounted = sum(rewards)
-        regret = info["optimal"] - discounted
-
-        prefix = "eval " if evaluation else ""
-
-        log = dict(
-            hours=(time.time() - start_time) / 3600,
-            step=T,
-            use_model_prob=use_model_prob,
-            **{
-                prefix + "return": discounted,
-                prefix + "undiscounted return": undiscounted,
-                prefix + "regret": regret,
-                "run ID": logger.run_id,
-                "success buffer": len(success_buffer),
-            },
-        )
-        print_rank0(local_rank, log, pretty=True)
-        if logger.run_id is not None:
-            logger.log(**log)
-
-    def evaluate():
-        start_states = env.start_states()
-        finite_start_states = start_states is not None
-        if finite_start_states:
-            start_states = list(start_states)
-        for _ in range(eval_interval):
-            state = env.reset()
-            if finite_start_states:
-                if not start_states:
-                    return
-                while state not in start_states:
-                    state = env.reset()
-                start_states.remove(state)
-            trajectory: List[TimeStep] = []
-            done = False
-            rewards = []
-            t = 0
-            while not done:
-                action = pi.act(trajectory, state)
-                next_state, reward, done, info = env.step(action)
-                step = TimeStep(state, action, reward, done, next_state)
-                trajectory.append(step)
-                state = next_state
-                rewards.append(reward)
-                t += 1
-                if done:
-                    make_log(
-                        info=info,
-                        rewards=rewards,
-                        evaluation=True,
-                    )
-
     while T < total_steps:
         use_model_prob = 1 / (1 + math.exp(2 * (min_successes - len(success_buffer))))
+        log_info = dict(
+            success_buffer_size=len(success_buffer),
+            use_model_prob=use_model_prob,
+            gamma=env.gamma(),
+            start_time=start_time,
+            step=T,
+            local_rank=local_rank
+        )
         if eval_interval is not None and episodes % eval_interval == 0:
-            evaluate()
+            evaluate(
+                logger,
+                env,
+                eval_interval,
+                pi.act,
+                **log_info
+            )
 
         done = False
         state = env.reset()
@@ -205,9 +129,11 @@ def train(
                 print_rank0(local_rank, ".", end="")
                 episodes += 1
                 make_log(
+                    logger=logger,
                     info=info,
                     rewards=rewards,
                     evaluation=False,
+                    **log_info,
                 )
             trajectory.append(step)
             state = next_state
