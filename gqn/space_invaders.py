@@ -69,10 +69,6 @@ class Env(base_env.Env[Obs, int]):
     def gamma() -> float:
         return 1.0
 
-    @staticmethod
-    def hint_stop() -> Optional[str]:
-        return "\n"
-
     def _hint_str(self, state: Obs) -> str:
         hint = " and ".join(
             [
@@ -93,10 +89,6 @@ class Env(base_env.Env[Obs, int]):
     def partially_observable(self) -> bool:
         return False
 
-    def quantify(self, prompt: str) -> float:
-        matches = re.findall(r"assert reward == (\d)", prompt)
-        return sum([float(x) for x in matches])
-
     def render(self, mode="human"):
         pass
 
@@ -110,6 +102,7 @@ class Env(base_env.Env[Obs, int]):
         num_aliens = 1 + self.random.choice(self.max_aliens)
         self.agent, *alien_xs = self.random.choice(self.width, size=1 + num_aliens)
         self.aliens = [Alien(x, self.height) for i, x in enumerate(alien_xs)]
+        self.optimal = num_aliens
         return Obs(self.agent, tuple(self.aliens))
 
     @staticmethod
@@ -135,7 +128,8 @@ class Env(base_env.Env[Obs, int]):
             reward = 0
 
         if reward == 0 and len(self.aliens) < self.max_aliens and self.random.choice(2):
-            self.aliens.append(Alien(self.random.choice(self.width), self.height))
+            alien = Alien(self.random.choice(self.width), self.height)
+            self.aliens.append(alien)
 
         self.aliens = [Alien(a.x, a.y - 1) for a in self.aliens]
         info = dict(optimal=self.max_step)

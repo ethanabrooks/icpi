@@ -1,4 +1,5 @@
 import abc
+import re
 from dataclasses import dataclass
 from typing import Generic, Iterable, Optional
 
@@ -56,9 +57,8 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
         ...
 
     @staticmethod
-    @abc.abstractmethod
     def hint_stop() -> Optional[str]:
-        ...
+        return "\n"
 
     @staticmethod
     @abc.abstractmethod
@@ -69,9 +69,9 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     def partially_observable(self) -> bool:
         ...
 
-    @abc.abstractmethod
-    def quantify(self, value: str) -> float:
-        ...
+    def quantify(self, prompt: str) -> float:
+        matches = re.findall(r"assert reward == (\d)", prompt)
+        return sum([float(x) for x in matches])
 
     @staticmethod
     def reward_stop() -> Optional[str]:

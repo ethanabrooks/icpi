@@ -14,6 +14,7 @@
 # limitations under the License.
 # ============================================================================
 """Catch reinforcement learning environment."""
+import re
 from typing import List, NamedTuple, Optional, Tuple, cast
 
 import base_env
@@ -137,16 +138,20 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
             0.0: "P.x!=B.x, B.y==0, failure" if status else "failure",
         }
 
+    def action_str(self, action: int) -> str:
+        return f"paddle, ball, reward = {self.actions()[action]}(paddle, ball){self.action_stop()}"
+
     def actions(self) -> "list[str]":
         return [
-            "Left",
-            "Stay",
-            "Right",
+            "left",
+            "stay",
+            "right",
         ]
 
     def done(self, *completions: str) -> bool:
         *_, state_or_reward = completions
-        return any(r in state_or_reward for r in self.rewards.values())
+        breakpoint()
+        return bool(re.findall(r"ball == C\(\d, 0\)", state_or_reward))
 
     def failure_threshold(self) -> float:
         return 0
@@ -155,13 +160,12 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
     def gamma() -> float:
         return 1
 
+    @staticmethod
+    def initial_str() -> str:
+        return "paddle, ball = reset()\n"
+
     def partially_observable(self) -> bool:
         return False
-
-    def quantify(self, prompt: str) -> float:
-        success = prompt.endswith(f"[{self.rewards[1.0]}]{self.state_stop()}")
-        value = self.gamma() ** (prompt.count(":") - 1)
-        return value if success else 0
 
     def reset(self):
         assert isinstance(self.env, Env)
@@ -173,36 +177,19 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
             for ball_x in range(self.env.columns)
         ]
 
-    @staticmethod
-    def state_stop() -> str:
-        return ";"
-
-    @staticmethod
-    def _state_without_status_str(obs: Obs) -> str:
-        assert isinstance(obs, Obs)
-        paddle_x, ball_x, ball_y = Obs(*obs)
-        return f"P=({paddle_x},0) B=({ball_x},{ball_y})"
-
     def _state_str(self, obs: Obs) -> str:
-        state_str = self._state_without_status_str(obs)
-        if not self.status:
-            return state_str
-        return f"{state_str} [{self._status(obs)}]"
+        return f"assert paddle == C({obs.paddle_x}, 0) and ball == C({obs.ball_x}, {obs.ball_y})"
 
     @classmethod
-    def _status(cls, obs: Obs) -> str:
-        paddle_x, ball_x, ball_y = Obs(*obs)
-        x_status = "P.x==B.x" if paddle_x == ball_x else "P.x!=B.x"
-        y_status = "B.y==0" if ball_y == 0 else "B.y>0"
-        if ball_y == 0:
-            reward = (
-                "success"
-                if x_status == "P.x==B.x" and y_status == "B.y==0"
-                else "failure"
-            )
-        else:
-            reward = "in progress"
-        return f"{x_status}, {y_status}, {reward}"
+    def _hint_str(cls, obs: Obs) -> str:
+        return " and ".join(
+            [
+                "paddle.x "
+                + ("==" if obs.paddle_x == obs.ball_x else "!=")
+                + " ball.x",
+                "ball.y " + (">" if obs.ball_y > 0 else "==") + " 0",
+            ]
+        )
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
         assert isinstance(self.env, Env)
@@ -215,14 +202,22 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
         )
 
     def ts_to_string(self, ts: TimeStep) -> str:
-        description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"
-        if ts.done:
-            description += " "
-            if self.status:
-                description += self.state_str(ts.next_state)
-            else:
-                description += (
-                    self._state_without_status_str(ts.next_state)
-                    + f" [{self.rewards[ts.reward]}]{self.state_stop()}"
-                )
-        return description
+        s = "".join(
+            [
+                self.state_str(ts.state),
+                self._hint_str(ts.state),
+                self.hint_stop(),
+                self.action_str(ts.action),
+                f"assert reward == {ts.reward}",
+                self.reward_stop(),
+            ]
+        )
+        if ts.reward == 1 and ("paddle.x == ball.x" not in s or "ball.y == 0" not in s):
+            breakpoint()
+        if (
+            ts.reward == 0
+            and ts.done
+            and ("paddle.x != ball.x" not in s or "ball.y == 0" not in s)
+        ):
+            breakpoint()
+        return s
