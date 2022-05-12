@@ -50,6 +50,7 @@ class Encoder(BaseEncoder):
                 else f"{self.ship()}.x != {self.alien()}[{i}].x"
                 for i, a in enumerate(state.aliens)
             ]
+            + [f"len({self.alien()}) == {len(state.aliens)}"]
         )
         if hint:
             return f"assert {hint}\n"
@@ -64,12 +65,7 @@ class Encoder(BaseEncoder):
         )
 
     def nonterminal_reward_str(self, ts: TimeStep[Obs, int]) -> str:
-        string = f"assert reward == {ts.reward}\n"
-        # if ts.action == 1:
-        #     hit = [a.i for a in ts.state.aliens if a.over(ts.state.agent)]
-        #     for i in hit:
-        #         string += f"assert alien[{i}] == None\n"
-        return string
+        return f"assert reward == {ts.reward} and len({self.alien()}) == {len(ts.state.aliens)}\n"
 
     def reward_query(self, ts: TimeStep[Obs, int]) -> str:
         return self.action_query(ts.state) + self.action_str(ts.state, ts.action)
@@ -110,7 +106,7 @@ class Encoder(BaseEncoder):
         return "\n".join(
             [
                 "\n".join(
-                    ["# new episode", f"{self.ship()}, {self.alien()} = reset()"]
+                    [f"{self.ship()}, {self.alien()} = reset()"]
                     + [self.time_step_str(ts) for ts in trajectory]
                 )
                 for trajectory in trajectories
