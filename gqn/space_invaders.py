@@ -108,7 +108,6 @@ class Env(base_env.Env[Obs, int]):
         options: Optional[dict] = None,
     ) -> Obs:
         num_aliens = 1 + self.random.choice(self.max_aliens)
-        self.reward = 0
         self.agent, *alien_xs = self.random.choice(self.width, size=1 + num_aliens)
         self.aliens = [Alien(x, self.height) for i, x in enumerate(alien_xs)]
         return Obs(self.agent, tuple(self.aliens))
@@ -128,29 +127,27 @@ class Env(base_env.Env[Obs, int]):
                 yield Obs(agent, tuple(aliens))
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
-        if (
-            self.reward == 0
-            and len(self.aliens) < self.max_aliens
-            and self.random.choice(2)
-        ):
-            self.aliens.append(Alien(self.random.choice(self.width), self.height))
-
         if action == 1:
             num_aliens = len(self.aliens)
             self.aliens = [Alien(a.x, a.y) for a in self.aliens if a.x != self.agent]
-            self.reward = num_aliens - len(self.aliens)
+            reward = num_aliens - len(self.aliens)
         else:
-            self.reward = 0
+            reward = 0
+
+        if reward == 0 and len(self.aliens) < self.max_aliens and self.random.choice(2):
+            self.aliens.append(Alien(self.random.choice(self.width), self.height))
+
         self.aliens = [Alien(a.x, a.y - 1) for a in self.aliens]
         info = dict(optimal=self.max_step)
         self.agent += action - 1
         self.agent = int(np.clip(self.agent, 0, self.width - 1))
         done = any(a.landed() for a in self.aliens)
         state = Obs(self.agent, tuple(self.aliens))
-        return state, self.reward, done, info
+        # print("agent", self.agent, "aliens", self.aliens, "action", action)
+        return state, reward, done, info
 
     def ts_to_string(self, ts: TimeStep) -> str:
-        return "".join(
+        s = "".join(
             [
                 self.state_str(ts.state),
                 self._hint_str(ts.state),
@@ -160,6 +157,11 @@ class Env(base_env.Env[Obs, int]):
                 self.reward_stop(),
             ]
         )
+        if ts.reward == 1 and "x == aliens" not in s:
+            breakpoint()
+        if ts.action == 1 and ts.reward == 0 and "x == aliens" in s:
+            breakpoint()
+        return s
 
 
 if __name__ == "__main__":

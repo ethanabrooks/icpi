@@ -171,6 +171,7 @@ def train(
                 action = env.action_space.sample()
             next_state, reward, done, info = env.step(action)
             step = TimeStep(state, action, reward, done, next_state)
+            env.ts_to_string(step)
             rewards.append(reward)
             t += 1
             T += 1
