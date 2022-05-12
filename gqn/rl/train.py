@@ -14,10 +14,10 @@ from util import make_env, print_rank0
 
 
 def train(
-    balance_successful_and_failed: bool,
     debug: int,
     env_id: str,
     eval_interval: Optional[int],
+    hint: bool,
     logprobs: int,
     logger: HasuraLogger,
     max_resamples: int,
@@ -27,8 +27,8 @@ def train(
     prompt_size: int,
     require_cache: bool,
     seed: int,
-    hint: bool,
     success_buffer_size: int,
+    success_fraction: float,
     temperature: float,
     top_p: float,
     total_steps: int,
@@ -70,7 +70,6 @@ def train(
         raise RuntimeError(f"Unknown model {model_name}")
 
     pi = Pi(
-        balance_successful_and_failed=balance_successful_and_failed,
         buffer=buffer,
         debug=debug,
         env=env,
@@ -80,10 +79,10 @@ def train(
         prompt_size=prompt_size,
         rng=rng,
         success_buffer=success_buffer,
+        success_fraction=success_fraction,
         temperature=0,
     )
     q = Q(
-        balance_successful_and_failed=balance_successful_and_failed,
         buffer=buffer,
         debug=debug,
         env=env,
@@ -93,6 +92,7 @@ def train(
         prompt_size=prompt_size,
         rng=rng,
         success_buffer=success_buffer,
+        success_fraction=success_fraction,
         temperature=temperature,
     )
 

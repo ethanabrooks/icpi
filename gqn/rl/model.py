@@ -29,7 +29,6 @@ def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
 
 @dataclass
 class Model(abc.ABC, Generic[ObsType, ActType]):
-    balance_successful_and_failed: bool
     buffer: Deque[List[TimeStep]]
     env: Env
     debug: int
@@ -39,6 +38,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     prompt_size: int
     rng: Generator
     success_buffer: Deque[List[TimeStep]]
+    success_fraction: float
     temperature: float
 
     def act(self, trajectory: List[TimeStep], state: ObsType) -> ActType:
@@ -106,28 +106,20 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         unsuccessful = [
             t for t in self.buffer if self.get_value(t) <= self.env.failure_threshold()
         ]
-        half = self.prompt_size // 2
-        if self.balance_successful_and_failed:
-            half = max(1, min([half, len(successful), len(unsuccessful)]))
-        successful_choices = [
-            successful[i]
-            for i in self.rng.choice(
-                len(successful), min(half, len(successful)), replace=False
-            )
+        self.rng.shuffle(successful)
+        self.rng.shuffle(unsuccessful)
+
+        successful = successful[: math.ceil(self.success_fraction * len(successful))]
+        unsuccessful = unsuccessful[
+            : math.ceil((1 - self.success_fraction) * len(unsuccessful))
         ]
-        unsuccessful_choices = [
-            unsuccessful[i]
-            for i in self.rng.choice(
-                len(unsuccessful), min(half, len(unsuccessful)), replace=False
-            )
-        ]
-        trajectories = successful_choices + unsuccessful_choices
+        trajectories = successful + unsuccessful
         if not trajectories:
             breakpoint()
         if all(
             [
-                len(successful_choices) < len(successful),
-                len(unsuccessful_choices) < len(unsuccessful),
+                len(successful) < len(successful),
+                len(unsuccessful) < len(unsuccessful),
             ]
         ):
             assert len(trajectories) == self.prompt_size
