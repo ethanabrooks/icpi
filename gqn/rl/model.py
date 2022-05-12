@@ -1,4 +1,5 @@
 import abc
+import itertools
 from dataclasses import dataclass
 from typing import Deque, Generic, List, Union
 
@@ -23,10 +24,6 @@ def get_value(*trajectory: TimeStep, gamma: float) -> float:
 
 def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
     return np.dot(a, b) / (norm(a) * norm(b))
-
-
-def sub_trajectories(*trajectories: List[TimeStep]) -> List[List[TimeStep]]:
-    return [t[i:] for t in trajectories for i in range(len(t))]
 
 
 @dataclass
@@ -109,7 +106,12 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     def sample_best(self):
         trajectories = list(self.success_buffer)
         if not self.env.partially_observable():
-            trajectories = sub_trajectories(*trajectories)
+            trajectories = [
+                trajectory[start:stop]
+                for trajectory in trajectories
+                for start, stop in itertools.combinations(range(len(trajectory)), 2)
+                if self.get_value(trajectory[start:stop]) > self.env.failure_threshold()
+            ]
         self.rng.shuffle(trajectories)
         prompts = [to_string(*t, env=self.env) for t in trajectories]
         return list(prompts)[: self.prompt_size]

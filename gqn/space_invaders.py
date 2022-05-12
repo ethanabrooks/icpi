@@ -92,7 +92,7 @@ class Env(base_env.Env[Obs, int]):
         return f"{cls.ship()}, {cls.alien()} = reset()\n"
 
     def partially_observable(self) -> bool:
-        return True
+        return False
 
     def quantify(self, prompt: str) -> float:
         matches = re.findall(r"assert reward == (\d)", prompt)
