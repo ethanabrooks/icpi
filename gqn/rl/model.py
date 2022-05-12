@@ -79,7 +79,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         ]
         half = self.prompt_size // 2
         if self.balance_successful_and_failed:
-            half = min([half, len(successful), len(unsuccessful)])
+            half = max(1, min([half, len(successful), len(unsuccessful)]))
         successful_choices = [
             successful[i]
             for i in self.rng.choice(
@@ -93,6 +93,8 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             )
         ]
         trajectories = successful_choices + unsuccessful_choices
+        if not trajectories:
+            breakpoint()
         if all(
             [
                 len(successful_choices) < len(successful),
@@ -112,6 +114,8 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
                 for start, stop in itertools.combinations(range(len(trajectory) + 1), 2)
                 if self.get_value(trajectory[start:stop]) > self.env.failure_threshold()
             ]
+        if not trajectories:
+            breakpoint()
         self.rng.shuffle(trajectories)
         prompts = [to_string(*t, env=self.env) for t in trajectories]
         return list(prompts)[: self.prompt_size]
