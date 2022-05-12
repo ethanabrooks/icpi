@@ -62,6 +62,7 @@ class GPT3:
 
     def __post_init__(self):
         self.tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
+        self.start_time = time.time()
         assert self.logprobs <= 5
 
     def __call__(
@@ -111,6 +112,7 @@ class GPT3:
             sys.stdout.flush()
             try:
                 time.sleep(wait_time)
+                tick = time.time()
                 choice, *_ = openai.Completion.create(
                     engine=ENGINE,
                     max_tokens=self.max_tokens,
@@ -119,6 +121,15 @@ class GPT3:
                     temperature=0.1,
                     stop=stop,
                 ).choices
+
+                if self.logger.run_id is not None:
+                    self.logger.log(
+                        hours=(time.time() - self.start_time) / 3600,
+                        **{
+                            "run ID": self.logger.run_id,
+                            "seconds per query": time.time() - tick,
+                        }
+                    )
                 # if not choice.text:
                 #     print(prompt)
                 #     Colorize.print_warning("Empty completion!")
