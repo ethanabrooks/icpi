@@ -109,7 +109,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             trajectories = [
                 trajectory[start:stop]
                 for trajectory in trajectories
-                for start, stop in itertools.combinations(range(len(trajectory)), 2)
+                for start, stop in itertools.combinations(range(len(trajectory) + 1), 2)
                 if self.get_value(trajectory[start:stop]) > self.env.failure_threshold()
             ]
         self.rng.shuffle(trajectories)
