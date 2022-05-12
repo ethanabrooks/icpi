@@ -16,7 +16,10 @@ class TimeStep(Generic[ObsType, ActType]):
     next_state: ObsType
 
 
+@dataclass
 class Env(gym.Env[ObsType, ActType], abc.ABC):
+    hint: bool
+
     def action(self, action_str: Optional[str]) -> Optional[ActType]:
         try:
             actions = [
@@ -56,9 +59,8 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     def gamma() -> float:
         ...
 
-    @staticmethod
-    def hint_stop() -> Optional[str]:
-        return "\n"
+    def hint_stop(self) -> Optional[str]:
+        return "\n" if self.hint else None
 
     @staticmethod
     @abc.abstractmethod

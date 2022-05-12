@@ -126,16 +126,16 @@ class Env(base.Environment):
 
 
 class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
-    def __init__(self, env: Env, status: bool):
+    def __init__(self, env: Env, hint: bool):
         super().__init__(cast(gym.Env, env))
-        self.status = status
+        self.hint = hint
         self.action_space = Discrete(3, seed=env.random_seed)
         self.observation_space = MultiDiscrete(
             np.ones_like(env.observation_spec().shape), seed=env.random_seed
         )
         self.rewards = {
-            1.0: "P.x==B.x, B.y==0, success" if status else "success",
-            0.0: "P.x!=B.x, B.y==0, failure" if status else "failure",
+            1.0: "P.x==B.x, B.y==0, success" if hint else "success",
+            0.0: "P.x!=B.x, B.y==0, failure" if hint else "failure",
         }
 
     def action_str(self, action: int) -> str:
@@ -205,8 +205,7 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
         s = "".join(
             [
                 self.state_str(ts.state),
-                self._hint_str(ts.state),
-                self.hint_stop(),
+                *([self._hint_str(ts.state), self.hint_stop()] if self.hint else []),
                 self.action_str(ts.action),
                 f"assert reward == {ts.reward}",
                 self.reward_stop(),

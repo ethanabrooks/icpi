@@ -35,7 +35,6 @@ class Env(base_env.Env[Obs, int]):
     max_aliens: int
     max_step: int
     random_seed: int
-    status: bool
     width: int
 
     def __post_init__(self):
@@ -144,8 +143,7 @@ class Env(base_env.Env[Obs, int]):
         s = "".join(
             [
                 self.state_str(ts.state),
-                self._hint_str(ts.state),
-                self.hint_stop(),
+                *([self._hint_str(ts.state), self.hint_stop()] if self.hint else []),
                 self.action_str(ts.action),
                 f"assert reward == {ts.reward}",
                 self.reward_stop(),
@@ -167,7 +165,7 @@ if __name__ == "__main__":
             max_aliens=2,
             max_step=max_step,
             random_seed=0,
-            status=False,
+            hint=False,
         ),
         max_episode_steps=max_step,
     )

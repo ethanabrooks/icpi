@@ -15,11 +15,9 @@ REWARDS = {
 
 @dataclass
 class Env(base_env.Env[int, int]):
-
     goal: int
     n: int
     random_seed: int
-    status: bool
 
     def __post_init__(self):
         self.random = np.random.default_rng(self.random_seed)
@@ -92,16 +90,14 @@ class Env(base_env.Env[int, int]):
         return state, float(success), done, info
 
     def ts_to_string(self, ts: TimeStep) -> str:
-        s = "".join(
-            [
-                self.state_str(ts.state),
-                self._hint_str(ts.state),
-                self.hint_stop(),
-                self.action_str(ts.action),
-                f"assert reward == {ts.reward}",
-                self.reward_stop(),
-            ]
-        )
+        parts = [
+            self.state_str(ts.state),
+            *([self._hint_str(ts.state), self.hint_stop()] if self.hint else []),
+            self.action_str(ts.action),
+            f"assert reward == {ts.reward}",
+            self.reward_stop(),
+        ]
+        s = "".join(parts)
         if ts.reward == 1 and f"state == {self.goal}" not in s:
             breakpoint()
         if ts.action == 1 and ts.reward == 0 and f"state != {self.goal}" in s:
