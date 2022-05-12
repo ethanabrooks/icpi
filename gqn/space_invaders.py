@@ -81,7 +81,6 @@ class Env(base_env.Env[Obs, int]):
                 else f"{self.ship()}.x != {self.alien()}[{i}].x"
                 for i, a in enumerate(state.aliens)
             ]
-            + [f"len({self.alien()}) == {len(state.aliens)}"]
         )
         if hint:
             return f"assert {hint}"
