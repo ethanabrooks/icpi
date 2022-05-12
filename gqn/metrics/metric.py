@@ -122,7 +122,7 @@ def get_trajectory(trajectory_with_actions: TrajectoryWithActions) -> Trajectory
     return [step.time_step for step in trajectory_with_actions]
 
 
-N = 30
+N = 20
 
 
 @dataclass
