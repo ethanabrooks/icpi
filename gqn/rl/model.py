@@ -59,7 +59,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         if self.debug >= 4:
             breakpoint()
         completion = self.lm(
-            new_prompt, stop=[stop], temperature=self.temperature, use_cache=False
+            new_prompt, stop=[stop], temperature=self.temperature, use_cache=True
         )
 
         if self.debug >= 2:
