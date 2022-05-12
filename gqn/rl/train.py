@@ -6,6 +6,7 @@ from typing import Deque, List, Optional
 
 import numpy as np
 import openai
+from rl.gpt3 import OPENAI_MODELS
 from rl.huggingface import HF_MODELS
 from rl.model import GPT3, HuggingFaceModel, Pi, Q, TimeStep, get_value, to_string
 from run_logger import HasuraLogger
@@ -42,11 +43,12 @@ def train(
     buffer: Deque[List[TimeStep]] = deque()
     success_buffer: Deque[List[TimeStep]] = deque(maxlen=success_buffer_size)
 
-    if model_name == "gpt3":
+    if model_name in OPENAI_MODELS:
         lm = GPT3(
             debug=debug,
             logprobs=logprobs,
             logger=logger,
+            model_name=model_name,
             require_cache=require_cache,
             stop=[env.action_stop(), env.state_stop()],
             top_p=top_p,
