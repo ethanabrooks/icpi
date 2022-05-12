@@ -5,6 +5,7 @@ from typing import List, Optional
 
 import openai
 from run_logger import HasuraLogger
+from util import Colorize
 
 from gql import gql
 
@@ -12,7 +13,6 @@ ENGINE = "text-davinci-002"
 
 
 def post_completion(
-    best_of: Optional[int],
     completion: str,
     logprobs: int,
     logger: HasuraLogger,
@@ -25,8 +25,8 @@ def post_completion(
     return logger.execute(
         query=gql(
             """
-mutation post_completion($prompt: String!, $completion: String!, $temperature: numeric!, $top_p: numeric!, $logprobs: Int!, $top_logprobs: jsonb!, $best_of: Int, $stop: jsonb, $model: String!) {
-  insert_completions_one(object: {completion: $completion, prompt: $prompt, temperature: $temperature, top_p: $top_p, logprobs: $logprobs, top_logprobs: $top_logprobs, best_of: $best_of, stop: $stop, model: $model}) {
+mutation post_completion($prompt: String!, $completion: String!, $temperature: numeric!, $top_p: numeric!, $logprobs: Int!, $top_logprobs: jsonb!, $stop: jsonb, $model: String!) {
+  insert_completions_one(object: {completion: $completion, prompt: $prompt, temperature: $temperature, top_p: $top_p, logprobs: $logprobs, top_logprobs: $top_logprobs, stop: $stop, model: $model}) {
     completion
     stop
   }
@@ -34,7 +34,6 @@ mutation post_completion($prompt: String!, $completion: String!, $temperature: n
 """
         ),
         variable_values=dict(
-            best_of=best_of,
             completion=completion,
             logprobs=logprobs,
             model=ENGINE,
@@ -52,8 +51,8 @@ class GPT3:
     debug: int
     logger: HasuraLogger
     logprobs: int
-    temperature: float
     top_p: float
+    wait_time: int
     max_tokens: int = 100
     require_cache: bool = False
     stop: Optional[List[str]] = None
@@ -91,10 +90,12 @@ class GPT3:
         self.print(prompt)
         if self.debug >= 5:
             breakpoint()
+        wait_time = self.wait_time
         while True:
             # print("Prompt:", prompt.split("\n")[-1])
             sys.stdout.flush()
             try:
+                time.sleep(wait_time)
                 choice, *_ = openai.Completion.create(
                     engine=ENGINE,
                     max_tokens=self.max_tokens,
@@ -103,11 +104,17 @@ class GPT3:
                     temperature=0.1,
                     stop=stop,
                 ).choices
+                if not choice.text:
+                    print(prompt)
+                    Colorize.print_warning("Empty completion!")
+                    breakpoint()
             except openai.error.RateLimitError as e:
+                print("Rate limit error:")
                 print(e)
-                time.sleep(1)
+                wait_time **= 2
                 continue
             except openai.error.InvalidRequestError as e:
+                print("Invalid request error:")
                 print(e)
                 _, *prompts = prompt.split("\n")
                 prompt = "\n".join(prompts)
@@ -116,13 +123,12 @@ class GPT3:
             top_logprobs = [l.to_dict() for l in choice.logprobs.top_logprobs]
             completion = choice.text.lstrip()
             response = post_completion(
-                best_of=best_of,
                 logger=self.logger,
                 logprobs=self.logprobs,
                 prompt=prompt,
                 completion=completion,
                 stop=stop,
-                temperature=self.temperature,
+                temperature=0.1,
                 top_logprobs=top_logprobs,
                 top_p=self.top_p,
             )["insert_completions_one"]["completion"]
@@ -159,7 +165,7 @@ query get_completion($prompt: String!, $temperature: numeric!, $top_p: numeric!,
                 model="gpt3" if ENGINE == "text-davinci-002" else ENGINE,
                 prompt=prompt,
                 stop=stop,
-                temperature=self.temperature,
+                temperature=0.1,
                 top_p=self.top_p,
             ),
         )["completions"]

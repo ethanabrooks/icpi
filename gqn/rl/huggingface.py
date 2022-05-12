@@ -78,7 +78,7 @@ class TokenStoppingCriteria(StoppingCriteria):
     def __call__(
         self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs
     ) -> bool:
-        return torch.any(input_ids[:, -1] == self.token_ids)
+        return bool(torch.any(input_ids[:, -1] == self.token_ids))
 
 
 @dataclass

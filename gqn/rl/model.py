@@ -41,6 +41,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     prompt_size: int
     rng: Generator
     success_buffer: Deque[List[TimeStep]]
+    temperature: float
 
     def act(self, trajectory: List[TimeStep], state: ObsType) -> ActType:
         if self.ready():

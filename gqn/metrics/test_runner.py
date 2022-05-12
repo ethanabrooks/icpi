@@ -72,8 +72,8 @@ class TestRunner(Generic[ObsType, ActType]):
             logger=logger,
             require_cache=require_cache,
             stop=None,
-            temperature=0,
             top_p=1,
+            wait_time=4,
         )
         rng = np.random.default_rng(seed)
 

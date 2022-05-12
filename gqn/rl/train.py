@@ -30,6 +30,7 @@ def train(
     temperature: float,
     top_p: float,
     total_steps: int,
+    wait_time: int,
 ):
     local_rank = os.getenv("LOCAL_RANK", None)
     if local_rank is not None:
@@ -48,8 +49,8 @@ def train(
             logger=logger,
             require_cache=require_cache,
             stop=[env.action_stop(), env.state_stop()],
-            temperature=temperature,
             top_p=top_p,
+            wait_time=wait_time,
         )
     elif model_name in HF_MODELS:
         lm = HuggingFaceModel(
@@ -75,6 +76,7 @@ def train(
         prompt_size=prompt_size,
         rng=rng,
         success_buffer=success_buffer,
+        temperature=temperature,
     )
     q = Q(
         balance_successful_and_failed=balance_successful_and_failed,
@@ -86,6 +88,7 @@ def train(
         prompt_size=prompt_size,
         rng=rng,
         success_buffer=success_buffer,
+        temperature=temperature,
     )
 
     T = 0
