@@ -70,7 +70,8 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             new_prompt = "".join([*prompts, "".join(completions)])
             if self.debug >= 2:
                 print()
-                print(new_prompt)
+                print("".join(prompts), end="")
+                Colorize.print_bold("".join(completions))
             if self.debug >= 4:
                 breakpoint()
             completion = self.lm(
