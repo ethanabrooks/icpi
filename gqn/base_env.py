@@ -30,7 +30,7 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
 
     @staticmethod
     def action_stop() -> str:
-        return ":"
+        return "\n"
 
     def action_str(self, action: ActType) -> str:
         try:
@@ -55,6 +55,16 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     def gamma() -> float:
         ...
 
+    @staticmethod
+    @abc.abstractmethod
+    def hint_stop() -> Optional[str]:
+        ...
+
+    @staticmethod
+    @abc.abstractmethod
+    def initial_str() -> str:
+        ...
+
     @abc.abstractmethod
     def partially_observable(self) -> bool:
         ...
@@ -64,8 +74,12 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
         ...
 
     @staticmethod
+    def reward_stop() -> Optional[str]:
+        return "\n"
+
+    @staticmethod
     def state_stop() -> str:
-        return "."
+        return "\n"
 
     @abc.abstractmethod
     def start_states(self) -> Optional[Iterable[ObsType]]:

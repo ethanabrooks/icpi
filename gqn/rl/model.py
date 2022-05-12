@@ -14,7 +14,7 @@ from util import Colorize
 
 
 def to_string(*trajectory: TimeStep, env) -> str:
-    return " ".join([env.ts_to_string(ts) for ts in trajectory])
+    return "".join([env.initial_str()] + [env.ts_to_string(ts) for ts in trajectory])
 
 
 def get_value(*trajectory: TimeStep, gamma: float) -> float:
@@ -40,6 +40,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     prompt_size: int
     rng: Generator
     success_buffer: Deque[List[TimeStep]]
+    temperature: float
 
     def act(self, trajectory: List[TimeStep], state: ObsType) -> ActType:
         if self.ready():
@@ -52,6 +53,24 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
 
     def get_value(self, trajectory: List[TimeStep]) -> float:
         return get_value(*trajectory, gamma=self.env.gamma())
+
+    def predict(self, completions: List[str], name: str, prompts: List[str], stop: str):
+        new_prompt = "".join([*prompts, "".join(completions)])
+        if self.debug >= 2:
+            print()
+            print(new_prompt)
+        if self.debug >= 4:
+            breakpoint()
+        completion = self.lm(
+            new_prompt, stop=[stop], temperature=self.temperature, use_cache=False
+        )
+
+        if self.debug >= 2:
+            Colorize.print_blue(name, end=" ")
+            Colorize.print_cyan(completion)
+        if self.debug >= 4:
+            breakpoint()
+        return completion + stop
 
     def ready(self) -> bool:
         return len(self.success_buffer) > 0
@@ -131,7 +150,7 @@ class Q(Model[ObsType, ActType]):
                         to_string(*trajectory, env=self.env),
                         *trajectory_strings,
                     ]
-                trajectory_str = " ".join(trajectory_strings)
+                trajectory_str = "".join(trajectory_strings)
                 print("value:", trajectory_str, end="")
                 if not v.startswith(trajectory_str):
                     print(trajectory_str)
@@ -160,59 +179,43 @@ class Q(Model[ObsType, ActType]):
         while True:
             if t == self.max_steps:
                 break
-            else:
-                prompts = self.sample()
-                new_prompt = "\n".join([*prompts, " ".join(completions)])
-                if self.debug >= 2:
-                    print()
-                    print(new_prompt)
-                if self.debug >= 4:
-                    breakpoint()
-
-                state_or_reward, *_ = self.lm(new_prompt, best_of=False).split(
-                    self.env.state_stop()
+            if self.env.reward_stop():
+                reward_str = self.predict(
+                    completions,
+                    name="reward",
+                    stop=self.env.reward_stop(),
+                    prompts=self.sample(),
                 )
-                state_or_reward = state_or_reward.lstrip() + self.env.state_stop()
-            if self.debug >= 2:
-                Colorize.print_blue("state/reward", end=" ")
-                Colorize.print_cyan(state_or_reward)
-            if self.debug >= 4:
-                breakpoint()
-            completions.append(state_or_reward)
+                completions.append(reward_str)
+            state_str = self.predict(
+                completions,
+                name="state",
+                prompts=self.sample(),
+                stop=self.env.state_stop(),
+            )
+            completions.append(state_str)
             if self.env.done(*completions):
                 break
-            if self.env.partially_observable():
-                query = " ".join(completions)
-            else:
-                query = state_or_reward
-            prompts = self.sample_best()
-            new_prompt = "\n".join([*prompts, query])
-            if self.debug >= 2:
-                Colorize.print_bold("Q prompt:")
-                print(new_prompt)
-            if self.debug >= 4:
-                breakpoint()
+            if self.env.hint_stop() is not None:
+                hint = self.predict(
+                    completions,
+                    name="hint",
+                    stop=self.env.hint_stop(),
+                    prompts=self.sample(),
+                )
+                completions.append(hint)
 
-            action_str, *_ = self.lm(new_prompt, best_of=False).split(
-                self.env.state_stop()
+            action_str = self.predict(
+                completions,
+                name="action",
+                stop=self.env.action_stop(),
+                prompts=self.sample_best(),
             )
-            if self.env.action(action_str) is None and self.debug >= 3:
-                print(self.env.actions())
-                print(action_str)
-                breakpoint()
-                break
-
-            action_str = action_str.lstrip() + self.env.action_stop()
-            t += 1
-
-            if self.debug >= 2:
-                Colorize.print_blue("action", end=" ")
-                Colorize.print_cyan(action_str)
-            if self.debug >= 4:
-                breakpoint()
             completions.append(action_str)
 
-        return " ".join(completions)
+            t += 1
+
+        return "".join(completions)
 
 
 class Pi(Model[ObsType, ActType]):
@@ -220,30 +223,24 @@ class Pi(Model[ObsType, ActType]):
         state = self.env.state_str(state)
         action = None
         t = 0
+
+        completions = (
+            [self.env.ts_to_string(ts) for ts in trajectory]
+            if self.env.partially_observable()
+            else []
+        ) + [state]
+
         while action is None:
             if t > self.max_steps:
                 return self.env.action_space.sample()
-            prompts = self.sample_best()
-            if self.env.partially_observable():
-                query = to_string(*trajectory, env=self.env)
-                if query:
-                    query += " "
-                query += state
-            else:
-                query = state
-            prompt = "\n".join([*prompts, query])
             if self.debug >= 1:
                 Colorize.print_header("pi prompt:")
-                print(prompt)
-            maybe_action, *_ = (
-                self.lm(prompt, best_of=True).lstrip().split(self.env.action_stop())
+            maybe_action = self.predict(
+                completions,
+                name="action",
+                prompts=self.sample_best(),
+                stop=self.env.action_stop(),
             )
-            if self.debug >= 1:
-                Colorize.print_blue("Action:", end=" ")
-                Colorize.print_cyan(maybe_action)
-            if self.debug >= 4:
-                breakpoint()
-
             action = self.env.action(maybe_action)
             t += 1
 

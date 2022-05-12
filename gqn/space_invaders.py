@@ -1,4 +1,5 @@
 import itertools
+import re
 from dataclasses import dataclass
 from typing import Iterable, NamedTuple, Optional, Tuple
 
@@ -43,6 +44,9 @@ class Env(base_env.Env[Obs, int]):
             len(self.actions()), seed=self.random_seed
         )
 
+    def action_str(self, action: int) -> str:
+        return f"{self.ship()}, {self.alien()}, reward = {self.actions()[action]}({self.ship()}, {self.alien()}){self.action_stop()}"
+
     def actions(self):
         return [
             "left",
@@ -50,11 +54,13 @@ class Env(base_env.Env[Obs, int]):
             "right",
         ]
 
+    @staticmethod
+    def alien() -> str:
+        return "aliens"
+
     def done(self, *completions: str) -> bool:
         *_, state_or_reward = completions
-        if "landed" in state_or_reward or "survived" in state_or_reward:
-            return True
-        return False
+        return bool(re.findall(r"\[C\(\d, 0\)", state_or_reward))
 
     def failure_threshold(self) -> float:
         return 0
@@ -63,19 +69,34 @@ class Env(base_env.Env[Obs, int]):
     def gamma() -> float:
         return 1.0
 
+    @staticmethod
+    def hint_stop() -> Optional[str]:
+        return "\n"
+
+    def _hint_str(self, state: Obs) -> str:
+        hint = " and ".join(
+            [
+                f"{self.ship()}.x == {self.alien()}[{i}].x"
+                if a.over(state.agent)
+                else f"{self.ship()}.x != {self.alien()}[{i}].x"
+                for i, a in enumerate(state.aliens)
+            ]
+            + [f"len({self.alien()}) == {len(state.aliens)}"]
+        )
+        if hint:
+            return f"assert {hint}"
+        return ""
+
+    @classmethod
+    def initial_str(cls) -> str:
+        return f"{cls.ship()}, {cls.alien()} = reset()\n"
+
     def partially_observable(self) -> bool:
         return True
 
     def quantify(self, prompt: str) -> float:
-        return_ = 0
-        for n in range(self.max_aliens):
-            for permutation in itertools.permutations(
-                range(1, 1 + self.max_aliens), n + 1
-            ):
-                search = "shot down " + " and ".join(f"A{i}" for i in permutation) + ","
-                return_ += (n + 1) * prompt.count(search)
-
-        return return_
+        matches = re.findall(r"assert reward == (\d)", prompt)
+        return sum([float(x) for x in matches])
 
     def render(self, mode="human"):
         pass
@@ -93,35 +114,18 @@ class Env(base_env.Env[Obs, int]):
         self.aliens = [Alien(x, self.height) for i, x in enumerate(alien_xs)]
         return Obs(self.agent, tuple(self.aliens))
 
-    def state_stop(self) -> str:
-        return ";"
+    @staticmethod
+    def ship() -> str:
+        return "ship"
 
     def _state_str(self, state: Obs) -> str:
-        state_str = self._state_without_status_str(state)
-        status = self._status_str(state)
-        if not self.status:
-            return state_str
-        return f"{state_str} [{status}]"
-
-    @staticmethod
-    def _status_str(state: Obs) -> str:
-        in_range = [i for i, a in enumerate(state.aliens) if a.over(state.agent)]
-        statuses = []
-        if in_range:
-            statuses.append("C.x=" + "=".join(f"A{i}.x" for i in in_range))
-        return ", ".join(statuses)
-
-    @staticmethod
-    def _state_without_status_str(state: Obs) -> str:
-        return ", ".join(
-            [f"C={(state.agent, 0)}"]
-            + [f"A{i}={tuple(pos)}" for i, *pos in state.aliens]
-        )
+        aliens = ", ".join([f"C{tuple(a)}" for a in state.aliens])
+        return f"assert {self.ship()} == C{(state.agent, 0)} and {self.alien()} == [{aliens}]"
 
     def start_states(self) -> Optional[Iterable[Obs]]:
         for agent in range(self.width):
             for xs in itertools.product(range(self.width), repeat=self.max_aliens):
-                aliens = [Alien(x, self.height) for i, x in enumerate(xs)]
+                aliens = [Alien(x, self.height) for x in xs]
                 yield Obs(agent, tuple(aliens))
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
@@ -147,24 +151,16 @@ class Env(base_env.Env[Obs, int]):
         return state, self.reward, done, info
 
     def ts_to_string(self, ts: TimeStep) -> str:
-        description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"
-        if ts.action == 1:
-            shot = [a.i for a in ts.state.aliens if a.x == ts.state.agent]
-            if shot:
-                shot = " and ".join(f"A{i}" for i in shot)
-                description += f" shot down {shot},"
-            else:
-                description += " missed,"
-        if ts.done:
-            description += f" {self._state_without_status_str(ts.next_state)}"
-            landed = [a.i for a in ts.next_state.aliens if a.y == 0]
-            landed = " and ".join(f"A{i}" for i in landed)
-            if landed:
-                description += f" [{landed} landed]"
-            else:
-                description += " [survived]"
-            description += self.state_stop()
-        return description
+        return "".join(
+            [
+                self.state_str(ts.state),
+                self._hint_str(ts.state),
+                self.hint_stop(),
+                self.action_str(ts.action),
+                f"assert reward == {ts.reward}",
+                self.reward_stop(),
+            ]
+        )
 
 
 if __name__ == "__main__":

@@ -54,6 +54,10 @@ class Colorize:
     def print_green(*objects, sep=" ", end="\n", file=sys.stdout):
         return Colorize(Color.OKGREEN).print(*objects, sep=sep, end=end, file=file)
 
+    @staticmethod
+    def print_warning(*objects, sep=" ", end="\n", file=sys.stdout):
+        return Colorize(Color.WARNING).print(*objects, sep=sep, end=end, file=file)
+
 
 def make_env(env_id: str, seed: int, status: bool) -> Env:
     if env_id == "bandit":

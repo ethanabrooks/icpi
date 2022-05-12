@@ -48,7 +48,6 @@ def train(
             logger=logger,
             require_cache=require_cache,
             stop=[env.action_stop(), env.state_stop()],
-            temperature=temperature,
             top_p=top_p,
         )
     elif model_name in HF_MODELS:
@@ -75,6 +74,7 @@ def train(
         prompt_size=prompt_size,
         rng=rng,
         success_buffer=success_buffer,
+        temperature=0,
     )
     q = Q(
         balance_successful_and_failed=balance_successful_and_failed,
@@ -86,6 +86,7 @@ def train(
         prompt_size=prompt_size,
         rng=rng,
         success_buffer=success_buffer,
+        temperature=temperature,
     )
 
     T = 0
