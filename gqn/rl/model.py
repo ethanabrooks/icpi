@@ -4,8 +4,7 @@ import math
 from dataclasses import dataclass
 from typing import Callable, Deque, Generic, List, Optional, Union
 
-from base_env import Env, TimeStep
-from gym.core import ActType, ObsType
+from base_env import ActType, Env, ObsType, TimeStep
 from gym.spaces import Discrete
 from numpy.random import Generator
 from rl.gpt3 import GPT3

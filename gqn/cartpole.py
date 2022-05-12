@@ -4,7 +4,7 @@ Copied from http://incompleteideas.net/sutton/book/code/pole.c
 permalink: https://perma.cc/C9ZM-652R
 """
 import math
-from typing import NamedTuple, Optional, Union
+from typing import NamedTuple, Optional
 
 import base_env
 import gym
@@ -18,7 +18,7 @@ class Obs(NamedTuple):
     steps_to_go: int
 
 
-class Env(gym.Env[np.ndarray, Union[int, Obs]]):
+class Env(gym.Env):
     """
     ### Description
 

@@ -1,10 +1,12 @@
 import abc
 import re
 from dataclasses import dataclass
-from typing import Generic, Iterable, Optional
+from typing import Generic, Iterable, Optional, TypeVar
 
 import gym
-from gym.core import ActType, ObsType
+
+ObsType = TypeVar("ObsType")
+ActType = TypeVar("ActType")
 
 
 @dataclass
@@ -17,7 +19,7 @@ class TimeStep(Generic[ObsType, ActType]):
 
 
 @dataclass
-class Env(gym.Env[ObsType, ActType], abc.ABC):
+class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
     hint: bool
 
     def action(self, action_str: Optional[str]) -> Optional[ActType]:

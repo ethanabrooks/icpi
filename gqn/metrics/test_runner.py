@@ -5,7 +5,7 @@ from typing import Generic, List, Optional
 import altair as alt
 import numpy as np
 import pandas as pd
-from gym.core import ActType, ObsType
+from base_env import ActType, ObsType
 from metrics.encoder import Encoder
 from metrics.metric import Metric, Trajectory
 from rl.gpt3 import GPT3

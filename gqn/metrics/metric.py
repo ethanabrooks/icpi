@@ -5,8 +5,7 @@ from dataclasses import dataclass
 from typing import Any, Callable, Dict, Generic, Iterator, List, Optional, Tuple
 
 import numpy as np
-from base_env import Env, TimeStep
-from gym.core import ActType, ObsType
+from base_env import ActType, Env, ObsType, TimeStep
 from metrics.encoder import Encoder
 from rl.gpt3 import GPT3
 
