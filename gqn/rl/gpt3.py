@@ -108,6 +108,7 @@ class GPT3:
                 print(prompt)
                 Colorize.print_warning("No completions found in cache for this prompt.")
                 breakpoint()
+                exit()
 
         self.print("Prompt:")
         self.print(prompt)
