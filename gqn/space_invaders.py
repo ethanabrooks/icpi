@@ -174,7 +174,7 @@ class Env(base_env.Env[Obs, int]):
             reward = 0
 
         dead = [a.is_dead() for a in self.aliens]
-        if reward == 0 and any(dead) and self.random.choice(2):
+        if reward == 0 and any(dead):
             i = dead.index(True)
             alien = self.aliens[i]
             self.aliens[i] = alien.spawn(self.random.choice(self.width), self.height)
