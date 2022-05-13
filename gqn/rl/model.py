@@ -284,9 +284,12 @@ class Pi(Model[ObsType, ActType]):
         state = self.env.state_str(state)
 
         completions = (
-            [self.env.ts_to_string(ts) for ts in trajectory]
-            if self.env.partially_observable()
-            else []
+            [self.env.initial_str()]
+            + (
+                [self.env.ts_to_string(ts) for ts in trajectory]
+                if self.env.partially_observable()
+                else []
+            )
         ) + [state]
 
         action_str = self.generate_action(completions)
