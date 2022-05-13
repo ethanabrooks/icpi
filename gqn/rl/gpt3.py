@@ -1,68 +1,21 @@
 import sys
 import time
 from dataclasses import dataclass
-from typing import List, Optional
 
 import openai
-from rl.common import Colorize
-from run_logger import HasuraLogger
 from transformers import GPT2TokenizerFast
 
-from gql import gql
+from rl.common import Colorize
+from rl.lm import LM
 
 OPENAI_MODELS = ["code-davinci-002", "text-davinci-002"]
 
 
-def post_completion(
-    completion: str,
-    logprobs: int,
-    logger: HasuraLogger,
-    model: str,
-    prompt: str,
-    stop: List[str],
-    temperature: float,
-    top_logprobs: list,
-    top_p: float,
-):
-    return logger.execute(
-        query=gql(
-            """
-mutation post_completion($prompt: String!, $completion: String!, $temperature: numeric!, $top_p: numeric!, $logprobs: Int!, $top_logprobs: jsonb!, $stop: jsonb, $model: String!) {
-  insert_completions_one(object: {completion: $completion, prompt: $prompt, temperature: $temperature, top_p: $top_p, logprobs: $logprobs, top_logprobs: $top_logprobs, stop: $stop, model: $model}) {
-    completion
-    stop
-  }
-}
-"""
-        ),
-        variable_values=dict(
-            completion=completion,
-            logprobs=logprobs,
-            model=model,
-            prompt=prompt,
-            stop=stop,
-            temperature=temperature,
-            top_logprobs=top_logprobs,
-            top_p=top_p,
-        ),
-    )
-
-
-MAX_TOKENS = 4000
+MAX_TOKENS_ACCEPTED_BY_LM = 4000
 
 
 @dataclass
-class GPT3:
-    debug: int
-    logger: HasuraLogger
-    logprobs: int
-    model_name: str
-    top_p: float
-    wait_time: float
-    max_tokens: int = 100
-    require_cache: bool = False
-    stop: Optional[List[str]] = None
-
+class GPT3(LM):
     def __post_init__(self):
         self.tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
         self.start_time = time.time()
@@ -75,23 +28,13 @@ class GPT3:
                 raise ValueError(f"Unknown model {self.model_name}")
         assert self.logprobs <= 5
 
-    def __call__(
-        self, prompt: str, stop: List[str], temperature: float, use_cache: bool = True
-    ):
-        return self.get_full_completion(
-            prompt, stop=stop, temperature=temperature, use_cache=use_cache
-        )["completion"]
-
     def get_full_completion(
         self, prompt: str, stop: list[str], temperature: float, use_cache: bool = True
     ):
         if self.debug >= 0:
             print("<", end="")
 
-        tokens = self.tokenizer(prompt)["input_ids"]
-        max_tokens = MAX_TOKENS - self.max_tokens - 100
-        tokens = tokens[-max_tokens:]
-        prompt = self.tokenizer.decode(tokens)
+        prompt = self.clip_prompt(prompt)
 
         if use_cache:
             completions = self.get_completions(
@@ -124,7 +67,7 @@ class GPT3:
                 tick = time.time()
                 choice, *_ = openai.Completion.create(
                     engine=self.model_name,
-                    max_tokens=self.max_tokens,
+                    max_tokens=self.max_tokens_in_completion,
                     prompt=prompt,
                     logprobs=self.logprobs,
                     temperature=0.1,
@@ -157,16 +100,12 @@ class GPT3:
 
             top_logprobs = [l.to_dict() for l in choice.logprobs.top_logprobs]
             completion = choice.text.lstrip()
-            response = post_completion(
+            response = self.post_completion(
                 completion=completion,
-                logger=self.logger,
-                logprobs=self.logprobs,
-                model=self.model_name,
                 prompt=prompt,
                 stop=stop,
                 temperature=temperature,
                 top_logprobs=top_logprobs,
-                top_p=self.top_p,
             )["insert_completions_one"]["completion"]
             if response != completion:
                 breakpoint()
@@ -181,27 +120,8 @@ class GPT3:
                 top_logprobs=top_logprobs,
             )
 
-    def get_completions(self, prompt: str, stop: List[str], temperature: float):
-        return self.logger.execute(
-            gql(
-                """
-query get_completion($prompt: String!, $temperature: numeric!, $top_p: numeric!, $best_of: Int, $stop: jsonb, $logprobs: Int!, $model: String!) {
-  completions(where: {prompt: {_eq: $prompt}, temperature: {_eq: $temperature}, top_p: {_eq: $top_p}, stop: {_eq: $stop}, logprobs: {_eq: $logprobs}, model: {_eq: $model}, best_of: {_is_null: true}}) {
-    prompt
-    completion
-    top_logprobs
-  }
-}"""
-            ),
-            variable_values=dict(
-                logprobs=self.logprobs,
-                model=self.model_name,
-                prompt=prompt,
-                stop=stop,
-                temperature=temperature,
-                top_p=self.top_p,
-            ),
-        )["completions"]
+    def max_prompt_tokens(self) -> int:
+        return MAX_TOKENS_ACCEPTED_BY_LM - self.max_tokens_in_completion - 100
 
     def print(self, *args, **kwargs):
         if self.debug >= 5:

@@ -21,6 +21,7 @@ def train(
     logprobs: int,
     logger: HasuraLogger,
     max_resamples: int,
+    max_tokens: int,
     min_successes: int,
     model_name: str,
     prompt_size: int,
@@ -43,27 +44,22 @@ def train(
     buffer: Deque[List[TimeStep]] = deque()
     success_buffer: Deque[List[TimeStep]] = deque(maxlen=success_buffer_size)
 
+    kwargs = dict(
+        debug=debug,
+        logprobs=logprobs,
+        logger=logger,
+        max_tokens_in_completion=max_tokens,
+        model_name=model_name,
+        require_cache=require_cache,
+        stop=[env.action_stop(), env.state_stop()],
+        top_p=top_p,
+        wait_time=wait_time,
+    )
     if model_name in OPENAI_MODELS:
-        lm = GPT3(
-            debug=debug,
-            logprobs=logprobs,
-            logger=logger,
-            model_name=model_name,
-            require_cache=require_cache,
-            stop=[env.action_stop(), env.state_stop()],
-            top_p=top_p,
-            wait_time=wait_time,
-        )
+        lm = GPT3(**kwargs)
     elif model_name in HF_MODELS:
         lm = HuggingFaceModel(
-            model_name=HF_MODELS[model_name],
-            debug=debug,
-            logprobs=logprobs,
-            logger=logger,
-            seed=seed,
-            stop=[env.action_stop(), env.state_stop()],
-            temperature=temperature,
-            top_p=top_p,
+            **kwargs
         )
     else:
         raise RuntimeError(f"Unknown model {model_name}")

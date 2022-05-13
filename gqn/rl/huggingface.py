@@ -7,20 +7,18 @@ import deepspeed
 import numpy as np
 import torch
 from deepspeed import DeepSpeedEngine
-from run_logger import HasuraLogger
 from torch.nn.functional import log_softmax
 from transformers import (
     AutoConfig,
     AutoModelForCausalLM,
     AutoTokenizer,
     PreTrainedModel,
-    PreTrainedTokenizer,
     StoppingCriteria,
     StoppingCriteriaList,
 )
 from transformers.deepspeed import HfDeepSpeedConfig
 
-from gql import gql
+from rl.lm import LM
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -34,43 +32,6 @@ HF_MODELS = {
 }
 
 
-def post_completion(
-    best_of: Optional[int],
-    completion: str,
-    logprobs: int,
-    logger: HasuraLogger,
-    prompt: str,
-    stop: Optional[List[str]],
-    temperature: float,
-    top_logprobs: list,
-    top_p: float,
-    model: str,
-):
-    return logger.execute(
-        query=gql(
-            """
-mutation post_completion($prompt: String!, $completion: String!, $temperature: numeric!, $top_p: numeric!, $logprobs: Int!, $top_logprobs: jsonb!, $model: String!, $best_of: Int, $stop: jsonb) {
-  insert_completions_one(object: {completion: $completion, prompt: $prompt, temperature: $temperature, top_p: $top_p, logprobs: $logprobs, top_logprobs: $top_logprobs, model: $model, best_of: $best_of, stop: $stop}, on_conflict: {constraint: completions_pkey1, update_columns: [completion, logprobs, temperature, top_p, stop, best_of]}) {
-    completion
-    stop
-  }
-}
-"""
-        ),
-        variable_values=dict(
-            best_of=best_of,
-            completion=completion,
-            logprobs=logprobs,
-            prompt=prompt,
-            stop=stop,
-            temperature=temperature,
-            top_logprobs=top_logprobs,
-            top_p=top_p,
-            model=model,
-        ),
-    )
-
-
 class TokenStoppingCriteria(StoppingCriteria):
     def __init__(self, token_ids: List[int], device: Union[int, str]):
         self.device = device
@@ -79,22 +40,13 @@ class TokenStoppingCriteria(StoppingCriteria):
     def __call__(
         self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs
     ) -> bool:
-        return torch.any(input_ids[:, -1] == self.token_ids)
+        return bool(torch.any(input_ids[:, -1] == self.token_ids))
 
 
 @dataclass
-class HuggingFaceModel:
-    model_name: str
-    debug: int
-    logger: HasuraLogger
-    logprobs: int
-    temperature: float
-    top_p: float
+class HuggingFaceModel(LM):
     seed: int
-    max_tokens: int = 100
-    best_of: Optional[int] = None
     eos_token_id: Optional[int] = None
-    stop: Optional[List[str]] = None
     stopping_criteria: Optional[StoppingCriteriaList] = None
     distributed: bool = False
     ds_engine: Optional[DeepSpeedEngine] = None
@@ -102,7 +54,6 @@ class HuggingFaceModel:
     local_rank: int = 0
     local_device: Union[int, str] = field(init=False)
     model: PreTrainedModel = field(init=False)
-    tokenizer: PreTrainedTokenizer = field(init=False)
     generate_fn: Callable = field(init=False)
 
     def __post_init__(self):
@@ -113,6 +64,7 @@ class HuggingFaceModel:
             torch.cuda.manual_seed_all(self.seed)
 
         world_size = os.getenv("WORLD_SIZE", None)
+        ds_config = None
         if world_size is not None:
             world_size = int(world_size)
             local_rank = int(os.getenv("LOCAL_RANK", "0"))
@@ -153,6 +105,7 @@ class HuggingFaceModel:
         self.eos_token_id = self.eos_token_id or self.tokenizer.eos_token_id
 
         if self.distributed:
+            assert ds_config is not None
             self.ds_engine = deepspeed.initialize(model=self.model, config_params=ds_config)[0]  # type: ignore
             self.ds_engine.module.eval()
             self.generate_fn = self.ds_engine.module.generate
@@ -171,19 +124,22 @@ class HuggingFaceModel:
                 )
             )
 
-    def __call__(self, prompt, best_of: bool):
-        return self.get_full_completion(prompt, best_of=best_of, stop=self.stop)[
-            "completion"
-        ]
-
     def get_full_completion(
-        self, prompt, best_of: bool, stop: Optional[List[str]], use_cache: bool = True
+        self,
+        prompt,
+        stop: Optional[List[str]],
+        temperature: float,
+        use_cache: bool = True,
     ):
-        best_of = 1 if best_of else None
+
+        prompt = self.clip_prompt(prompt)
+
         self.print("<", end="")
 
         if use_cache and self.local_rank == 0:
-            completions = self.get_completions(prompt, best_of=best_of, stop=stop)
+            completions = self.get_completions(
+                prompt, stop=stop, temperature=temperature
+            )
             if completions:
                 completion, *_ = completions
                 # print("Completion:")
@@ -212,11 +168,11 @@ class HuggingFaceModel:
                     output_scores=True,
                     return_dict_in_generate=True,
                     use_cache=True,
-                    temperature=self.temperature,
+                    temperature=temperature,
                     top_p=self.top_p,
                     eos_token_id=self.eos_token_id,
                     pad_token_id=self.eos_token_id,
-                    max_new_tokens=self.max_tokens,
+                    max_new_tokens=self.max_tokens_in_completion,
                     stopping_criteria=self.stopping_criteria,
                     synced_gpus=self.distributed,
                 )
@@ -240,17 +196,12 @@ class HuggingFaceModel:
                     skip_special_tokens=True,
                     clean_up_tokenization_spaces=True,
                 )[0]
-            response = post_completion(
-                best_of=best_of,
-                logger=self.logger,
-                logprobs=self.logprobs,
-                prompt=prompt,
+            response = self.post_completion(
                 completion=completion,
+                prompt=prompt,
                 stop=stop,
-                temperature=self.temperature,
+                temperature=temperature,
                 top_logprobs=top_logprobs,
-                top_p=self.top_p,
-                model=self.model_name,
             )["insert_completions_one"]["completion"]
             if response != completion:
                 breakpoint()
@@ -265,30 +216,8 @@ class HuggingFaceModel:
                 top_logprobs=top_logprobs,
             )
 
-    def get_completions(self, prompt: str, best_of: bool, stop: Optional[List[str]]):
-        return self.logger.execute(
-            gql(
-                """
-query get_completion($prompt: String!, $temperature: numeric!, $top_p: numeric!, $model: String!, $best_of: Int, $stop: jsonb, $logprobs: Int!) {
-  completions(where: {prompt: {_eq: $prompt}, temperature: {_eq: $temperature}, top_p: {_eq: $top_p}, stop: {_eq: $stop}, logprobs: {_eq: $logprobs}, model: {_eq: $model}, best_of:"""
-                + ("{_is_null: true}" if best_of is None else "{_eq: $best_of}")
-                + """}) {
-    prompt
-    completion
-    top_logprobs
-  }
-}"""
-            ),
-            variable_values=dict(
-                **({} if best_of is None else dict(best_of=best_of)),
-                logprobs=self.logprobs,
-                prompt=prompt,
-                stop=stop,
-                temperature=self.temperature,
-                top_p=self.top_p,
-                model=self.model_name,
-            ),
-        )["completions"]
+    def max_prompt_tokens(self) -> int:
+        return self.tokenizer.model_max_length - self.max_tokens_in_completion - 100
 
     def print(self, *args, **kwargs):
         if self.debug >= 5 and self.local_rank == 0:
