@@ -57,7 +57,6 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         self,
         query: List[str],
         get_prompts: Callable[[], List[str]],
-        header: str,
         max_prompts: int,
         name: str,
         stop: str,
@@ -75,7 +74,6 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
                 print()
                 print("".join(prompts), end="")
                 Colorize.print_bold("".join(query))
-                Colorize.print_header(header)
             if self.debug >= 4:
                 breakpoint()
             completion = self.lm(
@@ -83,7 +81,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             )
 
             if self.debug >= 2:
-                Colorize.print_blue(name, end=" ")
+                Colorize.print_blue(name)
                 Colorize.print_cyan(completion)
             if self.debug >= 4:
                 breakpoint()
@@ -156,11 +154,10 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         prompts = [to_string(*t, env=self.env) for t in trajectories]
         return list(prompts)[: self.prompt_size]
 
-    def generate_action(self, completions: List[str], header: str) -> Optional[str]:
+    def generate_action(self, completions: List[str]) -> Optional[str]:
         maybe_action = self.predict(
             completions,
             get_prompts=self.sample_best,
-            header=header,
             max_prompts=math.factorial(len(self.success_buffer)),
             name="action",
             stop=self.env.action_stop(),
@@ -235,8 +232,6 @@ class Q(Model[ObsType, ActType]):
         if self.env.partially_observable():
             query = [self.env.ts_to_string(ts) for ts in trajectory] + query
 
-        header = f"Compute value for state {state} and action {action}."
-
         def sample() -> List[str]:
             return self.sample(action=action)
 
@@ -250,7 +245,6 @@ class Q(Model[ObsType, ActType]):
                     max_prompts=max_prompts,
                     name="reward",
                     get_prompts=sample,
-                    header=header,
                     stop=self.env.reward_stop(),
                     valid=self.env.valid_reward,
                 )
@@ -263,7 +257,6 @@ class Q(Model[ObsType, ActType]):
                 max_prompts=max_prompts,
                 name="state",
                 get_prompts=sample,
-                header=header,
                 stop=self.env.state_stop(),
                 valid=self.env.valid_state,
             )
@@ -274,7 +267,7 @@ class Q(Model[ObsType, ActType]):
             if self.env.done(*query):
                 break
 
-            action_str = self.generate_action(query, header=header)
+            action_str = self.generate_action(query)
             action = self.env.action(action_str)
             completions.append(action_str)
             query.append(action_str)
@@ -296,7 +289,7 @@ class Pi(Model[ObsType, ActType]):
             else []
         ) + [state]
 
-        action_str = self.generate_action(completions, header="pi prompt:")
+        action_str = self.generate_action(completions)
         action = self.env.action(action_str)
         assert action is not None
         return action
