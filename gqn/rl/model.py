@@ -7,9 +7,9 @@ from typing import Callable, Deque, Generic, List, Optional, Union
 from base_env import ActType, Env, ObsType, TimeStep
 from gym.spaces import Discrete
 from numpy.random import Generator
+from rl.common import Colorize, get_value
 from rl.gpt3 import GPT3
 from rl.huggingface import HuggingFaceModel
-from util import Colorize, get_value
 
 
 def to_string(*trajectory: TimeStep, env) -> str:

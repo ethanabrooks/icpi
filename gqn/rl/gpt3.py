@@ -4,9 +4,9 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 import openai
+from rl.common import Colorize
 from run_logger import HasuraLogger
 from transformers import GPT2TokenizerFast
-from util import Colorize
 
 from gql import gql
 

@@ -1,17 +1,18 @@
 import sys
+import time
 from dataclasses import dataclass
 from enum import Enum
 from pprint import pprint
-from typing import Optional
+from typing import Any, Callable, List, Optional
 
 import bandit
 import cartpole
 import catch
 import chain
 import space_invaders
-import umbrella
 from base_env import Env, TimeStep
 from gym.wrappers import TimeLimit
+from run_logger import HasuraLogger
 
 
 class Color(Enum):
@@ -81,7 +82,7 @@ def make_env(env_id: str, seed: int, hint: bool) -> Env:
             hint=hint,
         )
     elif env_id == "umbrella":
-        env = umbrella.Env(num_colors=2, num_steps=2, random_seed=seed)
+        raise NotImplementedError()
     else:
         raise RuntimeError()
     return env
@@ -93,6 +94,78 @@ def print_rank0(local_rank: Optional[int], *args, pretty=False, **kwargs):
             pprint(*args, **kwargs)
         else:
             print(*args, **kwargs)
+
+
+def make_log(
+    logger: HasuraLogger,
+    info: dict,
+    rewards: List[float],
+    success_buffer_size: int,
+    use_model_prob: float,
+    gamma: float,
+    start_time: float,
+    step: int,
+    evaluation: bool,
+    local_rank: int = 0,
+):
+    discounted = sum([gamma**t * r for t, r in enumerate(rewards)])
+    undiscounted = sum(rewards)
+    regret = info["optimal"] - discounted
+
+    prefix = "eval " if evaluation else ""
+
+    log = dict(
+        hours=(time.time() - start_time) / 3600,
+        step=step,
+        use_model_prob=use_model_prob,
+        **{
+            prefix + "return": discounted,
+            prefix + "undiscounted return": undiscounted,
+            prefix + "regret": regret,
+            "run ID": logger.run_id,
+            "success buffer": success_buffer_size,
+        },
+    )
+    print_rank0(local_rank, log, pretty=True)
+    if logger.run_id is not None:
+        logger.log(**log)
+
+
+def evaluate(
+    logger: HasuraLogger,
+    env: Env,
+    eval_interval: int,
+    act_fn: Callable[[List[TimeStep], Any], int],
+    **kwargs,
+):
+    start_states = env.start_states()
+    finite_start_states = start_states is not None
+    if finite_start_states:
+        start_states = list(start_states)
+    for _ in range(eval_interval):
+        state = env.reset()
+        if finite_start_states:
+            if not start_states:
+                return
+            while state not in start_states:
+                state = env.reset()
+            start_states.remove(state)
+        trajectory: List[TimeStep] = []
+        done = False
+        rewards = []
+        t = 0
+        while not done:
+            action = act_fn(trajectory, state)
+            next_state, reward, done, info = env.step(action)
+            step = TimeStep(state, action, reward, done, next_state)
+            trajectory.append(step)
+            state = next_state
+            rewards.append(reward)
+            t += 1
+            if done:
+                make_log(
+                    logger=logger, info=info, rewards=rewards, evaluation=True, **kwargs
+                )
 
 
 def get_value(*trajectory: TimeStep, gamma: float) -> float:

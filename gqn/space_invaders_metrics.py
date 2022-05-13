@@ -17,7 +17,7 @@ from metrics.metric import (
 from metrics.metric import Transition as BaseTransition
 from metrics.metric import get_trajectory
 from metrics.test_runner import TestRunner
-from rl.model import get_value
+from rl.common import get_value
 from space_invaders import Alien, Obs
 
 ACTIONS = ["left", "shoot", "right"]
