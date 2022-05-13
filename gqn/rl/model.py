@@ -212,6 +212,10 @@ class Q(Model[ObsType, ActType]):
         return len(actions) == space.n
 
     def value(self, trajectory: List[TimeStep], state: ObsType, action: ActType) -> str:
+        if self.debug >= 2:
+            Colorize.print_header(
+                f"Computing Q value for state {state} and action {action}:"
+            )
         t = 0
         initial_str = self.env.initial_str()
         state_str = self.env.state_str(state)
@@ -270,6 +274,8 @@ class Pi(Model[ObsType, ActType]):
         return len(self.success_buffer) > 0
 
     def _act(self, trajectory: List[TimeStep], state: ObsType) -> ActType:
+        if self.debug >= 2:
+            Colorize.print_header(f"Computing pi action for state {state}:")
         state = self.env.state_str(state)
 
         completions = (
