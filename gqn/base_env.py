@@ -21,11 +21,11 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     hint: bool
 
     def action(self, action_str: Optional[str]) -> Optional[ActType]:
+        action_space = self.action_space
+        assert isinstance(action_space, gym.spaces.Discrete)
         try:
             actions = [
-                a
-                for a in range(self.action_space.n)
-                if self.action_str(a) == action_str
+                a for a in range(action_space.n) if self.action_str(a) == action_str
             ]
             [action] = actions
             return action
@@ -33,14 +33,13 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
             return None
 
     @staticmethod
+    @abc.abstractmethod
     def action_stop() -> str:
-        return "\n"
+        ...
 
+    @abc.abstractmethod
     def action_str(self, action: ActType) -> str:
-        try:
-            return self.actions()[action] + self.action_stop()
-        except IndexError:
-            breakpoint()
+        ...
 
     @abc.abstractmethod
     def actions(self) -> "list[str]":
@@ -59,8 +58,9 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     def gamma() -> float:
         ...
 
-    def hint_stop(self) -> Optional[str]:
-        return "\n" if self.hint else None
+    @staticmethod
+    def hint_stop() -> Optional[str]:
+        return "\n"
 
     @staticmethod
     @abc.abstractmethod

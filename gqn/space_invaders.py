@@ -72,8 +72,15 @@ class Env(base_env.Env[Obs, int]):
             len(self.actions()), seed=self.random_seed
         )
 
+    @staticmethod
+    def action_stop() -> str:
+        return "aliens.descend()\n"
+
     def action_str(self, action: int) -> str:
-        return f"{self.ship()}, {self.alien()}, reward = {self.actions()[action]}({self.ship()}, {self.alien()}){self.action_stop()}"
+        if action == 1:
+            return f"reward = {self.ship()}.{self.actions()[action]}({self.alien()})\n{self.action_stop()}"
+        else:
+            return f"{self.ship()} = {self.ship()}.{self.actions()[action]}()\n{self.action_stop()}"
 
     def actions(self):
         return [
@@ -204,7 +211,9 @@ class Env(base_env.Env[Obs, int]):
         return bool(re.match(r"assert reward == [0-9]+", reward_str))
 
     def valid_state(self, state_str: str) -> bool:
-        return bool(state_str.startswith(f"assert {self.ship()} == C("))
+        return bool(
+            state_str.startswith(f"assert {self.ship()} == C(")
+        ) and state_str.endswith(self.state_stop())
 
 
 if __name__ == "__main__":
