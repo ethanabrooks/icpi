@@ -224,6 +224,8 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
                     "ball.x " + ("==" if ts.reward else "!=") + " paddle.x",
                     "ball.y " + ("==" if ts.done else ">") + " 0",
                 ]
+                if self.hint
+                else []
             )
             + [f"assert reward == {ts.reward}"]
         )
@@ -235,10 +237,15 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
                 self.reward_stop(),
             ]
         )
-        if ts.reward == 1 and ("ball.x == paddle.x" not in s or "ball.y == 0" not in s):
+        if (
+            self.hint
+            and ts.reward == 1
+            and ("ball.x == paddle.x" not in s or "ball.y == 0" not in s)
+        ):
             breakpoint()
         if (
-            ts.reward == 0
+            self.hint
+            and ts.reward == 0
             and ts.done
             and ("ball.x != paddle.x" not in s or "ball.y == 0" not in s)
         ):
@@ -262,7 +269,7 @@ if __name__ == "__main__":
         return sum([gamma**t * ts.reward for t, ts in enumerate(trajectory)])
 
     max_step = 8
-    env = Wrapper(Env(columns=4, rows=5, seed=0), hint=True)
+    env = Wrapper(Env(columns=4, rows=5, seed=0), hint=False)
     while True:
         s = env.reset()
         print(env.initial_str() + env.state_str(s))
