@@ -76,7 +76,7 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
 
     def quantify(self, prompt: str) -> float:
         matches = re.findall(r"assert reward == (\d)", prompt)
-        return sum([float(x) for x in matches])
+        return sum([self.gamma() ** t * float(x) for t, x in enumerate(matches)])
 
     @staticmethod
     def reward_stop() -> Optional[str]:
