@@ -303,7 +303,7 @@ def collect_trajectory(
     parsers=dict(
         prompt_sizes=option(
             "prompt_sizes",
-            default=(8,),
+            default=(30,),
             type=lambda s: tuple(map(int, s.split(","))),
         )
     )

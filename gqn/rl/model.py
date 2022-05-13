@@ -55,7 +55,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
 
     def predict(
         self,
-        completions: List[str],
+        query: List[str],
         get_prompts: Callable[[], List[str]],
         header: str,
         max_prompts: int,
@@ -70,11 +70,11 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
                 prompts = get_prompts()
             previous_prompts.add("".join(prompts))
 
-            new_prompt = "".join([*prompts, "".join(completions)])
+            new_prompt = "".join([*prompts, "".join(query)])
             if self.debug >= 2:
                 print()
                 print("".join(prompts), end="")
-                Colorize.print_bold("".join(completions))
+                Colorize.print_bold("".join(query))
                 Colorize.print_header(header)
             if self.debug >= 4:
                 breakpoint()
@@ -98,23 +98,33 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
                     valid(completion)
         return None
 
+    @abc.abstractmethod
     def ready(self) -> bool:
-        return len(self.success_buffer) > 0
+        ...
 
-    def sample(self):
-        successful = list(self.success_buffer)
-        unsuccessful = [
+    def sample(self, action: ActType) -> List[str]:
+        def get_time_steps(*trajectories: List[TimeStep]) -> List[TimeStep]:
+            time_steps = [
+                ts
+                for trajectory in trajectories
+                for ts in trajectory
+                if ts.action == action
+            ]
+            self.rng.shuffle(time_steps)
+            return time_steps
+
+        failure_buffer = [
             t for t in self.buffer if self.get_value(t) <= self.env.failure_threshold()
         ]
-        self.rng.shuffle(successful)
-        self.rng.shuffle(unsuccessful)
-
+        unsuccessful = get_time_steps(*failure_buffer)
+        successful = get_time_steps(*self.success_buffer)
         successful = successful[: math.ceil(self.success_fraction * len(successful))]
         unsuccessful = unsuccessful[
             : math.ceil((1 - self.success_fraction) * len(unsuccessful))
         ]
-        trajectories = successful + unsuccessful
-        if not trajectories:
+        time_steps = successful + unsuccessful
+        if not time_steps:
+            Colorize.print_warning("No time steps to sample from.")
             breakpoint()
         if all(
             [
@@ -122,9 +132,14 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
                 len(unsuccessful) < len(unsuccessful),
             ]
         ):
-            assert len(trajectories) == self.prompt_size
-        self.rng.shuffle(trajectories)
-        return [to_string(*t, env=self.env) for t in trajectories]
+            assert len(time_steps) == self.prompt_size
+        self.rng.shuffle(time_steps)
+
+        return [
+            to_string(t, env=self.env)
+            + ("" if t.done else self.env.state_str(t.next_state))
+            for t in time_steps
+        ]
 
     def sample_best(self):
         trajectories = list(self.success_buffer)
@@ -204,27 +219,37 @@ class Q(Model[ObsType, ActType]):
             breakpoint()
         return action
 
+    def ready(self) -> bool:
+        actions = {ts.action for trajectory in self.buffer for ts in trajectory}
+        space = self.env.action_space
+        assert isinstance(space, Discrete)
+        return len(actions) == space.n
+
     def value(self, trajectory: List[TimeStep], state: ObsType, action: ActType) -> str:
         t = 0
         initial_str = self.env.initial_str()
         state_str = self.env.state_str(state)
         action_str = self.env.action_str(action)
         completions = [s for s in [initial_str, state_str, action_str] if s]
+        query = list(completions)
         if self.env.partially_observable():
-            completions = [self.env.ts_to_string(ts) for ts in trajectory] + completions
+            query = [self.env.ts_to_string(ts) for ts in trajectory] + query
 
         header = f"Compute value for state {state} and action {action}."
 
-        max_prompts = math.factorial(len(self.sample()))
+        def sample() -> List[str]:
+            return self.sample(action=action)
+
+        max_prompts = math.factorial(len(sample()))
         while True:
             if t == self.max_steps:
                 break
             if self.env.reward_stop():
                 reward_str = self.predict(
-                    completions,
+                    query,
                     max_prompts=max_prompts,
                     name="reward",
-                    get_prompts=self.sample,
+                    get_prompts=sample,
                     header=header,
                     stop=self.env.reward_stop(),
                     valid=self.env.valid_reward,
@@ -232,11 +257,12 @@ class Q(Model[ObsType, ActType]):
                 if reward_str is None:
                     break
                 completions.append(reward_str)
+                query.append(reward_str)
             state_str = self.predict(
-                completions,
+                query,
                 max_prompts=max_prompts,
                 name="state",
-                get_prompts=self.sample,
+                get_prompts=sample,
                 header=header,
                 stop=self.env.state_stop(),
                 valid=self.env.valid_state,
@@ -244,17 +270,23 @@ class Q(Model[ObsType, ActType]):
             if state_str is None:
                 break
             completions.append(state_str)
-            if self.env.done(*completions):
+            query = [initial_str, state_str]
+            if self.env.done(*query):
                 break
 
-            action_str = self.generate_action(completions, header=header)
+            action_str = self.generate_action(query, header=header)
+            action = self.env.action(action_str)
             completions.append(action_str)
+            query.append(action_str)
             t += 1
 
         return "".join(completions)
 
 
 class Pi(Model[ObsType, ActType]):
+    def ready(self) -> bool:
+        return len(self.success_buffer) > 0
+
     def _act(self, trajectory: List[TimeStep], state: ObsType) -> ActType:
         state = self.env.state_str(state)
 
