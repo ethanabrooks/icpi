@@ -203,17 +203,17 @@ class Env(base_env.Env[Obs, int]):
         return state, reward, done, info
 
     def ts_to_string(self, ts: TimeStep) -> str:
-        reward_str = " and ".join(
-            [f"assert reward == {ts.reward}"]
-            + (
+        reward_str = "assert " + " and ".join(
+            (
                 [
                     f"alien[{i}] is None"
                     for i, a in enumerate(ts.next_state.aliens)
-                    if a.dead()
+                    if a.is_dead()
                 ]
                 if ts.reward > 0
                 else []
             )
+            + [f"reward == {ts.reward}"]
         )
         s = "".join(
             [

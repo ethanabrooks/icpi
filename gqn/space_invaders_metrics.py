@@ -84,7 +84,7 @@ class Encoder(BaseEncoder):
                 + [
                     f"alien[{i}] is None"
                     for i, a in enumerate(ts.next_state.aliens)
-                    if a.dead()
+                    if a.is_dead()
                 ]
             )
         return reward_str
