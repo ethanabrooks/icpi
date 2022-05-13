@@ -16,7 +16,11 @@ from util import Colorize
 
 
 def to_string(*trajectory: TimeStep, env) -> str:
-    return "".join([env.initial_str()] + [env.ts_to_string(ts) for ts in trajectory])
+    return "".join(
+        [env.initial_str()]
+        + [env.ts_to_string(ts) for ts in trajectory]
+        + [env.state_str(trajectory[-1].next_state)]
+    )
 
 
 def get_value(*trajectory: TimeStep, gamma: float) -> float:
@@ -133,11 +137,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             assert len(time_steps) == self.prompt_size
         self.rng.shuffle(time_steps)
 
-        return [
-            to_string(t, env=self.env)
-            + ("" if t.done else self.env.state_str(t.next_state))
-            for t in time_steps
-        ]
+        return [to_string(t, env=self.env) for t in time_steps]
 
     def sample_best(self):
         trajectories = list(self.success_buffer)

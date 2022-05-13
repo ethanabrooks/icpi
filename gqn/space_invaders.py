@@ -223,8 +223,6 @@ class Env(base_env.Env[Obs, int]):
             breakpoint()
         if ts.action == 1 and ts.reward == 0 and "is None" in s:
             breakpoint()
-        if ts.done:
-            s += self.state_str(ts.next_state)
         return s
 
     def valid_reward(self, reward_str: str) -> bool:
