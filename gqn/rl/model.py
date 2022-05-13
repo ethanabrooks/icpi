@@ -264,7 +264,7 @@ class Q(Model[ObsType, ActType]):
                 break
             completions.append(state_str)
             query = [initial_str, state_str]
-            if self.env.done(*query):
+            if self.env.done(*completions):
                 break
 
             action_str = self.generate_action(query)
