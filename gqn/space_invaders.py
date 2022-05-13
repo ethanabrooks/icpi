@@ -106,7 +106,7 @@ class Env(base_env.Env[Obs, int]):
     def gamma() -> float:
         return 0.9
 
-    def _hint_str(self, state: Obs) -> str:
+    def hint_str(self, state: Obs) -> str:
         hint = " and ".join(
             [
                 f"{self.ship()}.x == {self.alien()}[{i}].x"
@@ -166,7 +166,7 @@ class Env(base_env.Env[Obs, int]):
     def state_str(self, state: Obs) -> str:
         state_str = self._state_str(state)
         if self.hint:
-            state_str += f" and {self._hint_str(state)}"
+            state_str += f" and {self.hint_str(state)}"
         return state_str + self.state_stop()
 
     def start_states(self) -> Optional[Iterable[Obs]]:
@@ -197,6 +197,7 @@ class Env(base_env.Env[Obs, int]):
         landed = any(a.landed() for a in self.aliens)
         max_return = self.r >= self.optimal_undiscounted
         done = landed or max_return
+        # print(f"landed={landed}, return={self.r}, done={done}")
         state = Obs(self.agent, tuple(self.aliens))
         # print("agent", self.agent, "aliens", self.aliens, "action", action)
         return state, reward, done, info

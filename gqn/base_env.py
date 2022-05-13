@@ -33,8 +33,9 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
             return None
 
     @staticmethod
+    @abc.abstractmethod
     def action_stop() -> str:
-        return "\n"
+        ...
 
     @abc.abstractmethod
     def action_str(self, action: ActType) -> str:
@@ -57,9 +58,8 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     def gamma() -> float:
         ...
 
-    @staticmethod
-    def hint_stop() -> Optional[str]:
-        return "\n"
+    def hint_stop(self) -> Optional[str]:
+        return "\n" if self.hint else None
 
     @staticmethod
     @abc.abstractmethod
@@ -77,7 +77,7 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     def quantify(self, prompt: str, gamma: Optional[float] = None) -> float:
         if gamma is None:
             gamma = self.gamma()
-        matches = re.findall(r"assert reward == (\d)", prompt)
+        matches = re.findall(r"reward == (\d)", prompt)
         return sum([gamma**t * float(x) for t, x in enumerate(matches)])
 
     @staticmethod
@@ -92,8 +92,9 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     def start_states(self) -> Optional[Iterable[ObsType]]:
         ...
 
+    @abc.abstractmethod
     def state_str(self, state: ObsType) -> str:
-        return self._state_str(state) + self.state_stop()
+        ...
 
     @classmethod
     @abc.abstractmethod

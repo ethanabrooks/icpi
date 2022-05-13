@@ -88,10 +88,6 @@ class Env(base.Environment):
 
     def _step(self, action: int) -> dm_env.TimeStep:
         """Updates the environment according to the action."""
-        # Check for termination.
-        if self._ball_y == self._paddle_y:
-            reward = 1.0 if self._paddle_x == self._ball_x else 0
-            return dm_env.termination(reward=reward, observation=self._observation())
 
         # Move the paddle.
         dx = _ACTIONS[action]
@@ -99,6 +95,11 @@ class Env(base.Environment):
 
         # Drop the ball.
         self._ball_y -= 1
+
+        # Check for termination.
+        if self._ball_y == self._paddle_y:
+            reward = 1.0 if self._paddle_x == self._ball_x else 0
+            return dm_env.termination(reward=reward, observation=self._observation())
 
         return dm_env.transition(reward=0.0, observation=self._observation())
 
@@ -138,8 +139,11 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
             0.0: "P.x!=B.x, B.y==0, failure" if hint else "failure",
         }
 
+    def action_stop(self) -> str:
+        return "\nball.descend()\n"
+
     def action_str(self, action: int) -> str:
-        return f"paddle, ball, reward = {self.actions()[action]}(paddle, ball){self.action_stop()}"
+        return f"reward = paddle.{self.actions()[action]}(){self.action_stop()}"
 
     def actions(self) -> "list[str]":
         return [
@@ -150,19 +154,32 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
 
     def done(self, *completions: str) -> bool:
         *_, state_or_reward = completions
-        breakpoint()
-        return bool(re.findall(r"ball == C\(\d, 0\)", state_or_reward))
+        # return bool(re.findall(r"ball.y == 0", state_or_reward))
+        return bool(re.findall(r"ball == C\(\d+, 0\)", state_or_reward))
 
     def failure_threshold(self) -> float:
         return 0
 
     @staticmethod
     def gamma() -> float:
-        return 1
+        return 0.9
+
+    @classmethod
+    def hint_str(cls, obs: Obs) -> str:
+        return " and ".join(
+            [
+                "paddle.x "
+                + ("==" if obs.paddle_x == obs.ball_x else "!=")
+                + " ball.x",
+            ]
+        )
 
     @staticmethod
     def initial_str() -> str:
         return "paddle, ball = reset()\n"
+
+    def max_trajectory(self) -> int:
+        return self.env.rows
 
     def partially_observable(self) -> bool:
         return False
@@ -170,6 +187,10 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
     def reset(self):
         assert isinstance(self.env, Env)
         return self.env.reset().observation
+
+    @staticmethod
+    def reward_stop() -> str:
+        return "\n"
 
     def start_states(self) -> Optional[List[Obs]]:
         return [
@@ -180,16 +201,11 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
     def _state_str(self, obs: Obs) -> str:
         return f"assert paddle == C({obs.paddle_x}, 0) and ball == C({obs.ball_x}, {obs.ball_y})"
 
-    @classmethod
-    def _hint_str(cls, obs: Obs) -> str:
-        return " and ".join(
-            [
-                "paddle.x "
-                + ("==" if obs.paddle_x == obs.ball_x else "!=")
-                + " ball.x",
-                "ball.y " + (">" if obs.ball_y > 0 else "==") + " 0",
-            ]
-        )
+    def state_str(self, state: Obs) -> str:
+        state_str = self._state_str(state)
+        if self.hint:
+            state_str += f" and {self.hint_str(state)}"
+        return state_str + self.state_stop()
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
         assert isinstance(self.env, Env)
@@ -202,21 +218,76 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
         )
 
     def ts_to_string(self, ts: TimeStep) -> str:
+        reward_str = " and ".join(
+            (
+                [
+                    "ball.x " + ("==" if ts.reward else "!=") + " paddle.x",
+                    "ball.y " + ("==" if ts.done else ">") + " 0",
+                ]
+            )
+            + [f"assert reward == {ts.reward}"]
+        )
         s = "".join(
             [
                 self.state_str(ts.state),
-                *([self._hint_str(ts.state), self.hint_stop()] if self.hint else []),
                 self.action_str(ts.action),
-                f"assert reward == {ts.reward}",
+                reward_str,
                 self.reward_stop(),
             ]
         )
-        if ts.reward == 1 and ("paddle.x == ball.x" not in s or "ball.y == 0" not in s):
+        if ts.reward == 1 and ("ball.x == paddle.x" not in s or "ball.y == 0" not in s):
             breakpoint()
         if (
             ts.reward == 0
             and ts.done
-            and ("paddle.x != ball.x" not in s or "ball.y == 0" not in s)
+            and ("ball.x != paddle.x" not in s or "ball.y == 0" not in s)
         ):
             breakpoint()
         return s
+
+    def valid_reward(self, reward_str: str) -> bool:
+        return bool(
+            re.findall(r"assert reward == [0-9]+", reward_str)
+        ) and reward_str.endswith(self.reward_stop())
+
+    def valid_state(self, state_str: str) -> bool:
+        return bool(state_str.startswith("assert paddle == C(")) and state_str.endswith(
+            self.state_stop()
+        )
+
+
+if __name__ == "__main__":
+
+    def get_value(*trajectory: TimeStep, gamma: float) -> float:
+        return sum([gamma**t * ts.reward for t, ts in enumerate(trajectory)])
+
+    max_step = 8
+    env = Wrapper(Env(columns=4, rows=5, seed=0), hint=True)
+    while True:
+        s = env.reset()
+        print(env.initial_str() + env.state_str(s))
+        t = False
+        trajectory = []
+        while not t:
+            # a = env.action_space.sample()
+            a = int(input("Action: ")) - 1
+            s_, r, t, i = env.step(a)
+            ts = TimeStep(s, a, r, t, s_)
+            trajectory.append(ts)
+            completions = [env.ts_to_string(ts) for ts in trajectory]
+            done_estimate = env.done(*completions, env.state_str(s_))
+            if not done_estimate == t:
+                breakpoint()
+                env.done(*completions, env.state_str(s_))
+            prompt = "".join(completions)
+            value_from_prompt = env.quantify(prompt)
+            value_from_trajectory = get_value(*trajectory, gamma=env.gamma())
+            if not value_from_prompt == value_from_trajectory:
+                print(value_from_prompt, value_from_trajectory)
+                breakpoint()
+                env.quantify(prompt)
+                get_value(*trajectory, gamma=env.gamma())
+            print(env.ts_to_string(ts) + env.state_str(ts.next_state))
+            # breakpoint()
+            s = s_
+        # breakpoint()

@@ -65,7 +65,7 @@ def make_env(env_id: str, seed: int, hint: bool) -> Env:
     elif env_id == "cartpole":
         env = cartpole.Wrapper(cartpole.Env(max_episode_steps=5, seed=seed))
     elif env_id == "catch":
-        env = catch.Wrapper(catch.Env(columns=4, rows=4, seed=seed), hint=hint)
+        env = catch.Wrapper(catch.Env(columns=4, rows=5, seed=seed), hint=hint)
     elif env_id == "chain":
         env = TimeLimit(
             chain.Env(goal=4, n=8, random_seed=seed, hint=hint),
