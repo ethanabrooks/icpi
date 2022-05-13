@@ -57,6 +57,7 @@ class GPT3:
     logprobs: int
     model_name: str
     top_p: float
+    wait_time: float
     max_tokens: int = 100
     require_cache: bool = False
     stop: Optional[List[str]] = None
@@ -64,12 +65,13 @@ class GPT3:
     def __post_init__(self):
         self.tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
         self.start_time = time.time()
-        if self.model_name == "code-davinci-002":
-            self.wait_time = 4
-        elif self.model_name == "text-davinci-002":
-            self.wait_time = 0
-        else:
-            raise ValueError(f"Unknown model {self.model_name}")
+        if self.wait_time is None:
+            if self.model_name == "code-davinci-002":
+                self.wait_time = 4
+            elif self.model_name == "text-davinci-002":
+                self.wait_time = 0
+            else:
+                raise ValueError(f"Unknown model {self.model_name}")
         assert self.logprobs <= 5
 
     def __call__(
