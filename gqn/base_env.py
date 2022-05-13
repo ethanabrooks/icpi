@@ -33,9 +33,8 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
             return None
 
     @staticmethod
-    @abc.abstractmethod
     def action_stop() -> str:
-        ...
+        return "\n"
 
     @abc.abstractmethod
     def action_str(self, action: ActType) -> str:

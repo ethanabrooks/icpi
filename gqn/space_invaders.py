@@ -72,15 +72,11 @@ class Env(base_env.Env[Obs, int]):
             len(self.actions()), seed=self.random_seed
         )
 
-    @staticmethod
-    def action_stop() -> str:
-        return "aliens.descend()\n"
-
     def action_str(self, action: int) -> str:
         if action == 1:
-            return f"reward = {self.ship()}.{self.actions()[action]}({self.alien()})\n{self.action_stop()}"
+            return f"reward = {self.ship()}.{self.actions()[action]}({self.alien()}){self.action_stop()}"
         else:
-            return f"{self.ship()} = {self.ship()}.{self.actions()[action]}()\n{self.action_stop()}"
+            return f"{self.ship()} = {self.ship()}.{self.actions()[action]}(){self.action_stop()}"
 
     def actions(self):
         return [
@@ -111,6 +107,7 @@ class Env(base_env.Env[Obs, int]):
                 if a.over(state.agent)
                 else f"{self.ship()}.x != {self.alien()}[{i}].x"
                 for i, a in enumerate(state.aliens)
+                if not a.is_dead()
             ]
         )
         return hint
@@ -144,6 +141,10 @@ class Env(base_env.Env[Obs, int]):
         self.optimal = num_aliens
         self.t = 0
         return Obs(self.agent, tuple(self.aliens))
+
+    @staticmethod
+    def reward_stop() -> str:
+        return "aliens.descend()\n"
 
     @staticmethod
     def ship() -> str:
@@ -191,11 +192,23 @@ class Env(base_env.Env[Obs, int]):
         return state, reward, done, info
 
     def ts_to_string(self, ts: TimeStep) -> str:
+        reward_str = " and ".join(
+            [f"assert reward == {ts.reward}"]
+            + (
+                [
+                    f"alien[{i}] is None"
+                    for i, a in enumerate(ts.next_state.aliens)
+                    if a.dead()
+                ]
+                if ts.reward > 0
+                else []
+            )
+        )
         s = "".join(
             [
                 self.state_str(ts.state),
                 self.action_str(ts.action),
-                f"assert reward == {ts.reward}",
+                reward_str + "\n",
                 self.reward_stop(),
             ]
         )
@@ -208,7 +221,9 @@ class Env(base_env.Env[Obs, int]):
         return s
 
     def valid_reward(self, reward_str: str) -> bool:
-        return bool(re.match(r"assert reward == [0-9]+", reward_str))
+        return bool(
+            re.match(r"assert reward == [0-9]+", reward_str)
+        ) and reward_str.endswith(self.reward_stop())
 
     def valid_state(self, state_str: str) -> bool:
         return bool(
