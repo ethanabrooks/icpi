@@ -1,13 +1,11 @@
 from abc import ABC, abstractmethod
-from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from gql import gql
 from run_logger import HasuraLogger
-from transformers import (
-    PreTrainedTokenizer,
-)
+from transformers import PreTrainedTokenizer
+
+from gql import gql
 
 
 @dataclass

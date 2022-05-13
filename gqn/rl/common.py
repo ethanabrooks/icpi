@@ -5,8 +5,6 @@ from enum import Enum
 from pprint import pprint
 from typing import Any, Callable, List, Optional
 
-from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast
-
 import bandit
 import cartpole
 import catch
@@ -172,12 +170,3 @@ def evaluate(
 
 def get_value(*trajectory: TimeStep, gamma: float) -> float:
     return sum([gamma**t * ts.reward for t, ts in enumerate(trajectory)])
-
-
-def clip_prompt(
-    max_tokens: int, prompt: str, tokenizer: PreTrainedTokenizer
-) -> str:
-    tokens = tokenizer(prompt)["input_ids"]
-    tokens = tokens[-max_tokens:]
-    prompt = tokenizer.decode(tokens)
-    return prompt
