@@ -21,7 +21,6 @@ def train(
     logprobs: int,
     logger: HasuraLogger,
     max_resamples: int,
-    max_trajectory: int,
     min_successes: int,
     model_name: str,
     prompt_size: int,
@@ -73,7 +72,7 @@ def train(
         env=env,
         lm=lm,
         max_resamples=max_resamples,
-        max_steps=max_trajectory,
+        max_steps=env.max_trajectory(),
         prompt_size=prompt_size,
         rng=rng,
         success_buffer=success_buffer,
@@ -86,7 +85,7 @@ def train(
         env=env,
         lm=lm,
         max_resamples=max_resamples,
-        max_steps=max_trajectory,
+        max_steps=env.max_trajectory(),
         prompt_size=prompt_size,
         rng=rng,
         success_buffer=success_buffer,
@@ -200,7 +199,7 @@ def train(
             env.quantify(prompt)
             get_value(*trajectory, gamma=env.gamma())
 
-        trajectory = trajectory[-max_trajectory:]
+        trajectory = trajectory[-env.max_trajectory() :]
         if not timed_out:
             buffer.append(trajectory)
             if get_value(*trajectory, gamma=env.gamma()) > env.failure_threshold():

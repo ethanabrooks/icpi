@@ -112,6 +112,9 @@ class Env(base_env.Env[Obs, int]):
     def initial_str(cls) -> str:
         return f"\n{cls.ship()}, {cls.alien()} = reset()\n"
 
+    def max_trajectory(self) -> int:
+        return self.max_step
+
     def partially_observable(self) -> bool:
         return False
 

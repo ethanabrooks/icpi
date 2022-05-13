@@ -72,7 +72,7 @@ def make_env(env_id: str, seed: int, hint: bool) -> Env:
             max_episode_steps=8,
         )
     elif env_id == "space-invaders":
-        max_step = 8
+        max_step = 5
         env = TimeLimit(
             space_invaders.Env(
                 width=3,

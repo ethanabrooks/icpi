@@ -68,6 +68,10 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
         ...
 
     @abc.abstractmethod
+    def max_trajectory(self) -> int:
+        ...
+
+    @abc.abstractmethod
     def partially_observable(self) -> bool:
         ...
 
