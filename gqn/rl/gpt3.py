@@ -132,8 +132,8 @@ class GPT3:
 
                 if self.logger.run_id is not None:
                     self.logger.log(
-                        hours=(time.time() - self.start_time) / 3600,
                         **{
+                            "hours": (time.time() - self.start_time) / 3600,
                             "run ID": self.logger.run_id,
                             "seconds per query": time.time() - tick,
                         },
