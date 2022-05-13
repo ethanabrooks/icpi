@@ -228,7 +228,7 @@ class Env(base_env.Env[Obs, int]):
 
     def valid_reward(self, reward_str: str) -> bool:
         return bool(
-            re.match(r"assert reward == [0-9]+", reward_str)
+            re.findall(r"reward == [0-9]+", reward_str)
         ) and reward_str.endswith(self.reward_stop())
 
     def valid_state(self, state_str: str) -> bool:
