@@ -6,6 +6,7 @@ from typing import List, Optional
 import openai
 from run_logger import HasuraLogger
 from transformers import GPT2TokenizerFast
+from util import Colorize
 
 from gql import gql
 
@@ -47,7 +48,7 @@ mutation post_completion($prompt: String!, $completion: String!, $temperature: n
     )
 
 
-MAX_TOKENS = 3900
+MAX_TOKENS = 4000
 
 
 @dataclass
@@ -87,12 +88,10 @@ class GPT3:
         if self.debug >= 0:
             print("<", end="")
 
-        while True:
-            tokens = self.tokenizer(prompt)["input_ids"]
-            if len(tokens) <= MAX_TOKENS:
-                break
-            _, *prompts = prompt.split("\n")
-            prompt = "\n".join(prompts)
+        tokens = self.tokenizer(prompt)["input_ids"]
+        max_tokens = MAX_TOKENS - self.max_tokens
+        tokens = tokens[-max_tokens:]
+        prompt = self.tokenizer.decode(tokens)
 
         if use_cache:
             completions = self.get_completions(
@@ -106,8 +105,8 @@ class GPT3:
                     print(">", end="")
                 return completion
             elif self.require_cache:
-                print("No completions found in cache for prompt:")
                 print(prompt)
+                Colorize.print_warning("No completions found in cache for this prompt.")
                 breakpoint()
 
         self.print("Prompt:")
