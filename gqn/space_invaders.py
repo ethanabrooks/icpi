@@ -8,7 +8,6 @@ import gym
 import gym.spaces
 import numpy as np
 from base_env import TimeStep
-from gym.wrappers import TimeLimit
 
 DEAD = "dead"
 
@@ -71,6 +70,10 @@ class Env(base_env.Env[Obs, int]):
         self.action_space = gym.spaces.Discrete(
             len(self.actions()), seed=self.random_seed
         )
+
+    @staticmethod
+    def action_stop() -> str:
+        return "\n"
 
     def action_str(self, action: int) -> str:
         if action == 1:
@@ -242,32 +245,31 @@ if __name__ == "__main__":
         return sum([gamma**t * ts.reward for t, ts in enumerate(trajectory)])
 
     max_step = 8
-    env = TimeLimit(
-        Env(
-            width=3,
-            height=4,
-            max_aliens=2,
-            optimal_undiscounted=3,
-            random_seed=0,
-            hint=False,
-        ),
-        max_episode_steps=max_step,
+    env = Env(
+        width=3,
+        height=4,
+        max_aliens=2,
+        optimal_undiscounted=3,
+        random_seed=0,
+        hint=False,
     )
     while True:
         s = env.reset()
-        print(env.state_str(s))
+        print(env.initial_str() + env.state_str(s))
         t = False
         trajectory = []
+        completions = []
         while not t:
-            a = env.action_space.sample()  # int(input("Action: ")) - 1
+            # a = env.action_space.sample()
+            a = int(input("Action: ")) - 1
             s_, r, t, i = env.step(a)
             ts = TimeStep(s, a, r, t, s_)
             trajectory.append(ts)
             completions = [env.ts_to_string(ts) for ts in trajectory]
-            done_estimate = env.done(*completions)
+            done_estimate = env.done(*completions, env.state_str(s_))
             if not done_estimate == t:
                 breakpoint()
-                env.done(*completions)
+                env.done(*completions, env.state_str(s_))
             prompt = "".join(completions)
             value_from_prompt = env.quantify(prompt)
             value_from_trajectory = get_value(*trajectory, gamma=env.gamma())
@@ -276,7 +278,6 @@ if __name__ == "__main__":
                 breakpoint()
                 env.quantify(prompt)
                 get_value(*trajectory, gamma=env.gamma())
-            print(env.ts_to_string(ts))
-            print(env.state_str(s_))
+            print(env.ts_to_string(ts) + env.state_str(ts.next_state))
             s = s_
         # breakpoint()
