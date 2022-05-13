@@ -127,12 +127,15 @@ class Env(base.Environment):
 
 
 class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
+    metadata = {"render.modes": []}
+
     def __init__(self, env: Env, hint: bool):
         super().__init__(cast(gym.Env, env))
         self.hint = hint
         self.action_space = Discrete(3, seed=env.random_seed)
+        spec = env.observation_spec()
         self.observation_space = MultiDiscrete(
-            np.ones_like(env.observation_spec().shape), seed=env.random_seed
+            np.full(spec.shape, spec.maximum - spec.minimum), seed=env.random_seed
         )
         self.rewards = {
             1.0: "P.x==B.x, B.y==0, success" if hint else "success",
@@ -191,6 +194,9 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
     @staticmethod
     def reward_stop() -> str:
         return "\n"
+
+    def seed(self, seed: Optional[int] = None):
+        self._rng = np.random.RandomState(seed)
 
     def start_states(self) -> Optional[List[Obs]]:
         return [
