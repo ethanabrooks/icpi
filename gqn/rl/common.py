@@ -13,6 +13,7 @@ import space_invaders
 from base_env import Env, TimeStep
 from gym.wrappers import TimeLimit
 from run_logger import HasuraLogger
+from transformers import PreTrainedTokenizer
 
 
 class Color(Enum):
@@ -174,3 +175,10 @@ def evaluate(
 
 def get_value(*trajectory: TimeStep, gamma: float) -> float:
     return sum([gamma**t * ts.reward for t, ts in enumerate(trajectory)])
+
+
+def clip_prompt(max_tokens: int, prompt: str, tokenizer: PreTrainedTokenizer) -> str:
+    tokens = tokenizer(prompt)["input_ids"]
+    tokens = tokens[-max_tokens:]
+    prompt = tokenizer.decode(tokens)
+    return prompt
