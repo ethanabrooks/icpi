@@ -147,7 +147,7 @@ class GPT3:
                 print("Rate limit error:")
                 print(e)
                 sys.stdout.flush()
-                wait_time **= 2
+                wait_time *= 2
                 continue
             except openai.error.InvalidRequestError as e:
                 print("Invalid request error:")
