@@ -159,12 +159,9 @@ class Env(base_env.Env[Obs, int]):
     def ship() -> str:
         return "ship"
 
-    def _state_str(self, state: Obs) -> str:
-        aliens = ", ".join([f"{a}" for a in state.aliens])
-        return f"assert {self.ship()} == C{(state.agent, 0)} and {self.alien()} == [{aliens}]"
-
     def state_str(self, state: Obs) -> str:
-        state_str = self._state_str(state)
+        aliens = ", ".join([f"{a}" for a in state.aliens])
+        state_str = f"assert {self.ship()} == C{(state.agent, 0)} and {self.alien()} == [{aliens}]"
         if self.hint:
             state_str += f" and {self.hint_str(state)}"
         return state_str + self.state_stop()
@@ -261,8 +258,8 @@ if __name__ == "__main__":
         trajectory = []
         completions = []
         while not t:
-            # a = env.action_space.sample()
-            a = int(input("Action: ")) - 1
+            a = env.action_space.sample()
+            # a = int(input("Action: ")) - 1
             s_, r, t, i = env.step(a)
             ts = TimeStep(s, a, r, t, s_)
             trajectory.append(ts)

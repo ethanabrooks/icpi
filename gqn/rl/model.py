@@ -4,15 +4,13 @@ import math
 from dataclasses import dataclass
 from typing import Callable, Deque, Generic, List, Optional, Union
 
-import numpy as np
 from base_env import Env, TimeStep
 from gym.core import ActType, ObsType
 from gym.spaces import Discrete
-from numpy.linalg import norm
 from numpy.random import Generator
 from rl.gpt3 import GPT3
 from rl.huggingface import HuggingFaceModel
-from util import Colorize
+from util import Colorize, get_value
 
 
 def to_string(*trajectory: TimeStep, env) -> str:
@@ -21,14 +19,6 @@ def to_string(*trajectory: TimeStep, env) -> str:
         + [env.ts_to_string(ts) for ts in trajectory]
         + [env.state_str(trajectory[-1].next_state)]
     )
-
-
-def get_value(*trajectory: TimeStep, gamma: float) -> float:
-    return sum([gamma**t * ts.reward for t, ts in enumerate(trajectory)])
-
-
-def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
-    return np.dot(a, b) / (norm(a) * norm(b))
 
 
 @dataclass

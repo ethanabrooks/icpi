@@ -198,11 +198,8 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
             for ball_x in range(self.env.columns)
         ]
 
-    def _state_str(self, obs: Obs) -> str:
-        return f"assert paddle == C({obs.paddle_x}, 0) and ball == C({obs.ball_x}, {obs.ball_y})"
-
     def state_str(self, state: Obs) -> str:
-        state_str = self._state_str(state)
+        state_str = f"assert paddle == C({state.paddle_x}, 0) and ball == C({state.ball_x}, {state.ball_y})"
         if self.hint:
             state_str += f" and {self.hint_str(state)}"
         return state_str + self.state_stop()
@@ -269,15 +266,15 @@ if __name__ == "__main__":
         return sum([gamma**t * ts.reward for t, ts in enumerate(trajectory)])
 
     max_step = 8
-    env = Wrapper(Env(columns=4, rows=5, seed=0), hint=False)
+    env = Wrapper(Env(columns=4, rows=5, seed=0), hint=True)
     while True:
         s = env.reset()
         print(env.initial_str() + env.state_str(s))
         t = False
         trajectory = []
         while not t:
-            # a = env.action_space.sample()
-            a = int(input("Action: ")) - 1
+            a = env.action_space.sample()
+            # a = int(input("Action: ")) - 1
             s_, r, t, i = env.step(a)
             ts = TimeStep(s, a, r, t, s_)
             trajectory.append(ts)

@@ -10,7 +10,7 @@ import catch
 import chain
 import space_invaders
 import umbrella
-from base_env import Env
+from base_env import Env, TimeStep
 from gym.wrappers import TimeLimit
 
 
@@ -93,3 +93,7 @@ def print_rank0(local_rank: Optional[int], *args, pretty=False, **kwargs):
             pprint(*args, **kwargs)
         else:
             print(*args, **kwargs)
+
+
+def get_value(*trajectory: TimeStep, gamma: float) -> float:
+    return sum([gamma**t * ts.reward for t, ts in enumerate(trajectory)])

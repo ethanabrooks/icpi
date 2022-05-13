@@ -96,11 +96,6 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     def state_str(self, state: ObsType) -> str:
         ...
 
-    @classmethod
-    @abc.abstractmethod
-    def _state_str(cls, state: ObsType) -> str:
-        ...
-
     def ts_to_string(self, ts: TimeStep) -> str:
         ...
 
