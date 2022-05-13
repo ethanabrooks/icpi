@@ -104,7 +104,7 @@ class Env(base_env.Env[Obs, int]):
 
     @staticmethod
     def gamma() -> float:
-        return 0.9
+        return 0.8
 
     def hint_str(self, state: Obs) -> str:
         hint = " and ".join(
