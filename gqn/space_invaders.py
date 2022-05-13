@@ -210,7 +210,7 @@ class Env(base_env.Env[Obs, int]):
                     for i, a in enumerate(ts.next_state.aliens)
                     if a.is_dead()
                 ]
-                if ts.reward > 0
+                if (ts.reward > 0 and self.hint)
                 else []
             )
             + [f"reward == {ts.reward}"]
@@ -223,9 +223,9 @@ class Env(base_env.Env[Obs, int]):
                 self.reward_stop(),
             ]
         )
-        if ts.reward == 1 and "is None" not in s:
+        if self.hint and ts.reward == 1 and "is None" not in s:
             breakpoint()
-        if ts.action == 1 and ts.reward == 0 and "is None" in s:
+        if self.hint and ts.action == 1 and ts.reward == 0 and "is None" in s:
             breakpoint()
         return s
 
@@ -252,7 +252,7 @@ if __name__ == "__main__":
         max_aliens=2,
         optimal_undiscounted=3,
         random_seed=0,
-        hint=False,
+        hint=True,
     )
     while True:
         s = env.reset()
