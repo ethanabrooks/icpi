@@ -176,7 +176,7 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
 
     @staticmethod
     def initial_str() -> str:
-        return "paddle, ball = reset()\n"
+        return "\npaddle, ball = reset()\n"
 
     def max_trajectory(self) -> int:
         return self.env.rows
