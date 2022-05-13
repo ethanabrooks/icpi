@@ -62,7 +62,7 @@ class Obs(NamedTuple):
 class Env(base_env.Env[Obs, int]):
     height: int
     max_aliens: int
-    max_step: int
+    optimal_undiscounted: int
     random_seed: int
     width: int
 
@@ -91,7 +91,10 @@ class Env(base_env.Env[Obs, int]):
 
     def done(self, *completions: str) -> bool:
         *_, state_or_reward = completions
-        return bool(re.findall(r"aliens == \[.*C\(\d, 0\).*] and", state_or_reward))
+        landed = bool(re.findall(r"aliens == \[.*C\(\d, 0\).*]", state_or_reward))
+        return_ = self.quantify("".join(completions), gamma=1)
+        max_return = return_ >= self.optimal_undiscounted
+        return landed or max_return
 
     def failure_threshold(self) -> float:
         return 0
@@ -117,7 +120,10 @@ class Env(base_env.Env[Obs, int]):
         return f"\n{cls.ship()}, {cls.alien()} = reset()\n"
 
     def max_trajectory(self) -> int:
-        return self.max_step
+        return self.width * self.optimal_undiscounted
+
+    def optimal(self) -> float:
+        return sum(t ** self.gamma() for t in range(self.optimal_undiscounted))
 
     def partially_observable(self) -> bool:
         return False
@@ -138,8 +144,8 @@ class Env(base_env.Env[Obs, int]):
             (Alien.spawn(x, self.height) if i < num_aliens else Alien.dead())
             for i, x in enumerate(alien_xs)
         ]
-        self.optimal = num_aliens
         self.t = 0
+        self.r = 0
         return Obs(self.agent, tuple(self.aliens))
 
     @staticmethod
@@ -169,6 +175,7 @@ class Env(base_env.Env[Obs, int]):
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
         if action == 1:
             reward = sum(a.over(self.agent) for a in self.aliens)
+            self.r += reward
             self.aliens = [a.take_fire(self.agent) for a in self.aliens]
         else:
             reward = 0
@@ -178,15 +185,15 @@ class Env(base_env.Env[Obs, int]):
             i = dead.index(True)
             alien = self.aliens[i]
             self.aliens[i] = alien.spawn(self.random.choice(self.width), self.height)
-            if abs(self.aliens[i].xy.x - self.agent) < (self.max_step - self.t):
-                self.optimal += 1
 
         self.t += 1
         self.aliens = [a.descend() for a in self.aliens]
-        info = dict(optimal=self.optimal)
+        info = dict(optimal=self.optimal())
         self.agent += action - 1
         self.agent = int(np.clip(self.agent, 0, self.width - 1))
-        done = any(a.landed() for a in self.aliens)
+        landed = any(a.landed() for a in self.aliens)
+        max_return = self.r >= self.optimal_undiscounted
+        done = landed or max_return
         state = Obs(self.agent, tuple(self.aliens))
         # print("agent", self.agent, "aliens", self.aliens, "action", action)
         return state, reward, done, info
@@ -212,9 +219,9 @@ class Env(base_env.Env[Obs, int]):
                 self.reward_stop(),
             ]
         )
-        if ts.reward == 1 and "x == aliens" not in s:
+        if ts.reward == 1 and "is None" not in s:
             breakpoint()
-        if ts.action == 1 and ts.reward == 0 and "x == aliens" in s:
+        if ts.action == 1 and ts.reward == 0 and "is None" in s:
             breakpoint()
         if ts.done:
             s += self.state_str(ts.next_state)
@@ -232,13 +239,17 @@ class Env(base_env.Env[Obs, int]):
 
 
 if __name__ == "__main__":
+
+    def get_value(*trajectory: TimeStep, gamma: float) -> float:
+        return sum([gamma**t * ts.reward for t, ts in enumerate(trajectory)])
+
     max_step = 8
     env = TimeLimit(
         Env(
             width=3,
             height=4,
             max_aliens=2,
-            max_step=max_step,
+            optimal_undiscounted=3,
             random_seed=0,
             hint=False,
         ),
@@ -248,9 +259,26 @@ if __name__ == "__main__":
         s = env.reset()
         print(env.state_str(s))
         t = False
+        trajectory = []
         while not t:
-            a = int(input("Action: ")) - 1
+            a = env.action_space.sample()  # int(input("Action: ")) - 1
             s_, r, t, i = env.step(a)
-            print(env.ts_to_string(TimeStep(s, a, r, t, s_)), env.state_str(s_))
+            ts = TimeStep(s, a, r, t, s_)
+            trajectory.append(ts)
+            completions = [env.ts_to_string(ts) for ts in trajectory]
+            done_estimate = env.done(*completions)
+            if not done_estimate == t:
+                breakpoint()
+                env.done(*completions)
+            prompt = "".join(completions)
+            value_from_prompt = env.quantify(prompt)
+            value_from_trajectory = get_value(*trajectory, gamma=env.gamma())
+            if not value_from_prompt == value_from_trajectory:
+                print(value_from_prompt, value_from_trajectory)
+                breakpoint()
+                env.quantify(prompt)
+                get_value(*trajectory, gamma=env.gamma())
+            print(env.ts_to_string(ts))
+            print(env.state_str(s_))
             s = s_
-        breakpoint()
+        # breakpoint()

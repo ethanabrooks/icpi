@@ -74,9 +74,11 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
     def partially_observable(self) -> bool:
         ...
 
-    def quantify(self, prompt: str) -> float:
+    def quantify(self, prompt: str, gamma: Optional[float] = None) -> float:
+        if gamma is None:
+            gamma = self.gamma()
         matches = re.findall(r"assert reward == (\d)", prompt)
-        return sum([self.gamma() ** t * float(x) for t, x in enumerate(matches)])
+        return sum([gamma**t * float(x) for t, x in enumerate(matches)])
 
     @staticmethod
     def reward_stop() -> Optional[str]:
