@@ -6,9 +6,9 @@ from typing import Deque, List, Optional
 
 import numpy as np
 import openai
-from rl.common import make_env, print_rank0
+from rl.common import evaluate, get_value, make_env, make_log, print_rank0
 from rl.huggingface import HF_MODELS
-from rl.model import GPT3, HuggingFaceModel, Pi, Q, TimeStep, get_value, to_string
+from rl.model import GPT3, HuggingFaceModel, Pi, Q, TimeStep, to_string
 from run_logger import HasuraLogger
 
 
@@ -17,6 +17,7 @@ def train(
     debug: int,
     env_id: str,
     eval_interval: Optional[int],
+    hint: bool,
     logprobs: int,
     logger: HasuraLogger,
     max_trajectory: int,
@@ -25,7 +26,6 @@ def train(
     prompt_size: int,
     require_cache: bool,
     seed: int,
-    hint: bool,
     success_buffer_size: int,
     temperature: float,
     top_p: float,
@@ -94,67 +94,18 @@ def train(
     episodes = 0
     start_time = time.time()
 
-    def make_log(info: dict, rewards: List[float], evaluation: bool):
-        discounted = sum([env.gamma() ** t * r for t, r in enumerate(rewards)])
-        undiscounted = sum(rewards)
-        regret = info["optimal"] - discounted
-
-        prefix = "eval " if evaluation else ""
-
-        log = dict(
-            hours=(time.time() - start_time) / 3600,
-            step=T,
-            use_model_prob=use_model_prob,
-            **{
-                prefix + "return": discounted,
-                prefix + "undiscounted return": undiscounted,
-                prefix + "regret": regret,
-                "run ID": logger.run_id,
-                "success buffer": len(success_buffer),
-            },
-        )
-        print_rank0(local_rank, log, pretty=True)
-        if logger.run_id is not None:
-            logger.log(**log)
-
-    def evaluate():
-        start_states = env.start_states()
-        finite_start_states = start_states is not None
-        if finite_start_states:
-            start_states = list(start_states)
-        for _ in range(eval_interval):
-            state = env.reset()
-            if finite_start_states:
-                if not start_states:
-                    return
-                while state not in start_states:
-                    state = env.reset()
-                start_states.remove(state)
-            trajectory: List[TimeStep] = []
-            done = False
-            rewards = []
-            t = 0
-            while not done:
-                action = pi.act(trajectory, state)
-                next_state, reward, done, info = env.step(action)
-                step = TimeStep(state, action, reward, done, next_state)
-                trajectory.append(step)
-                state = next_state
-                rewards.append(reward)
-                t += 1
-                if done:
-                    make_log(
-                        info=info,
-                        rewards=rewards,
-                        evaluation=True,
-                    )
-                    if pi.ready() and debug >= 3:
-                        breakpoint()
-
     while T < total_steps:
         use_model_prob = 1 / (1 + math.exp(2 * (min_successes - len(success_buffer))))
+        log_info = dict(
+            success_buffer_size=len(success_buffer),
+            use_model_prob=use_model_prob,
+            gamma=env.gamma(),
+            start_time=start_time,
+            step=T,
+            local_rank=local_rank,
+        )
         if eval_interval is not None and episodes % eval_interval == 0:
-            evaluate()
+            evaluate(logger, env, eval_interval, pi.act, **log_info)
 
         done = False
         state = env.reset()
@@ -178,9 +129,11 @@ def train(
                 print_rank0(local_rank, ".", end="")
                 episodes += 1
                 make_log(
+                    logger=logger,
                     info=info,
                     rewards=rewards,
                     evaluation=False,
+                    **log_info,
                 )
             trajectory.append(step)
             state = next_state

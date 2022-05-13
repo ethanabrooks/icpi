@@ -3,30 +3,16 @@ import itertools
 from dataclasses import dataclass
 from typing import Deque, Generic, List, Union
 
-import numpy as np
 from base_env import ActType, Env, ObsType, TimeStep
 from gym.spaces import Discrete
-from numpy.linalg import norm
 from numpy.random import Generator
-from rl.common import Colorize
+from rl.common import Colorize, get_value
 from rl.gpt3 import GPT3
 from rl.huggingface import HuggingFaceModel
 
 
 def to_string(*trajectory: TimeStep, env) -> str:
     return " ".join([env.ts_to_string(ts) for ts in trajectory])
-
-
-def get_value(*trajectory: TimeStep, gamma: float) -> float:
-    return sum([gamma**t * ts.reward for t, ts in enumerate(trajectory)])
-
-
-def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
-    return np.dot(a, b) / (norm(a) * norm(b))
-
-
-def sub_trajectories(*trajectories: List[TimeStep]) -> List[List[TimeStep]]:
-    return [t[i:] for t in trajectories for i in range(len(t))]
 
 
 @dataclass
