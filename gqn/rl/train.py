@@ -59,6 +59,7 @@ def train(
         lm = GPT3(**kwargs)
     elif model_name in HF_MODELS:
         lm = HuggingFaceModel(
+            seed=seed,
             **kwargs
         )
     else:
