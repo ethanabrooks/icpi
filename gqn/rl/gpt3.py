@@ -89,7 +89,7 @@ class GPT3:
             print("<", end="")
 
         tokens = self.tokenizer(prompt)["input_ids"]
-        max_tokens = MAX_TOKENS - self.max_tokens
+        max_tokens = MAX_TOKENS - self.max_tokens - 100
         tokens = tokens[-max_tokens:]
         prompt = self.tokenizer.decode(tokens)
 
