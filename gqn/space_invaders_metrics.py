@@ -28,7 +28,10 @@ class Encoder(BaseEncoder):
         return range(3)
 
     def action_str(self, state: Obs, action: int) -> str:
-        return f"{self.ship()}, {self.alien()}, reward = {ACTIONS[action]}({self.ship()}, {self.alien()})\n"
+        if action == 1:
+            return f"reward = {self.ship()}.{ACTIONS[action]}({self.alien()})\n{self.alien()}.descend()\n"
+        else:
+            return f"{self.ship()} = {self.ship()}.{ACTIONS[action]}()\n{self.alien()}.descend()\n"
 
     def action_query(self, state: Obs) -> str:
         hint = self.hint(state)
@@ -75,7 +78,7 @@ class Encoder(BaseEncoder):
 
     def nonterminal_reward_str(self, ts: TimeStep[Obs, int]) -> str:
         reward_str = f"assert reward == {ts.reward}"
-        if ts.reward == 1:
+        if ts.reward > 0:
             reward_str += " and ".join(
                 [""]
                 + [

@@ -205,8 +205,20 @@ class ProbabilityMetric(Metric, abc.ABC):
                 continue
             if debug >= 0:
                 print("<", end="")
-            stop = [o[-1] + "\n" for o in output]
-            completion = gpt3.get_full_completion(full_prompt, stop=stop, temperature=0)
+
+            def get_common_suffix():
+                for cs in reversed(list(zip(*output))):
+                    cs = set(cs)
+                    if len(cs) == 1:
+                        [c] = cs
+                        yield c
+                    else:
+                        return
+
+            stop = "".join(reversed(list(get_common_suffix())))
+            completion = gpt3.get_full_completion(
+                full_prompt, stop=[stop], temperature=0
+            )
             logprobs = completion["top_logprobs"]
             if debug >= 0:
                 print(">", end="")
