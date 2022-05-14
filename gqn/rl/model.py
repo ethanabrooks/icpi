@@ -89,9 +89,8 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
                     valid(completion)
         return None
 
-    @abc.abstractmethod
     def ready(self) -> bool:
-        ...
+        return len(self.success_buffer) > 0
 
     def sample(self, action: ActType) -> List[str]:
         def get_time_steps(*trajectories: List[TimeStep]) -> List[TimeStep]:
@@ -209,7 +208,7 @@ class Q(Model[ObsType, ActType]):
         actions = {ts.action for trajectory in self.buffer for ts in trajectory}
         space = self.env.action_space
         assert isinstance(space, Discrete)
-        return len(actions) == space.n
+        return len(actions) == space.n and super().ready()
 
     def value(self, trajectory: List[TimeStep], state: ObsType, action: ActType) -> str:
         if self.debug >= 2:
@@ -270,9 +269,6 @@ class Q(Model[ObsType, ActType]):
 
 
 class Pi(Model[ObsType, ActType]):
-    def ready(self) -> bool:
-        return len(self.success_buffer) > 0
-
     def _act(self, trajectory: List[TimeStep], state: ObsType) -> ActType:
         if self.debug >= 2:
             Colorize.print_header(f"Computing pi action for state {state}:")
