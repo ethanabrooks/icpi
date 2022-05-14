@@ -55,9 +55,9 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         valid: Callable[[str], bool],
     ) -> Optional[str]:
         previous_prompts = set()
-        for _ in range(self.max_resamples):
+        for _ in range(min(self.max_resamples, max_prompts)):
             prompts = get_prompts()
-            while "".join(prompts) in previous_prompts and len(prompts) < max_prompts:
+            while "".join(prompts) in previous_prompts:
                 prompts = get_prompts()
             previous_prompts.add("".join(prompts))
 
