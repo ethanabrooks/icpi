@@ -3,10 +3,9 @@ import time
 from dataclasses import dataclass
 
 import openai
-from transformers import GPT2TokenizerFast
-
 from rl.common import Colorize
 from rl.lm import LM
+from transformers import GPT2TokenizerFast
 
 OPENAI_MODELS = ["code-davinci-002", "text-davinci-002"]
 
@@ -86,11 +85,16 @@ class GPT3(LM):
                 #     print(prompt)
                 #     Colorize.print_warning("Empty completion!")
                 #     breakpoint()
-            except openai.error.RateLimitError as e:
-                print("Rate limit error:")
+            except (
+                openai.error.RateLimitError,
+                openai.error.ServiceUnavailableError,
+            ) as e:
+                print(type(e))
                 print(e)
                 sys.stdout.flush()
                 wait_time *= 2
+                if wait_time == 0:
+                    wait_time = 1
                 continue
             except openai.error.InvalidRequestError as e:
                 print("Invalid request error:")
