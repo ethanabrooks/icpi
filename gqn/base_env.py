@@ -72,10 +72,6 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
     def max_trajectory(self) -> int:
         ...
 
-    @abc.abstractmethod
-    def partially_observable(self) -> bool:
-        ...
-
     def quantify(self, prompt: str, gamma: Optional[float] = None) -> float:
         if gamma is None:
             gamma = self.gamma()

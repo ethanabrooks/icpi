@@ -121,13 +121,12 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
 
     def sample_best(self):
         trajectories = list(self.success_buffer)
-        if not self.env.partially_observable():
-            trajectories = [
-                trajectory[start:stop]
-                for trajectory in trajectories
-                for start, stop in itertools.combinations(range(len(trajectory) + 1), 2)
-                if self.get_value(trajectory[start:stop]) > self.env.failure_threshold()
-            ]
+        trajectories = [
+            trajectory[start:stop]
+            for trajectory in trajectories
+            for start, stop in itertools.combinations(range(len(trajectory) + 1), 2)
+            if self.get_value(trajectory[start:stop]) > self.env.failure_threshold()
+        ]
         if not trajectories:
             breakpoint()
         self.rng.shuffle(trajectories)
@@ -179,11 +178,6 @@ class Q(Model[ObsType, ActType]):
                     self.env.state_str(state),
                     self.env.action_str(a),
                 ]
-                if trajectory and self.env.partially_observable():
-                    trajectory_strings = [
-                        to_string(*trajectory, env=self.env),
-                        *trajectory_strings,
-                    ]
                 trajectory_str = "".join(trajectory_strings)
                 print("value:", trajectory_str, end="")
                 if not v.startswith(trajectory_str):
@@ -213,8 +207,6 @@ class Q(Model[ObsType, ActType]):
         action_str = self.env.action_str(action)
         completions = [s for s in [initial_str, state_str, action_str] if s]
         query = list(completions)
-        if self.env.partially_observable():
-            query = [self.env.ts_to_string(ts) for ts in trajectory] + query
 
         def sample() -> List[str]:
             return self.sample(action=action)
@@ -266,14 +258,7 @@ class Pi(Model[ObsType, ActType]):
             Colorize.print_header(f"Computing pi action for state {state}:")
         state = self.env.state_str(state)
 
-        completions = (
-            [self.env.initial_str()]
-            + (
-                [self.env.ts_to_string(ts) for ts in trajectory]
-                if self.env.partially_observable()
-                else []
-            )
-        ) + [state]
+        completions = [self.env.initial_str(), state]
 
         action_str = self.generate_action(completions)
         action = self.env.action(action_str)

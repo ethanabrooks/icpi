@@ -180,9 +180,6 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
     def max_trajectory(self) -> int:
         return self.env.rows
 
-    def partially_observable(self) -> bool:
-        return False
-
     def reset(self):
         assert isinstance(self.env, Env)
         return self.env.reset().observation

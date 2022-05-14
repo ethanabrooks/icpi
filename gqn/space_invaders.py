@@ -128,9 +128,6 @@ class Env(base_env.Env[Obs, int]):
     def optimal(self) -> float:
         return sum(t ** self.gamma() for t in range(self.optimal_undiscounted))
 
-    def partially_observable(self) -> bool:
-        return False
-
     def render(self, mode="human"):
         pass
 
