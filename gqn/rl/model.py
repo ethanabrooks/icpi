@@ -89,7 +89,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         return None
 
     def ready(self) -> bool:
-        return len(self.success_buffer) > 0
+        return bool(self.sample_best())
 
     def sample(self, action: ActType) -> List[str]:
         def get_time_steps(*trajectories: List[TimeStep]) -> List[TimeStep]:
@@ -191,10 +191,10 @@ class Q(Model[ObsType, ActType]):
         return action
 
     def ready(self) -> bool:
-        actions = {ts.action for trajectory in self.buffer for ts in trajectory}
-        space = self.env.action_space
-        assert isinstance(space, Discrete)
-        return len(actions) == space.n and super().ready()
+        return (
+            all(bool(self.sample(a)) for a in range(self.env.action_space.n))
+            and super().ready()
+        )
 
     def value(self, trajectory: List[TimeStep], state: ObsType, action: ActType) -> str:
         if self.debug >= 2:
