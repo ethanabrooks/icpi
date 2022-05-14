@@ -16,7 +16,7 @@ def to_string(*trajectory: TimeStep, env) -> str:
     return "".join(
         [env.initial_str()]
         + [env.ts_to_string(ts) for ts in trajectory]
-        + [env.state_str(trajectory[-1].next_state)]
+        + [env.termination_str(trajectory[-1])]
     )
 
 

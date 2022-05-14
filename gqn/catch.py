@@ -136,10 +136,6 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
         self.observation_space = MultiDiscrete(
             np.full(spec.shape, spec.maximum - spec.minimum), seed=env.random_seed
         )
-        self.rewards = {
-            1.0: "P.x==B.x, B.y==0, success" if hint else "success",
-            0.0: "P.x!=B.x, B.y==0, failure" if hint else "failure",
-        }
 
     def action_stop(self) -> str:
         return "\nball.descend()\n"
@@ -170,9 +166,10 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
     def hint_str(cls, obs: Obs) -> str:
         return " and ".join(
             [
-                "paddle.x "
-                + ("==" if obs.paddle_x == obs.ball_x else "!=")
-                + " ball.x",
+                "ball.x "
+                + ("==" if obs.ball_x == obs.paddle_x else "!=")
+                + " paddle.x",
+                "ball.y " + ("==" if obs.ball_y == 0 else ">") + " 0",
             ]
         )
 
@@ -192,7 +189,7 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
 
     @staticmethod
     def reward_stop() -> str:
-        return "\n"
+        return ""
 
     def seed(self, seed: Optional[int] = None):
         self._rng = np.random.RandomState(seed)
@@ -207,7 +204,8 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
         state_str = f"assert paddle == C({state.paddle_x}, 0) and ball == C({state.ball_x}, {state.ball_y})"
         if self.hint:
             state_str += f" and {self.hint_str(state)}"
-        return state_str + self.state_stop()
+        reward = f" and reward == {1 if (state.ball_x == state.paddle_x and state.ball_y == 0) else 0}"
+        return state_str + reward + self.state_stop()
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
         assert isinstance(self.env, Env)
@@ -219,32 +217,8 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
             self.bsuite_info(),
         )
 
-    def ts_to_string(self, ts: TimeStep) -> str:
-        reward_str = " and ".join(
-            (
-                [
-                    "ball.x " + ("==" if ts.reward else "!=") + " paddle.x",
-                    "ball.y " + ("==" if ts.done else ">") + " 0",
-                ]
-                if self.hint
-                else []
-            )
-            + [f"assert reward == {ts.reward}"]
-        )
-        s = "".join(
-            [
-                self.state_str(ts.state),
-                self.action_str(ts.action),
-                reward_str,
-                self.reward_stop(),
-            ]
-        )
-        if (
-            self.hint
-            and ts.reward == 1
-            and ("ball.x == paddle.x" not in s or "ball.y == 0" not in s)
-        ):
-            breakpoint()
+    def termination_str(self, ts: TimeStep) -> str:
+        s = super().termination_str(ts)
         if (
             self.hint
             and ts.reward == 0
@@ -252,7 +226,21 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
             and ("ball.x != paddle.x" not in s or "ball.y == 0" not in s)
         ):
             breakpoint()
+        if (
+            self.hint
+            and ts.reward == 1
+            and ("ball.x == paddle.x" not in s or "ball.y == 0" not in s)
+        ):
+            breakpoint()
         return s
+
+    def ts_to_string(self, ts: TimeStep) -> str:
+        return "".join(
+            [
+                self.state_str(ts.state),
+                self.action_str(ts.action),
+            ]
+        )
 
     def valid_reward(self, reward_str: str) -> bool:
         return bool(
@@ -284,11 +272,12 @@ if __name__ == "__main__":
             ts = TimeStep(s, a, r, t, s_)
             trajectory.append(ts)
             completions = [env.ts_to_string(ts) for ts in trajectory]
-            done_estimate = env.done(*completions, env.state_str(s_))
+            with_termination = [*completions, env.termination_str(ts)]
+            done_estimate = env.done(*with_termination)
             if not done_estimate == t:
                 breakpoint()
-                env.done(*completions, env.state_str(s_))
-            prompt = "".join(completions)
+                env.done(*with_termination)
+            prompt = "".join(with_termination)
             value_from_prompt = env.quantify(prompt)
             value_from_trajectory = get_value(*trajectory, gamma=env.gamma())
             if not value_from_prompt == value_from_trajectory:

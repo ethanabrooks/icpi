@@ -98,6 +98,9 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
     def state_str(self, state: ObsType) -> str:
         ...
 
+    def termination_str(self, ts: TimeStep) -> str:
+        return self.state_str(ts.next_state)
+
     def ts_to_string(self, ts: TimeStep) -> str:
         ...
 
