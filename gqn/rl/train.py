@@ -24,7 +24,6 @@ def train(
     max_tokens: int,
     min_successes: int,
     model_name: str,
-    prompt_size: int,
     require_cache: bool,
     seed: int,
     success_buffer_size: int,
@@ -59,10 +58,7 @@ def train(
         lm = GPT3(**kwargs)
     elif model_name in HF_MODELS:
         kwargs["model_name"] = HF_MODELS[kwargs["model_name"]]
-        lm = HuggingFaceModel(
-            seed=seed,
-            **kwargs
-        )
+        lm = HuggingFaceModel(seed=seed, **kwargs)
     else:
         raise RuntimeError(f"Unknown model {model_name}")
 
@@ -73,7 +69,6 @@ def train(
         lm=lm,
         max_resamples=max_resamples,
         max_steps=env.max_trajectory(),
-        prompt_size=prompt_size,
         rng=rng,
         success_buffer=success_buffer,
         success_fraction=success_fraction,
@@ -86,7 +81,6 @@ def train(
         lm=lm,
         max_resamples=max_resamples,
         max_steps=env.max_trajectory(),
-        prompt_size=prompt_size,
         rng=rng,
         success_buffer=success_buffer,
         success_fraction=success_fraction,

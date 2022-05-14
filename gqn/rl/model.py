@@ -28,7 +28,6 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     lm: Union[GPT3, HuggingFaceModel]
     max_resamples: int
     max_steps: int
-    prompt_size: int
     rng: Generator
     success_buffer: Deque[List[TimeStep]]
     success_fraction: float
@@ -116,13 +115,6 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         if not time_steps:
             Colorize.print_warning("No time steps to sample from.")
             breakpoint()
-        if all(
-            [
-                len(successful) < len(successful),
-                len(unsuccessful) < len(unsuccessful),
-            ]
-        ):
-            assert len(time_steps) == self.prompt_size
         self.rng.shuffle(time_steps)
 
         return [to_string(t, env=self.env) for t in time_steps]
@@ -140,7 +132,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             breakpoint()
         self.rng.shuffle(trajectories)
         prompts = [to_string(*t, env=self.env) for t in trajectories]
-        return list(prompts)[: self.prompt_size]
+        return list(prompts)
 
     def generate_action(self, completions: List[str]) -> Optional[str]:
         maybe_action = self.predict(
