@@ -1,6 +1,7 @@
 import sys
 import time
 from dataclasses import dataclass
+from typing import Optional
 
 import openai
 from rl.common import Colorize
@@ -15,6 +16,8 @@ MAX_TOKENS_ACCEPTED_BY_LM = 4000
 
 @dataclass
 class GPT3(LM):
+    wait_time: Optional[float]
+
     def __post_init__(self):
         self.tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
         self.start_time = time.time()
