@@ -27,7 +27,6 @@ def train(
     require_cache: bool,
     seed: int,
     success_buffer_size: int,
-    success_fraction: float,
     temperature: float,
     top_p: float,
     total_steps: int,
@@ -71,7 +70,6 @@ def train(
         max_steps=env.max_trajectory(),
         rng=rng,
         success_buffer=success_buffer,
-        success_fraction=success_fraction,
         temperature=0,
     )
     q = Q(
@@ -83,7 +81,6 @@ def train(
         max_steps=env.max_trajectory(),
         rng=rng,
         success_buffer=success_buffer,
-        success_fraction=success_fraction,
         temperature=temperature,
     )
 

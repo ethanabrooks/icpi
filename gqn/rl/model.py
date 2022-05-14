@@ -1,6 +1,7 @@
 import abc
 import itertools
 import math
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Callable, Deque, Generic, List, Optional, Union
 
@@ -30,7 +31,6 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     max_steps: int
     rng: Generator
     success_buffer: Deque[List[TimeStep]]
-    success_fraction: float
     temperature: float
 
     def act(self, trajectory: List[TimeStep], state: ObsType) -> ActType:
@@ -92,31 +92,19 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         return bool(self.sample_best())
 
     def sample(self, action: ActType) -> List[str]:
-        def get_time_steps(*trajectories: List[TimeStep]) -> List[TimeStep]:
-            time_steps = [
-                ts
-                for trajectory in trajectories
-                for ts in trajectory
-                if ts.action == action
-            ]
-            self.rng.shuffle(time_steps)
-            return time_steps
-
-        failure_buffer = [
-            t for t in self.buffer if self.get_value(t) <= self.env.failure_threshold()
+        time_steps = [
+            ts for trajectory in self.buffer for ts in trajectory if ts.action == action
         ]
-        unsuccessful = get_time_steps(*failure_buffer)
-        successful = get_time_steps(*self.success_buffer)
-        successful = successful[: math.ceil(self.success_fraction * len(successful))]
-        unsuccessful = unsuccessful[
-            : math.ceil((1 - self.success_fraction) * len(unsuccessful))
-        ]
-        time_steps = successful + unsuccessful
-        if not time_steps:
-            Colorize.print_warning("No time steps to sample from.")
-            breakpoint()
         self.rng.shuffle(time_steps)
-
+        time_steps_by_reward = defaultdict(list)
+        for ts in time_steps:
+            time_steps_by_reward[ts.reward].append(ts)
+        time_steps = [
+            ts
+            for _time_steps in zip(*time_steps_by_reward.values())
+            for ts in _time_steps
+        ]
+        self.rng.shuffle(time_steps)
         return [to_string(t, env=self.env) for t in time_steps]
 
     def sample_best(self):
@@ -127,8 +115,6 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             for start, stop in itertools.combinations(range(len(trajectory) + 1), 2)
             if self.get_value(trajectory[start:stop]) > self.env.failure_threshold()
         ]
-        if not trajectories:
-            breakpoint()
         self.rng.shuffle(trajectories)
         prompts = [to_string(*t, env=self.env) for t in trajectories]
         return list(prompts)
