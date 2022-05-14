@@ -165,7 +165,7 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
 
     @staticmethod
     def gamma() -> float:
-        return 0.9
+        return 0.8
 
     @classmethod
     def hint_str(cls, obs: Obs) -> str:

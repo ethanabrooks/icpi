@@ -53,7 +53,7 @@ class Env(base_env.Env[int, int]):
 
     @staticmethod
     def gamma() -> float:
-        return 0.9
+        return 0.8
 
     def hint_str(self, state: int) -> str:
         return "state " + ("==" if state == self.goal else "!=") + f" {self.goal}"
