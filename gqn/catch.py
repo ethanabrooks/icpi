@@ -72,7 +72,6 @@ class Env(base.Environment):
         self._paddle_x = None
         self._paddle_y = None
         self.bsuite_num_episodes = sweep.NUM_EPISODES
-        self._optimal = 1
 
     def render(self, mode="human"):
         pass
@@ -123,7 +122,7 @@ class Env(base.Environment):
         return Obs(paddle_x=self._paddle_x, ball_x=self._ball_x, ball_y=self._ball_y)
 
     def bsuite_info(self):
-        return dict(optimal=self._optimal)
+        return dict(optimal=1)
 
 
 class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
@@ -165,7 +164,7 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
 
     @staticmethod
     def gamma() -> float:
-        return 0.8
+        return 1
 
     @classmethod
     def hint_str(cls, obs: Obs) -> str:
