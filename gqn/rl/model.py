@@ -92,20 +92,24 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         return bool(self.sample_best())
 
     def sample(self, action: ActType) -> List[str]:
-        time_steps = [
-            ts for trajectory in self.buffer for ts in trajectory if ts.action == action
+        trajectories = [
+            trajectory
+            for trajectory in self.buffer
+            if any(ts.action == action for ts in trajectory)
         ]
-        self.rng.shuffle(time_steps)
-        time_steps_by_reward = defaultdict(list)
-        for ts in time_steps:
-            time_steps_by_reward[ts.reward].append(ts)
-        time_steps = [
-            ts
-            for _time_steps in zip(*time_steps_by_reward.values())
-            for ts in _time_steps
+        self.rng.shuffle(trajectories)
+        trajectories_by_success = defaultdict(list)
+        for trajectory in trajectories:
+            trajectories_by_success[
+                self.get_value(trajectory) > self.env.failure_threshold()
+            ].append(trajectory)
+        trajectories = [
+            trajectory
+            for trajectories in zip(*trajectories_by_success.values())
+            for trajectory in trajectories
         ]
-        self.rng.shuffle(time_steps)
-        return [to_string(t, env=self.env) for t in time_steps]
+        self.rng.shuffle(trajectories)
+        return [to_string(*t, env=self.env) for t in trajectories]
 
     def sample_best(self):
         trajectories = list(self.success_buffer)
