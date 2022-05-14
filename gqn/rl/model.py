@@ -207,7 +207,7 @@ class Q(Model[ObsType, ActType]):
                 break
             if self.env.reward_stop():
                 reward_str = self.predict(
-                    query,
+                    completions,
                     max_prompts=max_prompts,
                     name="reward",
                     get_prompts=sample,
@@ -219,7 +219,7 @@ class Q(Model[ObsType, ActType]):
                 completions.append(reward_str)
                 query.append(reward_str)
             state_str = self.predict(
-                query,
+                completions,
                 max_prompts=max_prompts,
                 name="state",
                 get_prompts=sample,
