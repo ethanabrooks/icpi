@@ -1,9 +1,11 @@
 import abc
 import itertools
 import math
-from collections import defaultdict
+import operator
+from collections import Counter, defaultdict
 from dataclasses import dataclass
-from typing import Callable, Deque, Generic, List, Optional, Union
+from functools import reduce
+from typing import Callable, Deque, Generic, Hashable, Iterable, List, Optional, Union
 
 from base_env import ActType, Env, ObsType, TimeStep
 from gym.spaces import Discrete
@@ -19,6 +21,15 @@ def to_string(*trajectory: TimeStep, env) -> str:
         + [env.ts_to_string(ts) for ts in trajectory]
         + [env.termination_str(trajectory[-1])]
     )
+
+
+def product(x):
+    return reduce(operator.mul, x, 1)
+
+
+def unique_permutations(population: Iterable[Hashable]) -> int:
+    counts = list(Counter(population).values())
+    return math.factorial(sum(counts)) // product(math.factorial(c) for c in counts)
 
 
 @dataclass
@@ -127,7 +138,10 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         maybe_action = self.predict(
             completions,
             get_prompts=self.sample_best,
-            max_prompts=math.factorial(len(self.success_buffer)),
+            max_prompts=unique_permutations(
+                "\n".join([to_string(s, env=self.env) for s in t])
+                for t in self.success_buffer
+            ),
             name="action",
             stop=self.env.action_stop(),
             valid=lambda s: self.env.action(s) is not None,
@@ -201,7 +215,7 @@ class Q(Model[ObsType, ActType]):
         def sample() -> List[str]:
             return self.sample(action=action)
 
-        max_prompts = math.factorial(len(sample()))
+        max_prompts = unique_permutations(sample())
         while True:
             if t == self.max_steps:
                 break
