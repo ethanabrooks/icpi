@@ -1,0 +1,3 @@
+- runs without hints
+- runs without Q
+- runs with optimal Q
