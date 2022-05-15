@@ -60,10 +60,14 @@ class GPT3:
     def __post_init__(self):
         assert self.logprobs <= 5
 
-    def __call__(self, prompt: str):
-        return self.get_full_completion(prompt, stop=self.stop)["completion"]
+    def __call__(self, prompt: str, temperature: float):
+        return self.get_full_completion(
+            prompt, stop=self.stop, temperature=temperature
+        )["completion"]
 
-    def get_full_completion(self, prompt, stop: list[str], use_cache: bool = True):
+    def get_full_completion(
+        self, prompt: str, stop: list[str], temperature: float, use_cache: bool = True
+    ):
         if self.debug >= 0:
             print("<", end="")
 
@@ -96,7 +100,7 @@ class GPT3:
                     max_tokens=self.max_tokens,
                     prompt=prompt,
                     logprobs=self.logprobs,
-                    temperature=0.1,
+                    temperature=temperature,
                     stop=stop,
                 ).choices
                 if not choice.text:
@@ -123,7 +127,7 @@ class GPT3:
                 prompt=prompt,
                 completion=completion,
                 stop=stop,
-                temperature=0.1,
+                temperature=temperature,
                 top_logprobs=top_logprobs,
                 top_p=self.top_p,
             )["insert_completions_one"]["completion"]
