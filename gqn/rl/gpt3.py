@@ -74,10 +74,12 @@ class GPT3:
                 raise ValueError(f"Unknown model {self.model_name}")
         assert self.logprobs <= 5
 
-    def __call__(self, prompt: str, stop: List[str], temperature: float):
-        return self.get_full_completion(prompt, stop=stop, temperature=temperature)[
-            "completion"
-        ]
+    def __call__(
+        self, prompt: str, stop: List[str], temperature: float, use_cache: bool = True
+    ):
+        return self.get_full_completion(
+            prompt, stop=stop, temperature=temperature, use_cache=use_cache
+        )["completion"]
 
     def get_full_completion(
         self, prompt: str, stop: list[str], temperature: float, use_cache: bool = True
