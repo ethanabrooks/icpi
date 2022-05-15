@@ -1,7 +1,7 @@
 import abc
 import itertools
 from dataclasses import dataclass
-from typing import Deque, Generic, List, Union
+from typing import Callable, Deque, Generic, List, Optional, Union
 
 from base_env import ActType, Env, ObsType, TimeStep
 from gym.spaces import Discrete
@@ -41,6 +41,34 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
 
     def ready(self) -> bool:
         return len(self.success_buffer) > 0
+
+    def predict(
+        self,
+        query: List[str],
+        get_prompts: Callable[[], List[str]],
+        name: str,
+        stop: str,
+    ) -> Optional[str]:
+        prompts = get_prompts()
+
+        new_prompt = "".join([*prompts, "".join(query)])
+        if self.debug >= 2:
+            print()
+            print(" ".join(prompts), end="")
+            Colorize.print_bold("".join(query))
+        if self.debug >= 4:
+            breakpoint()
+        completion = self.lm(
+            new_prompt, stop=[stop], temperature=self.temperature, use_cache=True
+        )
+
+        if self.debug >= 2:
+            Colorize.print_blue(name)
+            Colorize.print_cyan(completion)
+        if self.debug >= 4:
+            breakpoint()
+        completion += stop
+        return completion
 
     def sample(self):
         successful = list(self.success_buffer)
@@ -83,6 +111,17 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         self.rng.shuffle(trajectories)
         prompts = [to_string(*t, env=self.env) for t in trajectories]
         return list(prompts)[: self.prompt_size]
+
+    def generate_action(self, completions: List[str]) -> Optional[str]:
+        maybe_action = self.predict(
+            completions,
+            get_prompts=self.sample_best,
+            name="action",
+            stop=self.env.action_stop(),
+        )
+        if maybe_action is None:
+            return self.env.action_str(self.env.action_space.sample())
+        return maybe_action
 
 
 @dataclass
