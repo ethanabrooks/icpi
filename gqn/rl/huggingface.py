@@ -119,7 +119,7 @@ class HuggingFaceModel(LM):
             self.stopping_criteria = StoppingCriteriaList()
             self.stopping_criteria.append(
                 TokenStoppingCriteria(
-                    self.tokenizer.convert_tokens_to_ids(self.stop),
+                    self.tokenizer.encode(list(set(self.stop)) + [""], add_special_tokens=False),
                     device=self.local_device,
                 )
             )
