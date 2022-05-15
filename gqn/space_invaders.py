@@ -74,9 +74,6 @@ class Env(base_env.Env[Obs, int]):
     def gamma() -> float:
         return 1.0
 
-    def partially_observable(self) -> bool:
-        return True
-
     def quantify(self, prompt: str) -> float:
         return_ = 0
         for n in range(self.max_aliens):

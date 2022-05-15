@@ -230,9 +230,6 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
     def gamma() -> float:
         return 1
 
-    def partially_observable(self) -> bool:
-        return False
-
     @classmethod
     def quantify(cls, value: str) -> float:
         success = value.endswith(REWARDS[1.0] + ";")

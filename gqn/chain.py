@@ -50,9 +50,6 @@ class Env(base_env.Env[int, int]):
     def gamma() -> float:
         return 0.9
 
-    def partially_observable(self) -> bool:
-        return False
-
     @classmethod
     def quantify(cls, prompt: str) -> float:
         success = prompt.endswith(REWARDS[1.0] + cls.state_stop())

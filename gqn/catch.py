@@ -155,9 +155,6 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
     def gamma() -> float:
         return 1
 
-    def partially_observable(self) -> bool:
-        return False
-
     def quantify(self, prompt: str) -> float:
         success = prompt.endswith(f"[{self.rewards[1.0]}]{self.state_stop()}")
         value = self.gamma() ** (prompt.count(":") - 1)

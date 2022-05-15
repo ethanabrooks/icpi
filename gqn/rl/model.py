@@ -91,13 +91,12 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
 
     def sample_best(self):
         trajectories = list(self.success_buffer)
-        if not self.env.partially_observable():
-            trajectories = [
-                t[i:j]
-                for t in trajectories
-                for i, j in itertools.combinations(range(len(t) + 1), 2)
-                if self.get_value(t[i:j]) > self.env.failure_threshold()
-            ]
+        trajectories = [
+            t[i:j]
+            for t in trajectories
+            for i, j in itertools.combinations(range(len(t) + 1), 2)
+            if self.get_value(t[i:j]) > self.env.failure_threshold()
+        ]
         self.rng.shuffle(trajectories)
         prompts = [to_string(*t, env=self.env) for t in trajectories]
         return list(prompts)[: self.prompt_size]
@@ -133,11 +132,6 @@ class Q(Model[ObsType, ActType]):
                     self.env.state_str(state),
                     self.env.action_str(a),
                 ]
-                if trajectory and self.env.partially_observable():
-                    trajectory_strings = [
-                        to_string(*trajectory, env=self.env),
-                        *trajectory_strings,
-                    ]
                 trajectory_str = " ".join(trajectory_strings)
                 print("value:", trajectory_str, end="")
                 if not v.startswith(trajectory_str):
@@ -155,8 +149,6 @@ class Q(Model[ObsType, ActType]):
         state_str = self.env.state_str(state)
         action_str = self.env.action_str(action)
         completions = [s for s in [state_str, action_str] if s]
-        if self.env.partially_observable():
-            completions = [self.env.ts_to_string(ts) for ts in trajectory] + completions
 
         if self.debug >= 2:
             print()
@@ -190,10 +182,7 @@ class Q(Model[ObsType, ActType]):
             completions.append(state_or_reward)
             if self.env.done(*completions):
                 break
-            if self.env.partially_observable():
-                query = " ".join(completions)
-            else:
-                query = state_or_reward
+            query = state_or_reward
             prompts = self.sample_best()
             new_prompt = "\n".join([*prompts, query])
             if self.debug >= 2:
@@ -235,14 +224,7 @@ class Pi(Model[ObsType, ActType]):
             if t > self.max_steps:
                 return self.env.action_space.sample()
             prompts = self.sample_best()
-            if self.env.partially_observable():
-                query = to_string(*trajectory, env=self.env)
-                if query:
-                    query += " "
-                query += state
-            else:
-                query = state
-            prompt = "\n".join([*prompts, query])
+            prompt = "\n".join([*prompts, state])
             if self.debug >= 1:
                 Colorize.print_header("pi prompt:")
                 print(prompt)

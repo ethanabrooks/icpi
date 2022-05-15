@@ -56,10 +56,6 @@ class Env(gym.Env[ObsType, ActType], abc.ABC):
         ...
 
     @abc.abstractmethod
-    def partially_observable(self) -> bool:
-        ...
-
-    @abc.abstractmethod
     def quantify(self, value: str) -> float:
         ...
 
