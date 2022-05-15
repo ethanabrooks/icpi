@@ -15,7 +15,6 @@ class LM(ABC):
     logprobs: int
     model_name: str
     top_p: float
-    wait_time: float
     max_tokens_in_completion: int
     require_cache: bool
     stop: Optional[List[str]]

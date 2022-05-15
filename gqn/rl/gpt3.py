@@ -1,6 +1,7 @@
 import sys
 import time
 from dataclasses import dataclass
+from typing import Optional
 
 import openai
 from rl.common import Colorize
@@ -15,6 +16,8 @@ MAX_TOKENS_ACCEPTED_BY_LM = 4000
 
 @dataclass
 class GPT3(LM):
+    wait_time: Optional[float]
+
     def __post_init__(self):
         self.tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
         self.start_time = time.time()
@@ -87,11 +90,16 @@ class GPT3(LM):
                 #     print(prompt)
                 #     Colorize.print_warning("Empty completion!")
                 #     breakpoint()
-            except openai.error.RateLimitError as e:
-                print("Rate limit error:")
+            except (
+                openai.error.RateLimitError,
+                openai.error.ServiceUnavailableError,
+            ) as e:
+                print(type(e))
                 print(e)
                 sys.stdout.flush()
                 wait_time *= 2
+                if wait_time == 0:
+                    wait_time = 1
                 continue
             except openai.error.InvalidRequestError as e:
                 print("Invalid request error:")

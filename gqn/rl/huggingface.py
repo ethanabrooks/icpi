@@ -7,6 +7,7 @@ import deepspeed
 import numpy as np
 import torch
 from deepspeed import DeepSpeedEngine
+from rl.lm import LM
 from torch.nn.functional import log_softmax
 from transformers import (
     AutoConfig,
@@ -17,8 +18,6 @@ from transformers import (
     StoppingCriteriaList,
 )
 from transformers.deepspeed import HfDeepSpeedConfig
-
-from rl.lm import LM
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
