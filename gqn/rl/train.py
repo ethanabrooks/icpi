@@ -6,10 +6,10 @@ from typing import Deque, List, Optional
 
 import numpy as np
 import openai
+from rl.common import make_env, print_rank0
 from rl.huggingface import HF_MODELS
 from rl.model import GPT3, HuggingFaceModel, Pi, Q, TimeStep, get_value, to_string
 from run_logger import HasuraLogger
-from util import make_env, print_rank0
 
 
 def train(

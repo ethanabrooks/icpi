@@ -9,9 +9,9 @@ from gym.core import ActType, ObsType
 from gym.spaces import Discrete
 from numpy.linalg import norm
 from numpy.random import Generator
+from rl.common import Colorize
 from rl.gpt3 import GPT3
 from rl.huggingface import HuggingFaceModel
-from util import Colorize
 
 
 def to_string(*trajectory: TimeStep, env) -> str:

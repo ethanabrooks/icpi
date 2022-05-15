@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from typing import List
 
 import openai
+from rl.common import Colorize
 from run_logger import HasuraLogger
-from util import Colorize
 
 from gql import gql
 
