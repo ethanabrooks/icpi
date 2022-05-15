@@ -163,11 +163,11 @@ class HuggingFaceModel(LM):
             with torch.no_grad():
                 result = self.generate_fn(
                     inputs,
-                    do_sample=True,
+                    do_sample=(temperature > 0.0),
                     output_scores=True,
                     return_dict_in_generate=True,
                     use_cache=True,
-                    temperature=temperature,
+                    temperature=(temperature or None),
                     top_p=self.top_p,
                     eos_token_id=self.eos_token_id,
                     pad_token_id=self.eos_token_id,
