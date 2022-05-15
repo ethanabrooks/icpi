@@ -17,7 +17,6 @@ def to_string(*trajectory: TimeStep, env) -> str:
 
 @dataclass
 class Model(abc.ABC, Generic[ObsType, ActType]):
-    balance_successful_and_failed: bool
     buffer: Deque[List[TimeStep]]
     env: Env
     debug: int
@@ -49,8 +48,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             t for t in self.buffer if self.get_value(t) <= self.env.failure_threshold()
         ]
         half = self.prompt_size // 2
-        if self.balance_successful_and_failed:
-            half = min([half, len(successful), len(unsuccessful)])
+        half = min([half, len(successful), len(unsuccessful)])
         successful_choices = [
             successful[i]
             for i in self.rng.choice(
