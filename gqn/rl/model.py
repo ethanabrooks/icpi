@@ -177,7 +177,9 @@ class Q(Model[ObsType, ActType]):
                     breakpoint()
 
                 state_or_reward, *_ = self.lm(
-                    new_prompt, temperature=self.temperature
+                    new_prompt,
+                    stop=[self.env.action_stop(), self.env.state_stop()],
+                    temperature=self.temperature,
                 ).split(self.env.state_stop())
                 state_or_reward = state_or_reward.lstrip() + self.env.state_stop()
             if self.debug >= 2:
@@ -200,9 +202,11 @@ class Q(Model[ObsType, ActType]):
             if self.debug >= 4:
                 breakpoint()
 
-            action_str, *_ = self.lm(new_prompt, temperature=self.temperature).split(
-                self.env.state_stop()
-            )
+            action_str, *_ = self.lm(
+                new_prompt,
+                stop=[self.env.action_stop(), self.env.state_stop()],
+                temperature=self.temperature,
+            ).split(self.env.state_stop())
             if self.env.action(action_str) is None and self.debug >= 3:
                 print(self.env.actions())
                 print(action_str)
@@ -243,7 +247,11 @@ class Pi(Model[ObsType, ActType]):
                 Colorize.print_header("pi prompt:")
                 print(prompt)
             maybe_action, *_ = (
-                self.lm(prompt, temperature=self.temperature)
+                self.lm(
+                    prompt,
+                    stop=[self.env.action_stop(), self.env.state_stop()],
+                    temperature=self.temperature,
+                )
                 .lstrip()
                 .split(self.env.action_stop())
             )

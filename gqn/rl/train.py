@@ -48,7 +48,6 @@ def train(
             logprobs=logprobs,
             logger=logger,
             require_cache=require_cache,
-            stop=[env.action_stop(), env.state_stop()],
             top_p=top_p,
             wait_time=wait_time,
         )

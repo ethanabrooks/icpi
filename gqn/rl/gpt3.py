@@ -1,7 +1,7 @@
 import sys
 import time
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import List
 
 import openai
 from run_logger import HasuraLogger
@@ -55,15 +55,14 @@ class GPT3:
     wait_time: int
     max_tokens: int = 100
     require_cache: bool = False
-    stop: Optional[List[str]] = None
 
     def __post_init__(self):
         assert self.logprobs <= 5
 
-    def __call__(self, prompt: str, temperature: float):
-        return self.get_full_completion(
-            prompt, stop=self.stop, temperature=temperature
-        )["completion"]
+    def __call__(self, prompt: str, stop: List[str], temperature: float):
+        return self.get_full_completion(prompt, stop=stop, temperature=temperature)[
+            "completion"
+        ]
 
     def get_full_completion(
         self, prompt: str, stop: list[str], temperature: float, use_cache: bool = True
