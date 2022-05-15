@@ -31,7 +31,7 @@ def train(
     temperature: float,
     top_p: float,
     total_steps: int,
-    wait_time: int,
+    wait_time: Optional[float],
 ):
     local_rank = os.getenv("LOCAL_RANK", None)
     if local_rank is not None:
