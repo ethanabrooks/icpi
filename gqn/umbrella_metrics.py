@@ -5,9 +5,8 @@ from typing import List, Optional
 
 import numpy as np
 import umbrella
-from base_env import TimeStep
+from base_env import ActType, ObsType, TimeStep
 from dollar_lambda import command, option
-from gym.core import ActType, ObsType
 from gym.spaces import Discrete
 from metrics.encoder import Encoder as BaseEncoder
 from metrics.metric import (

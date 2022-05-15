@@ -4,8 +4,7 @@ from dataclasses import dataclass
 from typing import Deque, Generic, List, Union
 
 import numpy as np
-from base_env import Env, TimeStep
-from gym.core import ActType, ObsType
+from base_env import ActType, Env, ObsType, TimeStep
 from gym.spaces import Discrete
 from numpy.linalg import norm
 from numpy.random import Generator

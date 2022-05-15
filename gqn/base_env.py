@@ -1,9 +1,11 @@
 import abc
 from dataclasses import dataclass
-from typing import Generic, Iterable, Optional
+from typing import Generic, Iterable, Optional, TypeVar
 
 import gym
-from gym.core import ActType, ObsType
+
+ObsType = TypeVar("ObsType")
+ActType = TypeVar("ActType")
 
 
 @dataclass
@@ -15,7 +17,8 @@ class TimeStep(Generic[ObsType, ActType]):
     next_state: ObsType
 
 
-class Env(gym.Env[ObsType, ActType], abc.ABC):
+@dataclass
+class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
     def action(self, action_str: Optional[str]) -> Optional[ActType]:
         try:
             actions = [
