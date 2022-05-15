@@ -91,7 +91,9 @@ class GPT3:
         prompt = self.tokenizer.decode(tokens)
 
         if use_cache:
-            completions = self.get_completions(prompt, stop=stop)
+            completions = self.get_completions(
+                prompt, stop=stop, temperature=temperature
+            )
             if completions:
                 completion, *_ = completions
                 # print("Completion:")
@@ -179,7 +181,7 @@ class GPT3:
                 top_logprobs=top_logprobs,
             )
 
-    def get_completions(self, prompt: str, stop: List[str]):
+    def get_completions(self, prompt: str, stop: List[str], temperature: float):
         return self.logger.execute(
             gql(
                 """
@@ -198,7 +200,7 @@ query get_completion($prompt: String!, $temperature: numeric!, $top_p: numeric!,
                 else self.model_name,
                 prompt=prompt,
                 stop=stop,
-                temperature=0.1,
+                temperature=temperature,
                 top_p=self.top_p,
             ),
         )["completions"]
