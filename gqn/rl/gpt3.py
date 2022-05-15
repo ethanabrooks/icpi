@@ -10,7 +10,6 @@ from transformers import GPT2TokenizerFast
 from gql import gql
 
 OPENAI_MODELS = ["code-davinci-002", "text-davinci-002"]
-MAX_TOKENS = 4000
 
 
 def post_completion(
@@ -46,6 +45,9 @@ mutation post_completion($prompt: String!, $completion: String!, $temperature: n
             top_p=top_p,
         ),
     )
+
+
+MAX_TOKENS = 4000
 
 
 @dataclass
