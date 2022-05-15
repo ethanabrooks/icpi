@@ -1,7 +1,7 @@
 import sys
 import time
 from dataclasses import dataclass
-from typing import List
+from typing import List, Optional
 
 import openai
 from run_logger import HasuraLogger
@@ -9,7 +9,7 @@ from transformers import GPT2TokenizerFast
 
 from gql import gql
 
-ENGINE = "text-davinci-002"
+OPENAI_MODELS = ["code-davinci-002", "text-davinci-002"]
 MAX_TOKENS = 4000
 
 
@@ -17,6 +17,7 @@ def post_completion(
     completion: str,
     logprobs: int,
     logger: HasuraLogger,
+    model: str,
     prompt: str,
     stop: List[str],
     temperature: float,
@@ -37,7 +38,7 @@ mutation post_completion($prompt: String!, $completion: String!, $temperature: n
         variable_values=dict(
             completion=completion,
             logprobs=logprobs,
-            model=ENGINE,
+            model=model,
             prompt=prompt,
             stop=stop,
             temperature=temperature,
@@ -52,14 +53,22 @@ class GPT3:
     debug: int
     logger: HasuraLogger
     logprobs: int
+    model_name: str
     top_p: float
-    wait_time: int
+    wait_time: Optional[float]
     max_tokens: int = 100
     require_cache: bool = False
 
     def __post_init__(self):
         self.tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
         self.start_time = time.time()
+        if self.wait_time is None:
+            if self.model_name == "code-davinci-002":
+                self.wait_time = 4
+            elif self.model_name == "text-davinci-002":
+                self.wait_time = 0
+            else:
+                raise ValueError(f"Unknown model {self.model_name}")
         assert self.logprobs <= 5
 
     def __call__(self, prompt: str, stop: List[str], temperature: float):
@@ -104,7 +113,7 @@ class GPT3:
                 time.sleep(wait_time)
                 tick = time.time()
                 choice, *_ = openai.Completion.create(
-                    engine=ENGINE,
+                    engine=self.model_name,
                     max_tokens=self.max_tokens,
                     prompt=prompt,
                     logprobs=self.logprobs,
@@ -142,10 +151,11 @@ class GPT3:
             top_logprobs = [l.to_dict() for l in choice.logprobs.top_logprobs]
             completion = choice.text.lstrip()
             response = post_completion(
+                completion=completion,
                 logger=self.logger,
                 logprobs=self.logprobs,
+                model=self.model_name,
                 prompt=prompt,
-                completion=completion,
                 stop=stop,
                 temperature=temperature,
                 top_logprobs=top_logprobs,
@@ -178,7 +188,9 @@ query get_completion($prompt: String!, $temperature: numeric!, $top_p: numeric!,
             ),
             variable_values=dict(
                 logprobs=self.logprobs,
-                model="gpt3" if ENGINE == "text-davinci-002" else ENGINE,
+                model="gpt3"
+                if self.model_name == "text-davinci-002"
+                else self.model_name,
                 prompt=prompt,
                 stop=stop,
                 temperature=0.1,

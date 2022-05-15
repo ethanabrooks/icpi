@@ -47,6 +47,7 @@ def train(
             debug=debug,
             logprobs=logprobs,
             logger=logger,
+            model_name=model_name,
             require_cache=require_cache,
             top_p=top_p,
             wait_time=wait_time,
