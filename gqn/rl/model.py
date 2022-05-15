@@ -196,20 +196,12 @@ class Q(Model[ObsType, ActType]):
             completions.append(state_or_reward)
             if self.env.done(*completions):
                 break
-            query = state_or_reward
-            prompts = self.sample_best()
-            new_prompt = "\n".join([*prompts, query])
-            if self.debug >= 2:
-                Colorize.print_bold("Q prompt:")
-                print(new_prompt)
-            if self.debug >= 4:
-                breakpoint()
-
-            action_str, *_ = self.lm(
-                new_prompt,
+            action_str = self.predict(
+                [state_or_reward],
+                get_prompts=self.sample_best,
+                name="action",
                 stop=[self.env.action_stop(), self.env.state_stop()],
-                temperature=self.temperature,
-            ).split(self.env.state_stop())
+            )
             if self.env.action(action_str) is None and self.debug >= 3:
                 print(self.env.actions())
                 print(action_str)
