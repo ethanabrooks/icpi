@@ -55,16 +55,16 @@ class Colorize:
         return Colorize(Color.OKGREEN).print(*objects, sep=sep, end=end, file=file)
 
 
-def make_env(env_id: str, seed: int, status: bool) -> Env:
+def make_env(env_id: str, seed: int, hint: bool) -> Env:
     if env_id == "bandit":
         env = bandit.Env(num_steps=5, random_seed=seed)
     elif env_id == "cartpole":
         env = cartpole.Wrapper(cartpole.Env(max_episode_steps=5, seed=seed))
     elif env_id == "catch":
-        env = catch.Wrapper(catch.Env(columns=4, rows=5, seed=seed), status=status)
+        env = catch.Wrapper(catch.Env(columns=4, rows=5, seed=seed), hint=hint)
     elif env_id == "chain":
         env = TimeLimit(
-            chain.Env(goal=4, n=8, random_seed=seed, status=status),
+            chain.Env(goal=4, n=8, random_seed=seed, hint=hint),
             max_episode_steps=8,
         )
     elif env_id == "space-invaders":
@@ -76,7 +76,7 @@ def make_env(env_id: str, seed: int, status: bool) -> Env:
                 max_aliens=2,
                 max_step=max_step,
                 random_seed=seed,
-                status=status,
+                hint=hint,
             ),
             max_episode_steps=max_step,
         )

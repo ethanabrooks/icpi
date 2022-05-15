@@ -45,7 +45,6 @@ class Env(base_env.Env[Obs, int]):
     max_aliens: int
     max_step: int
     random_seed: int
-    status: bool
     width: int
 
     def __post_init__(self):
@@ -109,7 +108,7 @@ class Env(base_env.Env[Obs, int]):
     def _state_str(self, state: Obs) -> str:
         state_str = self._state_without_status_str(state)
         status = self._status_str(state)
-        if not self.status:
+        if not self.hint:
             return state_str
         return f"{state_str} [{status}]"
 

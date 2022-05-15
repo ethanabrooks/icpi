@@ -19,6 +19,8 @@ class TimeStep(Generic[ObsType, ActType]):
 
 @dataclass
 class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
+    hint: bool
+
     def action(self, action_str: Optional[str]) -> Optional[ActType]:
         try:
             actions = [

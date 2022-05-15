@@ -125,16 +125,16 @@ class Env(base.Environment):
 
 
 class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
-    def __init__(self, env: Env, status: bool):
+    def __init__(self, env: Env, hint: bool):
         super().__init__(cast(gym.Env, env))
-        self.status = status
+        self.hint = hint
         self.action_space = Discrete(3, seed=env.random_seed)
         self.observation_space = MultiDiscrete(
             np.ones_like(env.observation_spec().shape), seed=env.random_seed
         )
         self.rewards = {
-            1.0: "P.x==B.x, B.y==0, success" if status else "success",
-            0.0: "P.x!=B.x, B.y==0, failure" if status else "failure",
+            1.0: "P.x==B.x, B.y==0, success" if hint else "success",
+            0.0: "P.x!=B.x, B.y==0, failure" if hint else "failure",
         }
 
     def actions(self) -> "list[str]":
@@ -182,7 +182,7 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
 
     def _state_str(self, obs: Obs) -> str:
         state_str = self._state_without_status_str(obs)
-        if not self.status:
+        if not self.hint:
             return state_str
         return f"{state_str} [{self._status(obs)}]"
 
@@ -215,7 +215,7 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
         description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"
         if ts.done:
             description += " "
-            if self.status:
+            if self.hint:
                 description += self.state_str(ts.next_state)
             else:
                 description += (

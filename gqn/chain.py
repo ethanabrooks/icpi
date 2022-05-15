@@ -15,11 +15,9 @@ REWARDS = {
 
 @dataclass
 class Env(base_env.Env[int, int]):
-
     goal: int
     n: int
     random_seed: int
-    status: bool
 
     def __post_init__(self):
         self.random = np.random.default_rng(self.random_seed)
@@ -78,7 +76,7 @@ class Env(base_env.Env[int, int]):
         return range(self.n)
 
     def _state_str(self, state: int) -> str:
-        if not self.status:
+        if not self.hint:
             return str(state)
         status = f"at {self.goal}" if state == self.goal else f"not at {self.goal}"
         return f"{state} [{status}]"

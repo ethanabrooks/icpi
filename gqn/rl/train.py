@@ -25,7 +25,7 @@ def train(
     prompt_size: int,
     require_cache: bool,
     seed: int,
-    status: bool,
+    hint: bool,
     success_buffer_size: int,
     temperature: float,
     top_p: float,
@@ -37,7 +37,7 @@ def train(
         local_rank = int(local_rank)
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
-    env = make_env(env_id=env_id, seed=seed, status=status)
+    env = make_env(env_id=env_id, seed=seed, hint=hint)
 
     buffer: Deque[List[TimeStep]] = deque()
     success_buffer: Deque[List[TimeStep]] = deque(maxlen=success_buffer_size)
