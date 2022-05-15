@@ -1,4 +1,3 @@
-import itertools
 import re
 from dataclasses import dataclass
 from typing import Iterable, NamedTuple, Optional, Tuple
@@ -54,13 +53,12 @@ class Alien(NamedTuple):
 
 class Obs(NamedTuple):
     agent: int
-    aliens: Tuple[Alien, ...]
+    alien: Alien
 
 
 @dataclass
 class Env(base_env.Env[Obs, int]):
     height: int
-    max_aliens: int
     optimal_undiscounted: int
     random_seed: int
     width: int
@@ -77,9 +75,9 @@ class Env(base_env.Env[Obs, int]):
 
     def action_str(self, action: int) -> str:
         if action == 1:
-            return f"reward = {self.ship()}.{self.actions()[action]}({self.alien()}){self.action_stop()}"
+            return f"reward = {self.ship()}.{self.actions()[action]}({self.alien_str()}){self.action_stop()}"
         else:
-            return f"{self.ship()} = {self.ship()}.{self.actions()[action]}(){self.action_stop()}"
+            return f"{self.ship()}.{self.actions()[action]}(){self.action_stop()}"
 
     def actions(self):
         return [
@@ -89,12 +87,12 @@ class Env(base_env.Env[Obs, int]):
         ]
 
     @staticmethod
-    def alien() -> str:
-        return "aliens"
+    def alien_str() -> str:
+        return "alien"
 
     def done(self, *completions: str) -> bool:
         *_, state_or_reward = completions
-        landed = bool(re.findall(r"aliens == \[.*C\(\d, 0\).*]", state_or_reward))
+        landed = bool(re.findall(r"alien == C\(\d, 0\)", state_or_reward))
         return_ = self.quantify("".join(completions), gamma=1)
         max_return = return_ >= self.optimal_undiscounted
         return landed or max_return
@@ -107,20 +105,28 @@ class Env(base_env.Env[Obs, int]):
         return 0.8
 
     def hint_str(self, state: Obs) -> str:
+        if state.alien.is_dead():
+            return ""
         hint = " and ".join(
             [
-                f"{self.ship()}.x == {self.alien()}[{i}].x"
-                if a.over(state.agent)
-                else f"{self.ship()}.x != {self.alien()}[{i}].x"
-                for i, a in enumerate(state.aliens)
-                if not a.is_dead()
+                f"{self.alien_str()}.x "
+                + ("==" if state.alien.over(state.agent) else "!=")
+                + f" {self.ship()}.x",
+                f"{self.alien_str()}.y "
+                + ("==" if state.alien.landed() else ">")
+                + " 0",
             ]
         )
+        # if state.alien.xy is not None:
+        #     if state.agent == state.alien.xy.x:
+        #         breakpoint()
+        #     if 0 == state.alien.xy.y:
+        #         breakpoint()
         return hint
 
     @classmethod
     def initial_str(cls) -> str:
-        return f"\n{cls.ship()}, {cls.alien()} = reset()\n"
+        return f"\n{cls.ship()}, {cls.alien_str()} = reset()\n"
 
     def max_trajectory(self) -> int:
         return self.width * self.optimal_undiscounted
@@ -138,82 +144,71 @@ class Env(base_env.Env[Obs, int]):
         return_info: bool = False,
         options: Optional[dict] = None,
     ) -> Obs:
-        num_aliens = 1 + self.random.choice(self.max_aliens)
-        self.agent, *alien_xs = self.random.choice(self.width, size=1 + self.max_aliens)
-        self.aliens = [
-            (Alien.spawn(x, self.height) if i < num_aliens else Alien.dead())
-            for i, x in enumerate(alien_xs)
-        ]
+        self.agent, alien_x = self.random.choice(self.width, size=2)
+        self.alien = Alien.spawn(alien_x, self.height)
         self.t = 0
         self.r = 0
-        return Obs(self.agent, tuple(self.aliens))
+        return Obs(self.agent, self.alien)
 
     @staticmethod
     def reward_stop() -> str:
-        return "aliens.descend()\n"
+        return "()\n"
 
     @staticmethod
     def ship() -> str:
         return "ship"
 
     def state_str(self, state: Obs) -> str:
-        aliens = ", ".join([f"{a}" for a in state.aliens])
-        state_str = f"assert {self.ship()} == C{(state.agent, 0)} and {self.alien()} == [{aliens}]"
-        if self.hint:
-            state_str += f" and {self.hint_str(state)}"
+        state_str = f"assert {self.ship()} == C{(state.agent, 0)} and {self.alien_str()} == {str(state.alien)}"
+        hint_str = self.hint_str(state)
+        if self.hint and hint_str:
+            state_str += f" and {hint_str}"
         return state_str + self.state_stop()
 
     def start_states(self) -> Optional[Iterable[Obs]]:
         for agent in range(self.width):
-            for xs in itertools.product(range(self.width), repeat=self.max_aliens):
-                aliens = [Alien.spawn(x, self.height) for x in xs]
-                yield Obs(agent, tuple(aliens))
+            for alien_x in range(self.width):
+                alien = Alien.spawn(alien_x, self.height)
+                yield Obs(agent, alien)
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
         if action == 1:
-            reward = sum(a.over(self.agent) for a in self.aliens)
+            reward = float(self.alien.over(self.agent))
             self.r += reward
-            self.aliens = [a.take_fire(self.agent) for a in self.aliens]
+            self.alien = self.alien.take_fire(self.agent)
         else:
             reward = 0
 
-        dead = [a.is_dead() for a in self.aliens]
-        if reward == 0 and any(dead):
-            i = dead.index(True)
-            alien = self.aliens[i]
-            self.aliens[i] = alien.spawn(self.random.choice(self.width), self.height)
+        dead = self.alien.is_dead()
+        if dead:
+            self.alien = self.alien.spawn(self.random.choice(self.width), self.height)
 
         self.t += 1
-        self.aliens = [a.descend() for a in self.aliens]
+        self.alien = self.alien.descend()
         info = dict(optimal=self.optimal())
         self.agent += action - 1
         self.agent = int(np.clip(self.agent, 0, self.width - 1))
-        landed = any(a.landed() for a in self.aliens)
         max_return = self.r >= self.optimal_undiscounted
-        done = landed or max_return
+        done = self.alien.landed() or max_return
         # print(f"landed={landed}, return={self.r}, done={done}")
-        state = Obs(self.agent, tuple(self.aliens))
-        # print("agent", self.agent, "aliens", self.aliens, "action", action)
+        state = Obs(self.agent, self.alien)
         return state, reward, done, info
 
     def ts_to_string(self, ts: TimeStep) -> str:
-        reward_str = "assert " + " and ".join(
-            (
-                [
-                    f"alien[{i}] is None"
-                    for i, a in enumerate(ts.next_state.aliens)
-                    if a.is_dead()
-                ]
-                if (ts.reward > 0 and self.hint)
-                else []
+        reward_str = (
+            "assert "
+            + " and ".join(
+                (["alien is None"] if (ts.reward > 0 and self.hint) else [])
+                + [f"reward == {ts.reward}"]
             )
-            + [f"reward == {ts.reward}"]
+            + f"\nalien.{'spawn' if ts.reward > 0 else 'descend'}"
         )
+
         s = "".join(
             [
                 self.state_str(ts.state),
                 self.action_str(ts.action),
-                reward_str + "\n",
+                reward_str,
                 self.reward_stop(),
             ]
         )
@@ -221,6 +216,12 @@ class Env(base_env.Env[Obs, int]):
             breakpoint()
         if self.hint and ts.action == 1 and ts.reward == 0 and "is None" in s:
             breakpoint()
+        if ts.reward == 1:
+            if "spawn()" not in s:
+                breakpoint()
+        else:
+            if "descend()" not in s:
+                breakpoint()
         return s
 
     def valid_reward(self, reward_str: str) -> bool:
@@ -243,7 +244,6 @@ if __name__ == "__main__":
     env = Env(
         width=3,
         height=4,
-        max_aliens=2,
         optimal_undiscounted=3,
         random_seed=0,
         hint=True,

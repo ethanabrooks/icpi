@@ -76,7 +76,6 @@ def make_env(env_id: str, seed: int, hint: bool) -> Env:
         env = space_invaders.Env(
             width=3,
             height=4,
-            max_aliens=2,
             optimal_undiscounted=3,
             random_seed=seed,
             hint=hint,

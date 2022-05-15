@@ -82,13 +82,13 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             completion = self.lm(
                 new_prompt, stop=[stop], temperature=self.temperature, use_cache=True
             )
+            completion += stop
 
             if self.debug >= 2:
                 Colorize.print_blue(name)
                 Colorize.print_cyan(completion)
             if self.debug >= 4:
                 breakpoint()
-            completion += stop
             if valid(completion):
                 return completion
             else:
