@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  sweep:
+    build:
+      dockerfile: Dockerfile.gpu
+  run:
+    build:
+      dockerfile: Dockerfile.gpu
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - device_ids: ["0", "1", "2", "3"]
+              capabilities: [gpu]
