@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import List
 
 import openai
-from rl.common import Colorize
 from run_logger import HasuraLogger
 
 from gql import gql
@@ -57,6 +56,7 @@ class GPT3:
     require_cache: bool = False
 
     def __post_init__(self):
+        self.start_time = time.time()
         assert self.logprobs <= 5
 
     def __call__(self, prompt: str, stop: List[str], temperature: float):
@@ -94,6 +94,7 @@ class GPT3:
             sys.stdout.flush()
             try:
                 time.sleep(wait_time)
+                tick = time.time()
                 choice, *_ = openai.Completion.create(
                     engine=ENGINE,
                     max_tokens=self.max_tokens,
@@ -102,12 +103,24 @@ class GPT3:
                     temperature=temperature,
                     stop=stop,
                 ).choices
-                if not choice.text:
-                    print(prompt)
-                    Colorize.print_warning("Empty completion!")
-                    breakpoint()
-            except openai.error.RateLimitError as e:
-                print("Rate limit error:")
+
+                if self.logger.run_id is not None:
+                    self.logger.log(
+                        **{
+                            "hours": (time.time() - self.start_time) / 3600,
+                            "run ID": self.logger.run_id,
+                            "seconds per query": time.time() - tick,
+                        },
+                    )
+                # if not choice.text:
+                #     print(prompt)
+                #     Colorize.print_warning("Empty completion!")
+                #     breakpoint()
+            except (
+                openai.error.RateLimitError,
+                openai.error.ServiceUnavailableError,
+            ) as e:
+                print(type(e))
                 print(e)
                 wait_time **= 2
                 continue

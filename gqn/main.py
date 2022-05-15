@@ -73,7 +73,7 @@ def log(
         line.spec(x=x, y=y, visualizer_url=visualizer_url)
         for x in ["step", "hours"]
         for y in ["regret", "return", "use_model_prob", "eval regret", "eval return"]
-    ]
+    ] + [line.spec(x="hours", y="seconds per query", visualizer_url=visualizer_url)]
 
     params, logger = run_logger.initialize(
         graphql_endpoint=GRAPHQL_ENDPOINT,
