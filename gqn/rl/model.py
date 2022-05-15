@@ -224,26 +224,7 @@ class Pi(Model[ObsType, ActType]):
         while action is None:
             if t > self.max_steps:
                 return self.env.action_space.sample()
-            prompts = self.sample_best()
-            prompt = "\n".join([*prompts, state])
-            if self.debug >= 1:
-                Colorize.print_header("pi prompt:")
-                print(prompt)
-            maybe_action, *_ = (
-                self.lm(
-                    prompt,
-                    stop=[self.env.action_stop(), self.env.state_stop()],
-                    temperature=self.temperature,
-                )
-                .lstrip()
-                .split(self.env.action_stop())
-            )
-            if self.debug >= 1:
-                Colorize.print_blue("Action:", end=" ")
-                Colorize.print_cyan(maybe_action)
-            if self.debug >= 4:
-                breakpoint()
-
+            maybe_action = self.generate_action(state)
             action = self.env.action(maybe_action)
             t += 1
 
