@@ -144,7 +144,8 @@ class GPT3:
             ) as e:
                 print(type(e))
                 print(e)
-                wait_time **= 2
+                sys.stdout.flush()
+                wait_time *= 2
                 continue
             except openai.error.InvalidRequestError as e:
                 print("Invalid request error:")
