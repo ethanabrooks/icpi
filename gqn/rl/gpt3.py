@@ -60,20 +60,15 @@ class GPT3:
     def __post_init__(self):
         assert self.logprobs <= 5
 
-    def __call__(self, prompt, best_of: bool):
-        return self.get_full_completion(prompt, best_of=best_of, stop=self.stop)[
-            "completion"
-        ]
+    def __call__(self, prompt: str):
+        return self.get_full_completion(prompt, stop=self.stop)["completion"]
 
-    def get_full_completion(
-        self, prompt, best_of: bool, stop: list[str], use_cache: bool = True
-    ):
-        best_of = 1 if best_of else None
+    def get_full_completion(self, prompt, stop: list[str], use_cache: bool = True):
         if self.debug >= 0:
             print("<", end="")
 
         if use_cache:
-            completions = self.get_completions(prompt, best_of=best_of, stop=stop)
+            completions = self.get_completions(prompt, stop=stop)
             if completions:
                 completion, *_ = completions
                 # print("Completion:")
@@ -145,14 +140,12 @@ class GPT3:
                 top_logprobs=top_logprobs,
             )
 
-    def get_completions(self, prompt: str, best_of: Optional[int], stop: List[str]):
+    def get_completions(self, prompt: str, stop: List[str]):
         return self.logger.execute(
             gql(
                 """
-query get_completion($prompt: String!, $temperature: numeric!, $top_p: numeric!, $best_of: Int, $stop: jsonb, $logprobs: Int!, $model: String!) {
-  completions(where: {prompt: {_eq: $prompt}, temperature: {_eq: $temperature}, top_p: {_eq: $top_p}, stop: {_eq: $stop}, logprobs: {_eq: $logprobs}, model: {_eq: $model}, best_of:"""
-                + ("{_is_null: true}" if best_of is None else "{_eq: $best_of}")
-                + """}) {
+query get_completion($prompt: String!, $temperature: numeric!, $top_p: numeric!, $stop: jsonb, $logprobs: Int!, $model: String!) {
+  completions(where: {prompt: {_eq: $prompt}, temperature: {_eq: $temperature}, top_p: {_eq: $top_p}, stop: {_eq: $stop}, logprobs: {_eq: $logprobs}, model: {_eq: $model}}) {
     prompt
     completion
     top_logprobs
@@ -160,7 +153,6 @@ query get_completion($prompt: String!, $temperature: numeric!, $top_p: numeric!,
 }"""
             ),
             variable_values=dict(
-                **({} if best_of is None else dict(best_of=best_of)),
                 logprobs=self.logprobs,
                 model="gpt3" if ENGINE == "text-davinci-002" else ENGINE,
                 prompt=prompt,
