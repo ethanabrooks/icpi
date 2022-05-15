@@ -39,9 +39,6 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     def get_value(self, trajectory: List[TimeStep]) -> float:
         return get_value(*trajectory, gamma=self.env.gamma())
 
-    def ready(self) -> bool:
-        return len(self.success_buffer) > 0
-
     def predict(
         self,
         query: List[str],
@@ -68,6 +65,9 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         if self.debug >= 4:
             breakpoint()
         return completion
+
+    def ready(self) -> bool:
+        return len(self.success_buffer) > 0
 
     def sample(self):
         successful = list(self.success_buffer)
