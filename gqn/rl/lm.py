@@ -60,7 +60,7 @@ query get_completion($prompt: String!, $temperature: numeric!, $top_p: numeric!,
     def clip_prompt(self, prompt: str) -> str:
         tokens = self.tokenizer(prompt)["input_ids"]
         tokens = tokens[-self.max_prompt_tokens() :]
-        return self.tokenizer.decode(tokens)
+        return self.tokenizer.decode(tokens, skip_special_tokens=True)
 
     @abstractmethod
     def max_prompt_tokens(self) -> int:
