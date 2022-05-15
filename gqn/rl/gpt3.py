@@ -150,8 +150,7 @@ class GPT3:
             except openai.error.InvalidRequestError as e:
                 print("Invalid request error:")
                 print(e)
-                _, *prompts = prompt.split("\n")
-                prompt = "\n".join(prompts)
+                breakpoint()
                 continue
 
             top_logprobs = [l.to_dict() for l in choice.logprobs.top_logprobs]
