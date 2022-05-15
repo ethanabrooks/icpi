@@ -112,6 +112,7 @@ class GPT3:
         wait_time = self.wait_time
         while True:
             # print("Prompt:", prompt.split("\n")[-1])
+            wait_time = min(wait_time, 60)
             sys.stdout.flush()
             try:
                 time.sleep(wait_time)
