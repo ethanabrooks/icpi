@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import List, Optional
 
 import openai
+from rl.common import Colorize
 from run_logger import HasuraLogger
 from transformers import GPT2TokenizerFast
 
@@ -99,9 +100,10 @@ class GPT3:
                     print(">", end="")
                 return completion
             elif self.require_cache:
-                print("No completions found in cache for prompt:")
                 print(prompt)
+                Colorize.print_warning("No completions found in cache for this prompt.")
                 breakpoint()
+                exit()
 
         self.print("Prompt:")
         self.print(prompt)
