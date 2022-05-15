@@ -1,4 +1,5 @@
 import abc
+import itertools
 from dataclasses import dataclass
 from typing import Deque, Generic, List, Union
 
@@ -90,7 +91,12 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     def sample_best(self):
         trajectories = list(self.success_buffer)
         if not self.env.partially_observable():
-            trajectories = sub_trajectories(*trajectories)
+            trajectories = [
+                t[i:j]
+                for t in trajectories
+                for i, j in itertools.combinations(range(len(t) + 1), 2)
+                if self.get_value(t[i:j]) > self.env.failure_threshold()
+            ]
         self.rng.shuffle(trajectories)
         prompts = [to_string(*t, env=self.env) for t in trajectories]
         return list(prompts)[: self.prompt_size]
