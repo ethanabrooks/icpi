@@ -22,11 +22,13 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
     hint: bool
 
     def action(self, action_str: Optional[str]) -> Optional[ActType]:
+        action_space = self.action_space
+        assert isinstance(action_space, gym.spaces.Discrete)
         try:
             actions = [
                 a
-                for a, _action_str in enumerate(self.actions())
-                if _action_str == action_str
+                for a in range(action_space.n)
+                if self.action_str(a) == (action_str + self.action_stop())
             ]
             [action] = actions
             return action
