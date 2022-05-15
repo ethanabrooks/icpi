@@ -111,15 +111,15 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         prompts = [to_string(*t, env=self.env) for t in trajectories]
         return list(prompts)[: self.prompt_size]
 
-    def generate_action(self, completions: List[str]) -> Optional[str]:
+    def generate_action(self, state_or_reward: str) -> Optional[str]:
         maybe_action = self.predict(
-            completions,
+            [state_or_reward],
             get_prompts=self.sample_best,
             name="action",
-            stop=[self.env.state_stop(), self.env.action_stop()],
+            stop=[self.env.action_stop(), self.env.state_stop()],
         )
-        if maybe_action is None:
-            return self.env.action_str(self.env.action_space.sample())
+        # if maybe_action is None:
+        #     return self.env.action_str(self.env.action_space.sample())
         return maybe_action
 
 
@@ -196,12 +196,7 @@ class Q(Model[ObsType, ActType]):
             completions.append(state_or_reward)
             if self.env.done(*completions):
                 break
-            action_str = self.predict(
-                [state_or_reward],
-                get_prompts=self.sample_best,
-                name="action",
-                stop=[self.env.action_stop(), self.env.state_stop()],
-            )
+            action_str = self.generate_action(state_or_reward)
             if self.env.action(action_str) is None and self.debug >= 3:
                 print(self.env.actions())
                 print(action_str)
