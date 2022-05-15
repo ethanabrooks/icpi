@@ -57,7 +57,9 @@ def train(
     if model_name in OPENAI_MODELS:
         lm = GPT3(**kwargs)
     elif model_name in HF_MODELS:
-        lm = HuggingFaceModel(**kwargs)
+        del kwargs["wait_time"]
+        kwargs["model_name"] = HF_MODELS[kwargs["model_name"]]
+        lm = HuggingFaceModel(seed=seed, **kwargs)
     else:
         raise RuntimeError(f"Unknown model {model_name}")
 
