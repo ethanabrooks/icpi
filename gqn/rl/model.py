@@ -47,11 +47,11 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         query: List[str],
         get_prompts: Callable[[], List[str]],
         name: str,
-        stop: str,
+        stop: List[str],
     ) -> Optional[str]:
         prompts = get_prompts()
 
-        new_prompt = "".join([*prompts, "".join(query)])
+        new_prompt = "\n".join([*prompts, " ".join(query)])
         if self.debug >= 2:
             print()
             print(" ".join(prompts), end="")
@@ -59,7 +59,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         if self.debug >= 4:
             breakpoint()
         completion = self.lm(
-            new_prompt, stop=[stop], temperature=self.temperature, use_cache=True
+            new_prompt, stop=stop, temperature=self.temperature, use_cache=True
         )
 
         if self.debug >= 2:
@@ -67,7 +67,6 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             Colorize.print_cyan(completion)
         if self.debug >= 4:
             breakpoint()
-        completion += stop
         return completion
 
     def sample(self):
@@ -117,7 +116,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             completions,
             get_prompts=self.sample_best,
             name="action",
-            stop=self.env.action_stop(),
+            stop=[self.env.state_stop(), self.env.action_stop()],
         )
         if maybe_action is None:
             return self.env.action_str(self.env.action_space.sample())
@@ -182,19 +181,12 @@ class Q(Model[ObsType, ActType]):
             if t == self.max_steps:
                 break
             else:
-                prompts = self.sample()
-                new_prompt = "\n".join([*prompts, " ".join(completions)])
-                if self.debug >= 2:
-                    print()
-                    print(new_prompt)
-                if self.debug >= 4:
-                    breakpoint()
-
-                state_or_reward, *_ = self.lm(
-                    new_prompt,
+                state_or_reward = self.predict(
+                    completions,
+                    get_prompts=self.sample,
+                    name="state/reward",
                     stop=[self.env.action_stop(), self.env.state_stop()],
-                    temperature=self.temperature,
-                ).split(self.env.state_stop())
+                )
                 state_or_reward = state_or_reward.lstrip() + self.env.state_stop()
             if self.debug >= 2:
                 Colorize.print_blue("state/reward", end=" ")
