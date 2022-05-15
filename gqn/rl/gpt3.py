@@ -5,10 +5,12 @@ from typing import List
 
 import openai
 from run_logger import HasuraLogger
+from transformers import GPT2TokenizerFast
 
 from gql import gql
 
 ENGINE = "text-davinci-002"
+MAX_TOKENS = 4000
 
 
 def post_completion(
@@ -56,6 +58,7 @@ class GPT3:
     require_cache: bool = False
 
     def __post_init__(self):
+        self.tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
         self.start_time = time.time()
         assert self.logprobs <= 5
 
@@ -69,6 +72,11 @@ class GPT3:
     ):
         if self.debug >= 0:
             print("<", end="")
+
+        tokens = self.tokenizer(prompt)["input_ids"]
+        max_tokens = MAX_TOKENS - self.max_tokens - 100
+        tokens = tokens[-max_tokens:]
+        prompt = self.tokenizer.decode(tokens)
 
         if use_cache:
             completions = self.get_completions(prompt, stop=stop)
