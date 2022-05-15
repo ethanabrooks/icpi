@@ -1,5 +1,6 @@
 import os
 import sys
+from itertools import chain
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional, Union
 
@@ -115,12 +116,13 @@ class HuggingFaceModel(LM):
             self.generate_fn = self.model.generate
 
         if self.stop:
+            stop_ids = list(set(chain.from_iterable(
+                self.tokenizer.encode(s, add_special_tokens=False)
+                for s in self.stop
+            )))
             self.stopping_criteria = StoppingCriteriaList()
             self.stopping_criteria.append(
-                TokenStoppingCriteria(
-                    self.tokenizer.encode(list(set(self.stop)) + [""], add_special_tokens=False),
-                    device=self.local_device,
-                )
+                TokenStoppingCriteria(stop_ids, device=self.local_device)
             )
 
     def get_full_completion(
