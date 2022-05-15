@@ -8,6 +8,8 @@ from run_logger import HasuraLogger
 
 from gql import gql
 
+ENGINE = "text-davinci-002"
+
 
 def post_completion(
     best_of: Optional[int],
@@ -23,8 +25,8 @@ def post_completion(
     return logger.execute(
         query=gql(
             """
-mutation post_completion($prompt: String!, $completion: String!, $temperature: numeric!, $top_p: numeric!, $logprobs: Int!, $top_logprobs: jsonb!, $best_of: Int, $stop: jsonb) {
-  insert_completions_one(object: {completion: $completion, prompt: $prompt, temperature: $temperature, top_p: $top_p, logprobs: $logprobs, top_logprobs: $top_logprobs, best_of: $best_of, stop: $stop}, on_conflict: {constraint: completions_pkey1, update_columns: [completion, logprobs, temperature, top_p, stop, best_of]}) {
+mutation post_completion($prompt: String!, $completion: String!, $temperature: numeric!, $top_p: numeric!, $logprobs: Int!, $top_logprobs: jsonb!, $best_of: Int, $stop: jsonb, $model: String!) {
+  insert_completions_one(object: {completion: $completion, prompt: $prompt, temperature: $temperature, top_p: $top_p, logprobs: $logprobs, top_logprobs: $top_logprobs, best_of: $best_of, stop: $stop, model: $model}) {
     completion
     stop
   }
@@ -35,6 +37,7 @@ mutation post_completion($prompt: String!, $completion: String!, $temperature: n
             best_of=best_of,
             completion=completion,
             logprobs=logprobs,
+            model=ENGINE,
             prompt=prompt,
             stop=stop,
             temperature=temperature,
@@ -93,7 +96,7 @@ class GPT3:
             sys.stdout.flush()
             try:
                 choice, *_ = openai.Completion.create(
-                    engine="text-davinci-002",
+                    engine=ENGINE,
                     max_tokens=self.max_tokens,
                     prompt=prompt,
                     logprobs=self.logprobs,
@@ -140,8 +143,8 @@ class GPT3:
         return self.logger.execute(
             gql(
                 """
-query get_completion($prompt: String!, $temperature: numeric!, $top_p: numeric!, $best_of: Int, $stop: jsonb, $logprobs: Int!) {
-  completions(where: {prompt: {_eq: $prompt}, temperature: {_eq: $temperature}, top_p: {_eq: $top_p}, stop: {_eq: $stop}, logprobs: {_eq: $logprobs}, best_of:"""
+query get_completion($prompt: String!, $temperature: numeric!, $top_p: numeric!, $best_of: Int, $stop: jsonb, $logprobs: Int!, $model: String!) {
+  completions(where: {prompt: {_eq: $prompt}, temperature: {_eq: $temperature}, top_p: {_eq: $top_p}, stop: {_eq: $stop}, logprobs: {_eq: $logprobs}, model: {_eq: $model}, best_of:"""
                 + ("{_is_null: true}" if best_of is None else "{_eq: $best_of}")
                 + """}) {
     prompt
@@ -153,6 +156,7 @@ query get_completion($prompt: String!, $temperature: numeric!, $top_p: numeric!,
             variable_values=dict(
                 **({} if best_of is None else dict(best_of=best_of)),
                 logprobs=self.logprobs,
+                model="gpt3" if ENGINE == "text-davinci-002" else ENGINE,
                 prompt=prompt,
                 stop=stop,
                 temperature=self.temperature,
