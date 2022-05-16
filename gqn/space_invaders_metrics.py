@@ -37,7 +37,7 @@ class Encoder(BaseEncoder):
         hint = ", ".join(
             [
                 f"ship==alien{a.i}_x" if a.over(state.agent) else f"ship!=alien{a.i}_x"
-                for a in state.aliens
+                for a in state.alien
             ]
         )
         return f"[{hint}]."
@@ -57,7 +57,7 @@ class Encoder(BaseEncoder):
             return ""
         if ts.reward == 0:
             return "missed;"
-        in_range = [a.i for a in ts.state.aliens if a.over(ts.state.agent)]
+        in_range = [a.i for a in ts.state.alien if a.over(ts.state.agent)]
         aliens_hit = " and ".join([f"alien{i}" for i in in_range])
         return f"hit {aliens_hit};"
 
@@ -65,7 +65,7 @@ class Encoder(BaseEncoder):
         return self.action_query(ts.state) + " " + self.action_str(ts.action)
 
     def state_str(self, state: Obs) -> str:
-        aliens = ", ".join([f"alien{a.i}={(a.xy.x, a.xy.y)}" for a in state.aliens])
+        aliens = ", ".join([f"alien{a.i}={(a.xy.x, a.xy.y)}" for a in state.alien])
         # ship = f"ship={(state.agent, 0)}"
         # aliens = ", ".join([f"alien{a.i}={a.x}" for a in state.aliens])
         ship = f"ship={state.agent}"
@@ -75,7 +75,7 @@ class Encoder(BaseEncoder):
         return [":", ";", "."]
 
     def terminal_reward_str(self, ts: TimeStep[Obs, int]) -> str:
-        landed = [a.i for a in ts.next_state.aliens if a.landed()]
+        landed = [a.i for a in ts.next_state.alien if a.landed()]
         if landed:
             return " and ".join([f"alien{i}" for i in landed]) + " landed."
         else:
@@ -160,7 +160,7 @@ class Transition(BaseTransition):
 
 
 def hopeless(s: Obs) -> bool:
-    return any([abs(s.agent - a.xy.x) > a.xy.y for a in s.aliens])
+    return any([abs(s.agent - a.xy.x) > a.xy.y for a in s.alien])
 
 
 def collect_trajectory(

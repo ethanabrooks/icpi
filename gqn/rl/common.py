@@ -73,17 +73,12 @@ def make_env(env_id: str, seed: int, hint: bool) -> Env:
             max_episode_steps=8,
         )
     elif env_id == "space-invaders":
-        max_step = 8
-        env = TimeLimit(
-            space_invaders.Env(
-                width=3,
-                height=4,
-                max_aliens=2,
-                max_step=max_step,
-                random_seed=seed,
-                hint=hint,
-            ),
-            max_episode_steps=max_step,
+        env = space_invaders.Env(
+            width=3,
+            height=4,
+            max_return=3,
+            random_seed=seed,
+            hint=hint,
         )
     elif env_id == "umbrella":
         raise NotImplementedError()
