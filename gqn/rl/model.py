@@ -216,11 +216,11 @@ class Q(Model[ObsType, ActType]):
             if t == self.max_steps:
                 break
             next_state, reward, done, _ = env.step(action)
-            if done:
-                break
             ts = TimeStep(state, action, reward, done, next_state)
             state = next_state
             completions.append(self.env.ts_to_string(ts))
+            if done:
+                break
             query = [initial_str, self.env.state_str(state)]
             action_str = self.generate_action(query)
             action = self.env.action(action_str)
