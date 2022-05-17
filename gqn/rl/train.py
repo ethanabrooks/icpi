@@ -94,7 +94,7 @@ def train(
         log_info = dict(
             success_buffer_size=len(success_buffer),
             use_model_prob=use_model_prob,
-            gamma=env.gamma(),
+            gamma=env.log_gamma(),
             start_time=start_time,
             step=T,
             local_rank=local_rank,
