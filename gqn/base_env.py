@@ -62,6 +62,10 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
     def gamma() -> float:
         ...
 
+    @classmethod
+    def log_gamma(cls) -> float:
+        return 1.0
+
     @abc.abstractmethod
     def quantify(self, value: str) -> float:
         ...

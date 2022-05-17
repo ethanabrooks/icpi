@@ -49,6 +49,10 @@ class Env(base_env.Env[int, int]):
         return 0.9
 
     @classmethod
+    def log_gamma(cls) -> float:
+        return cls.gamma()
+
+    @classmethod
     def quantify(cls, prompt: str) -> float:
         success = prompt.endswith(REWARDS[1.0] + cls.state_stop())
         length = prompt.count(cls.action_stop()) - 1
