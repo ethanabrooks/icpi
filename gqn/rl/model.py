@@ -201,7 +201,6 @@ class Q(Model[ObsType, ActType]):
                 print(self.env.actions())
                 print(action_str)
                 breakpoint()
-                break
 
             action_str = action_str.lstrip() + self.env.action_stop()
             t += 1
