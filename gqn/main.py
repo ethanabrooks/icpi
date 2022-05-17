@@ -41,6 +41,14 @@ def no_logging(
         params.update(run_logger.get_load_params(load_id=load_id, logger=logger))
 
     train(**params, logger=logger, require_cache=require_cache)
+    main_fn = train
+    if isinstance(params["seed"], list):
+        seeds = list(params["seed"])
+        for seed in seeds:
+            params.update(seed=seed)
+            main_fn(**params, logger=logger, require_cache=require_cache)
+    else:
+        train(**params, logger=logger, require_cache=require_cache)
 
 
 @tree.subcommand(parsers=dict(name=argument("name")))
@@ -87,7 +95,13 @@ def log(
     if require_cache not in params:
         params.update(require_cache=require_cache)
 
-    train(**params, debug=0, logger=logger)
+    if isinstance(params["seed"], list) and sweep_id is None:
+        seeds = list(params["seed"])
+        for seed in seeds:
+            params.update(seed=seed)
+            train(**params, debug=0, logger=logger)
+    else:
+        train(**params, debug=0, logger=logger)
 
 
 if __name__ == "__main__":
