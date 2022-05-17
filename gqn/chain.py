@@ -62,11 +62,12 @@ class Env(base_env.Env[int, int]):
     def initial_str(cls) -> str:
         return "\nstate, reward = reset()\n"
 
+    @classmethod
+    def log_gamma(cls) -> float:
+        return cls.gamma()
+
     def max_trajectory(self) -> int:
         return 2 + max(self.n - self.goal, self.goal)
-
-    def partially_observable(self) -> bool:
-        return False
 
     def render(self, mode="human"):
         pass
