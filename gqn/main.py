@@ -49,9 +49,9 @@ def no_logging(
         seeds = list(params["seed"])
         for seed in seeds:
             params.update(seed=seed)
-            main_fn(**params, logger=logger, require_cache=require_cache)
+            main_fn(**params, logger=logger)
     else:
-        main_fn(**params, logger=logger, require_cache=require_cache)
+        main_fn(**params, logger=logger)
 
 
 @tree.subcommand(parsers=dict(name=argument("name")))
