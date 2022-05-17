@@ -1,7 +1,6 @@
 import sys
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 import openai
 from rl.common import Colorize
@@ -16,18 +15,9 @@ MAX_TOKENS_ACCEPTED_BY_LM = 4000
 
 @dataclass
 class GPT3(LM):
-    wait_time: Optional[float]
-
     def __post_init__(self):
         self.tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
         self.start_time = time.time()
-        if self.wait_time is None:
-            if self.model_name == "code-davinci-002":
-                self.wait_time = 4
-            elif self.model_name in ["text-davinci-002", "gpt3"]:
-                self.wait_time = 0
-            else:
-                raise ValueError(f"Unknown model {self.model_name}")
         assert self.logprobs <= 5
 
     def get_full_completion(
@@ -59,13 +49,10 @@ class GPT3(LM):
         self.print(prompt)
         if self.debug >= 5:
             breakpoint()
-        wait_time = self.wait_time
         while True:
             # print("Prompt:", prompt.split("\n")[-1])
-            wait_time = min(wait_time, 60)
             sys.stdout.flush()
             try:
-                time.sleep(wait_time)
                 tick = time.time()
                 choice, *_ = openai.Completion.create(
                     engine="text-davinci-002"
@@ -97,9 +84,6 @@ class GPT3(LM):
                 print(type(e))
                 print(e)
                 sys.stdout.flush()
-                wait_time *= 2
-                if wait_time == 0:
-                    wait_time = 1
                 continue
             except openai.error.InvalidRequestError as e:
                 print("Invalid request error:")
