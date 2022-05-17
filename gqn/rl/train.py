@@ -9,7 +9,7 @@ import openai
 from rl.common import evaluate, get_value, make_env, make_log, print_rank0
 from rl.gpt3 import OPENAI_MODELS
 from rl.huggingface import HF_MODELS
-from rl.model import GPT3, HuggingFaceModel, Pi, Q, TimeStep, to_string
+from rl.model import GPT3, HuggingFaceModel, Pi, TimeStep, to_string
 from run_logger import HasuraLogger
 
 
@@ -73,17 +73,17 @@ def train(
         success_buffer=success_buffer,
         temperature=0,
     )
-    q = Q(
-        buffer=buffer,
-        debug=debug,
-        env=env,
-        lm=lm,
-        max_resamples=max_resamples,
-        max_steps=env.max_trajectory(),
-        rng=rng,
-        success_buffer=success_buffer,
-        temperature=temperature,
-    )
+    # q = Q(
+    #     buffer=buffer,
+    #     debug=debug,
+    #     env=env,
+    #     lm=lm,
+    #     max_resamples=max_resamples,
+    #     max_steps=env.max_trajectory(),
+    #     rng=rng,
+    #     success_buffer=success_buffer,
+    #     temperature=temperature,
+    # )
 
     T = 0
     episodes = 0
@@ -109,11 +109,11 @@ def train(
         t = 0
         rewards = []
         while not done:
-            use_model = (rng.random() < use_model_prob) and q.ready()
-            if use_model:
-                action = q.act(trajectory, state)
-            else:
-                action = env.action_space.sample()
+            # use_model = (rng.random() < use_model_prob) and q.ready()
+            # if use_model:
+            #     action = q.act(trajectory, state)
+            # else:
+            action = env.action_space.sample()
             next_state, reward, done, info = env.step(action)
             step = TimeStep(state, action, reward, done, next_state)
             env.ts_to_string(step)
