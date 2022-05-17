@@ -45,7 +45,13 @@ def no_logging(
     main_fn = train
     if params["model_name"].startswith("baseline"):
         main_fn = deep_baseline
-    main_fn(**params, logger=logger, require_cache=require_cache)
+    if isinstance(params["seed"], list):
+        seeds = list(params["seed"])
+        for seed in seeds:
+            params.update(seed=seed)
+            main_fn(**params, logger=logger, require_cache=require_cache)
+    else:
+        main_fn(**params, logger=logger, require_cache=require_cache)
 
 
 @tree.subcommand(parsers=dict(name=argument("name")))
@@ -96,7 +102,13 @@ def log(
     if params["model_name"].startswith("baseline"):
         main_fn = deep_baseline
 
-    main_fn(**params, debug=0, logger=logger)
+    if isinstance(params["seed"], list) and sweep_id is None:
+        seeds = list(params["seed"])
+        for seed in seeds:
+            params.update(seed=seed)
+            main_fn(**params, debug=0, logger=logger)
+    else:
+        main_fn(**params, debug=0, logger=logger)
 
 
 if __name__ == "__main__":
