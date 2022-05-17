@@ -167,7 +167,7 @@ class Q(Model[ObsType, ActType]):
         self.rng.shuffle(action_values)
         action, value = max(
             action_values,
-            key=lambda x: (self.env.quantify(x[1]), self.rng.random()),
+            key=lambda x: (self.get_value(x[1]), self.rng.random()),
         )
 
         if self.debug >= 1:
@@ -185,10 +185,11 @@ class Q(Model[ObsType, ActType]):
                 ]
                 trajectory_str = "".join(trajectory_strings)
                 print("value:", trajectory_str, end="")
-                if not v.startswith(trajectory_str):
+                rollout = to_string(*v, env=self.env)
+                if not rollout.startswith(trajectory_str):
                     print(trajectory_str)
                     breakpoint()
-                Colorize.print_cyan(v[len(trajectory_str) :])
+                Colorize.print_cyan(rollout[len(trajectory_str) :])
             Colorize.print_blue("chosen", end=" ")
             Colorize.print_cyan(action)
         if self.debug >= 3:
@@ -201,14 +202,16 @@ class Q(Model[ObsType, ActType]):
             and super().ready()
         )
 
-    def value(self, trajectory: List[TimeStep], state: ObsType, action: ActType) -> str:
+    def value(
+        self, trajectory: List[TimeStep], state: ObsType, action: ActType
+    ) -> List[TimeStep]:
         if self.debug >= 2:
             Colorize.print_header(
                 f"Computing Q value for state {state} and action {action}:"
             )
         t = 0
         initial_str = self.env.initial_str()
-        completions = [initial_str]
+        time_steps = []
 
         env = deepcopy(self.env)
 
@@ -218,7 +221,7 @@ class Q(Model[ObsType, ActType]):
             next_state, reward, done, _ = env.step(action)
             ts = TimeStep(state, action, reward, done, next_state)
             state = next_state
-            completions.append(self.env.ts_to_string(ts))
+            time_steps.append(ts)
             if done:
                 break
             query = [initial_str, self.env.state_str(state)]
@@ -226,7 +229,7 @@ class Q(Model[ObsType, ActType]):
             action = self.env.action(action_str)
             t += 1
 
-        return "".join(completions)
+        return time_steps
 
 
 class Pi(Model[ObsType, ActType]):
