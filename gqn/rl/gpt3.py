@@ -64,6 +64,9 @@ class GPT3(LM):
                     temperature=0.1,
                     stop=stop,
                 ).choices
+                if not use_cache:
+                    print("HERE")
+                    breakpoint()
 
                 if self.logger.run_id is not None:
                     self.logger.log(

@@ -179,37 +179,37 @@ class Q(Model[ObsType, ActType]):
 
         while True:
             if t == self.max_steps:
+                Colorize.print_green("OUT OF TIME")
                 break
-            else:
-                state_or_reward = self.predict(
-                    completions,
-                    get_prompts=self.sample,
-                    name="state/reward",
-                    stop=[self.env.action_stop(), self.env.state_stop()],
-                )
-                state_or_reward = state_or_reward.lstrip() + self.env.state_stop()
-            if self.debug >= 2:
-                Colorize.print_blue("state/reward", end=" ")
-                Colorize.print_cyan(state_or_reward)
-            if self.debug >= 4:
-                breakpoint()
-            completions.append(state_or_reward)
+            predicted_state = self.predict(
+                completions,
+                get_prompts=self.sample,
+                name="state",
+                stop=[self.env.state_stop(), "\n"],
+            )
+            predicted_state = predicted_state.lstrip() + self.env.state_stop()
+            completions.append(predicted_state)
             if self.env.done(*completions):
+                if self.debug >= 1:
+                    Colorize.print_green("DONE")
                 break
-            action_str = self.generate_action(state_or_reward)
-            if self.env.action(action_str) is None and self.debug >= 3:
-                print(self.env.actions())
-                print(action_str)
-                breakpoint()
+            if self.env.reward_stop() is not None:
+                reward_end = predicted_state.index(self.env.reward_stop())
+                # remove reward from query
+                query = predicted_state[reward_end + 1 :].lstrip()
+            else:
+                query = predicted_state
+            action_str = self.generate_action(query)
+            if self.env.action(action_str) is None:
+                if self.debug >= 3:
+                    Colorize.print_warning("Invalid action:")
+                    print(self.env.actions())
+                    print(action_str)
+                    breakpoint()
 
             action_str = action_str.lstrip() + self.env.action_stop()
             t += 1
 
-            if self.debug >= 2:
-                Colorize.print_blue("action", end=" ")
-                Colorize.print_cyan(action_str)
-            if self.debug >= 4:
-                breakpoint()
             completions.append(action_str)
 
         return " ".join(completions)

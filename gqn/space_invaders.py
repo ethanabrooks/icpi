@@ -62,6 +62,9 @@ class Env(base_env.Env[Obs, int]):
 
     def done(self, *completions: str) -> bool:
         *_, state_or_reward = completions
+        # print("##################", state_or_reward)
+        if not self.hint:
+            raise NotImplementedError()
         if (
             "A.y==0" in state_or_reward
             or self.quantify(" ".join(completions), gamma=1) >= self.max_return
@@ -101,6 +104,9 @@ class Env(base_env.Env[Obs, int]):
         self.t = 0
         return Obs(self.agent, self.alien)
 
+    def reward_stop(self) -> Optional[str]:
+        return "}"
+
     def state_stop(self) -> str:
         return ";"
 
@@ -116,8 +122,8 @@ class Env(base_env.Env[Obs, int]):
 
         return ", ".join(
             [
-                "S.x " + ("==" if state.agent == state.alien.x else "!=") + " A.x",
-                "A.y " + ("==" if 0 == state.alien.y else "!=") + " 0",
+                "S.x" + ("==" if state.agent == state.alien.x else "!=") + "A.x",
+                "A.y" + ("==" if 0 == state.alien.y else "!=") + "0",
             ]
         )
 
@@ -156,15 +162,13 @@ class Env(base_env.Env[Obs, int]):
         description = f"{self.state_str(ts.state)} {self.action_str(ts.action)}"
         if ts.action == 1:
             if ts.state.alien.over(ts.state.agent):
-                description += " got 1!"
+                description += " {got 1}"
             else:
-                description += " missed!"
+                description += " {missed}"
+        else:
+            description += " {didn't shoot}"
         if ts.done:
-            description += f" {self._state_without_status_str(ts.next_state)}"
-            landed = ts.next_state.alien.landed()
-            if landed:
-                description += " failed!"
-            description += self.state_stop()
+            description += f" {self._state_str(ts.next_state)}"
         return description
 
 

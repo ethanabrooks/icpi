@@ -71,6 +71,10 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
         ...
 
     @staticmethod
+    def reward_stop() -> Optional[str]:
+        return None
+
+    @staticmethod
     def state_stop() -> str:
         return "."
 
