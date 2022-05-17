@@ -42,15 +42,13 @@ def no_logging(
     if load_id is not None:
         params.update(run_logger.get_load_params(load_id=load_id, logger=logger))
 
-    train(**params, logger=logger, require_cache=require_cache)
-    main_fn = train
     if isinstance(params["seed"], list):
         seeds = list(params["seed"])
         for seed in seeds:
             params.update(seed=seed)
-            main_fn(**params, logger=logger, require_cache=require_cache)
+            train(**params, logger=logger)
     else:
-        train(**params, logger=logger, require_cache=require_cache)
+        train(**params, logger=logger)
 
 
 @tree.subcommand(parsers=dict(name=argument("name")))
