@@ -37,6 +37,8 @@ def no_logging(
 ):
     logger = HasuraLogger(GRAPHQL_ENDPOINT)
     params = dict(get_config_params(config), debug=debug)
+    if "require_cache" not in params:
+        params.update(require_cache=require_cache)
     if load_id is not None:
         params.update(run_logger.get_load_params(load_id=load_id, logger=logger))
 
@@ -92,7 +94,7 @@ def log(
         load_id=None,
         sweep_id=sweep_id,
     )
-    if require_cache not in params:
+    if "require_cache" not in params:
         params.update(require_cache=require_cache)
 
     if isinstance(params["seed"], list) and sweep_id is None:
