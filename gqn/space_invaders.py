@@ -131,9 +131,6 @@ class Env(base_env.Env[Obs, int]):
     def max_trajectory(self) -> int:
         return self.width * self.optimal_undiscounted
 
-    def optimal(self) -> float:
-        return sum(t ** self.gamma() for t in range(self.optimal_undiscounted))
-
     def render(self, mode="human"):
         pass
 
@@ -185,7 +182,7 @@ class Env(base_env.Env[Obs, int]):
 
         self.t += 1
         self.alien = self.alien.descend()
-        info = dict(optimal=self.optimal())
+        info = dict(optimal=self.optimal_undiscounted)
         self.agent += action - 1
         self.agent = int(np.clip(self.agent, 0, self.width - 1))
         max_return = self.r >= self.optimal_undiscounted
