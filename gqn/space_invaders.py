@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from typing import Iterable, NamedTuple, Optional, Tuple
 
@@ -62,11 +63,8 @@ class Env(base_env.Env[Obs, int]):
 
     def done(self, *completions: str) -> bool:
         *_, state_or_reward = completions
-        # print("##################", state_or_reward)
-        if not self.hint:
-            raise NotImplementedError()
         if (
-            "A.y==0" in state_or_reward
+            bool(re.findall(r"A=\(\d+, 0\)", state_or_reward))
             or self.quantify(" ".join(completions), gamma=1) >= self.max_return
         ):
             return True
