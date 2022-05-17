@@ -3,6 +3,7 @@ import itertools
 import math
 import operator
 from collections import Counter, defaultdict
+from copy import deepcopy
 from dataclasses import dataclass
 from functools import reduce
 from typing import Callable, Deque, Generic, Hashable, Iterable, List, Optional, Union
@@ -207,50 +208,22 @@ class Q(Model[ObsType, ActType]):
             )
         t = 0
         initial_str = self.env.initial_str()
-        state_str = self.env.state_str(state)
-        action_str = self.env.action_str(action)
-        completions = [s for s in [initial_str, state_str, action_str] if s]
-        query = list(completions)
+        completions = [initial_str]
 
-        def sample() -> List[str]:
-            return self.sample(action=action)
+        env = deepcopy(self.env)
 
-        max_prompts = unique_permutations(sample())
         while True:
             if t == self.max_steps:
                 break
-            if self.env.reward_stop():
-                reward_str = self.predict(
-                    completions,
-                    max_prompts=max_prompts,
-                    name="reward",
-                    get_prompts=sample,
-                    stop=self.env.reward_stop(),
-                    valid=self.env.valid_reward,
-                )
-                if reward_str is None:
-                    break
-                completions.append(reward_str)
-                query.append(reward_str)
-            state_str = self.predict(
-                completions,
-                max_prompts=max_prompts,
-                name="state",
-                get_prompts=sample,
-                stop=self.env.state_stop(),
-                valid=self.env.valid_state,
-            )
-            if state_str is None:
+            next_state, reward, done, _ = env.step(action)
+            if done:
                 break
-            completions.append(state_str)
-            query = [initial_str, state_str]
-            if self.env.done(*completions):
-                break
-
+            ts = TimeStep(state, action, reward, done, next_state)
+            state = next_state
+            completions.append(self.env.ts_to_string(ts))
+            query = [initial_str, self.env.state_str(state)]
             action_str = self.generate_action(query)
             action = self.env.action(action_str)
-            completions.append(action_str)
-            query.append(action_str)
             t += 1
 
         return "".join(completions)
