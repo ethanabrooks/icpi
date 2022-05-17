@@ -102,6 +102,7 @@ def make_log(
     success_buffer_size: int,
     use_model_prob: float,
     gamma: float,
+    seed: int,
     start_time: float,
     step: int,
     evaluation: bool,
@@ -115,6 +116,7 @@ def make_log(
 
     log = dict(
         hours=(time.time() - start_time) / 3600,
+        seed=seed,
         step=step,
         use_model_prob=use_model_prob,
         **{
