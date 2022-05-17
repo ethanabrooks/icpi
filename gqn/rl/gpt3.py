@@ -114,7 +114,7 @@ class GPT3(LM):
             )
 
     def max_prompt_tokens(self) -> int:
-        return MAX_TOKENS_ACCEPTED_BY_LM - self.max_tokens_in_completion - 100
+        return MAX_TOKENS_ACCEPTED_BY_LM - self.max_tokens_in_completion - 200
 
     def print(self, *args, **kwargs):
         if self.debug >= 5:
