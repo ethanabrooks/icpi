@@ -1,4 +1,3 @@
-import json
 import sys
 import time
 from dataclasses import dataclass
@@ -90,6 +89,7 @@ class GPT3(LM):
             except (
                 openai.error.RateLimitError,
                 openai.error.ServiceUnavailableError,
+                openai.error.APIError,
             ) as e:
                 print(type(e))
                 print(e)
@@ -103,8 +103,6 @@ class GPT3(LM):
                 print(e)
                 self.max_tokens_accepted_by_lm -= 100
                 continue
-            except json.decoder.JSONDecodeError:
-                breakpoint()
 
             top_logprobs = [l.to_dict() for l in choice.logprobs.top_logprobs]
             completion = choice.text.lstrip()
