@@ -1,3 +1,4 @@
+import json
 import sys
 import time
 from dataclasses import dataclass
@@ -11,9 +12,6 @@ from transformers import GPT2TokenizerFast
 OPENAI_MODELS = ["code-davinci-002", "text-davinci-002"]
 
 
-MAX_TOKENS_ACCEPTED_BY_LM = 4000
-
-
 @dataclass
 class GPT3(LM):
     wait_time: Optional[float]
@@ -21,6 +19,7 @@ class GPT3(LM):
     def __post_init__(self):
         self.tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
         self.start_time = time.time()
+        self.max_tokens_accepted_by_lm = 4000
         if self.wait_time is None:
             if self.model_name == "code-davinci-002":
                 self.wait_time = 4
@@ -102,8 +101,10 @@ class GPT3(LM):
             except openai.error.InvalidRequestError as e:
                 print("Invalid request error:")
                 print(e)
-                breakpoint()
+                self.max_tokens_accepted_by_lm -= 100
                 continue
+            except json.decoder.JSONDecodeError:
+                breakpoint()
 
             top_logprobs = [l.to_dict() for l in choice.logprobs.top_logprobs]
             completion = choice.text.lstrip()
@@ -128,7 +129,7 @@ class GPT3(LM):
             )
 
     def max_prompt_tokens(self) -> int:
-        return MAX_TOKENS_ACCEPTED_BY_LM - self.max_tokens_in_completion - 100
+        return self.max_tokens_accepted_by_lm - self.max_tokens_in_completion - 100
 
     def print(self, *args, **kwargs):
         if self.debug >= 5:
