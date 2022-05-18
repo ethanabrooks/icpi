@@ -9,7 +9,7 @@ from typing import Optional
 import run_logger
 from dollar_lambda import CommandTree, argument
 from git import Repo
-from rl.baseline import deep_baseline
+from rl.baseline import deep_baseline, tabular_main
 from rl.train import train
 from run_logger import HasuraLogger
 from run_logger.main import get_config_params
@@ -45,6 +45,8 @@ def no_logging(
     main_fn = train
     if params["model_name"].startswith("baseline"):
         main_fn = deep_baseline
+    if params["model_name"] == "tabular-q":
+        main_fn = tabular_main
     if isinstance(params["seed"], list):
         seeds = list(params["seed"])
         for seed in seeds:
@@ -101,6 +103,8 @@ def log(
     main_fn = train
     if params["model_name"].startswith("baseline"):
         main_fn = deep_baseline
+    if params["model_name"] == "tabular-q":
+        main_fn = tabular_main
 
     if isinstance(params["seed"], list) and sweep_id is None:
         seeds = list(params["seed"])
