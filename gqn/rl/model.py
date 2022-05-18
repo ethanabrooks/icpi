@@ -194,9 +194,13 @@ class Q(Model[ObsType, ActType]):
                     Colorize.print_green("DONE")
                 break
             if self.env.reward_stop() is not None:
-                reward_end = predicted_state.index(self.env.reward_stop())
-                # remove reward from query
-                query = predicted_state[reward_end + 1 :].lstrip()
+                try:
+                    reward_end = predicted_state.index(self.env.reward_stop())
+                    # remove reward from query
+                    query = predicted_state[reward_end + 1 :].lstrip()
+                except ValueError:
+                    # no reward stop
+                    query = predicted_state
             else:
                 query = predicted_state
             action_str = self.generate_action(query)
