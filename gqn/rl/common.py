@@ -99,7 +99,7 @@ def make_log(
     logger: HasuraLogger,
     info: dict,
     rewards: List[float],
-    success_buffer_size: int,
+    num_success: int,
     use_model_prob: float,
     gamma: float,
     seed: int,
@@ -124,7 +124,7 @@ def make_log(
             prefix + "undiscounted return": undiscounted,
             prefix + "regret": regret,
             "run ID": logger.run_id,
-            "success buffer": success_buffer_size,
+            "success buffer": num_success,
         },
     )
     print_rank0(local_rank, log, pretty=True)
