@@ -92,7 +92,7 @@ def train(
     while T < total_steps:
         use_model_prob = 1 / (1 + math.exp(2 * (min_successes - len(success_buffer))))
         log_info = dict(
-            success_buffer_size=len(success_buffer),
+            num_success=len(success_buffer),
             use_model_prob=use_model_prob,
             gamma=env.log_gamma(),
             seed=seed,
