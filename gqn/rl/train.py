@@ -110,11 +110,11 @@ def train(
         t = 0
         rewards = []
         while not done:
-            # use_model = (rng.random() < use_model_prob) and q.ready()
-            # if use_model:
-            #     action = q.act(trajectory, state)
-            # else:
-            action = env.action_space.sample()
+            use_model = pi.ready()
+            if use_model:
+                action = pi.act(trajectory, state)
+            else:
+                action = env.action_space.sample()
             next_state, reward, done, info = env.step(action)
             step = TimeStep(state, action, reward, done, next_state)
             env.ts_to_string(step)
