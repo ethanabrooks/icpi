@@ -9,7 +9,7 @@ import openai
 from rl.common import evaluate, get_value, make_env, make_log, print_rank0
 from rl.gpt3 import OPENAI_MODELS
 from rl.huggingface import HF_MODELS
-from rl.model import GPT3, HuggingFaceModel, Pi, Q, TimeStep, to_string
+from rl.model import GPT3, HuggingFaceModel, Q, TimeStep, to_string
 from run_logger import HasuraLogger
 
 
@@ -62,7 +62,7 @@ def train(
     else:
         raise RuntimeError(f"Unknown model {model_name}")
 
-    pi = Pi(
+    q_greedy = Q(
         buffer=buffer,
         debug=debug,
         env=env,
@@ -101,7 +101,7 @@ def train(
             local_rank=local_rank,
         )
         if eval_interval is not None and episodes % eval_interval == 0:
-            evaluate(logger, env, eval_interval, pi.act, **log_info)
+            evaluate(logger, env, eval_interval, q_greedy.act, **log_info)
 
         done = False
         state = env.reset()
