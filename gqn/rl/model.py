@@ -16,11 +16,7 @@ from rl.huggingface import HuggingFaceModel
 
 
 def to_string(*trajectory: TimeStep, env) -> str:
-    return "".join(
-        [env.initial_str()]
-        + [env.ts_to_string(ts) for ts in trajectory]
-        + [env.termination_str(trajectory[-1])]
-    )
+    return "".join([env.initial_str()] + [env.ts_to_string(ts) for ts in trajectory])
 
 
 def product(x):
@@ -38,6 +34,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     env: Env
     debug: int
     lm: Union[GPT3, HuggingFaceModel]
+    max_prompts: int
     max_resamples: int
     max_steps: int
     rng: Generator
@@ -60,22 +57,23 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         self,
         query: List[str],
         get_prompts: Callable[[], List[str]],
-        max_prompts: int,
         name: str,
         stop: str,
         valid: Callable[[str], bool],
     ) -> Optional[str]:
         previous_prompts = set()
-        for _ in range(min(self.max_resamples, max_prompts)):
+        for _ in range(self.max_resamples):
             prompts = get_prompts()
-            while "".join(prompts) in previous_prompts:
+            for _ in range(self.max_prompts):
                 prompts = get_prompts()
-            previous_prompts.add("".join(prompts))
+                if "\n".join(prompts) not in previous_prompts:
+                    break
+            previous_prompts.add("\n".join(prompts))
 
-            new_prompt = "".join([*prompts, "".join(query)])
+            new_prompt = "\n".join([*prompts, "".join(query)])
             if self.debug >= 2:
                 print()
-                print("".join(prompts), end="")
+                print("\n".join(prompts))
                 Colorize.print_bold("".join(query))
             if self.debug >= 4:
                 breakpoint()
@@ -102,27 +100,68 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     def ready(self) -> bool:
         return bool(self.sample_best())
 
-    def sample(self, action: ActType) -> List[str]:
-        trajectories = [
-            trajectory
-            for trajectory in self.buffer
-            if any(ts.action == action for ts in trajectory)
+    def sample_done(self, action: int) -> List[str]:
+        time_steps = [ts for t in self.buffer for ts in t if ts.action == action]
+        done = [ts for ts in time_steps if ts.done]
+        not_done = [ts for ts in time_steps if not ts.done]
+        balanced = [ts for (d, nd) in zip(done, not_done) for ts in [d, nd]]
+        self.rng.shuffle(balanced)
+        return [
+            self.env.state_str(ts.state)
+            + self.env.action_str(ts.action)
+            + self.env.done_str(ts.done)
+            + self.env.done_stop()
+            for ts in balanced
         ]
-        self.rng.shuffle(trajectories)
-        trajectories_by_success = defaultdict(list)
-        for trajectory in trajectories:
-            trajectories_by_success[
-                self.get_value(trajectory) > self.env.failure_threshold()
-            ].append(trajectory)
-        trajectories = [
-            trajectory
-            for trajectories in zip(*trajectories_by_success.values())
-            for trajectory in trajectories
-        ]
-        self.rng.shuffle(trajectories)
-        return [to_string(*t, env=self.env) for t in trajectories]
 
-    def sample_best(self):
+    def sample_next_state(self, action: int) -> List[str]:
+        def get_time_steps(*trajectories: List[TimeStep]) -> List[TimeStep]:
+            return [
+                ts
+                for t in trajectories
+                for ts in t
+                if ts.action == action and not ts.done
+            ]
+
+        successful = get_time_steps(*self.success_buffer)
+        unsuccessful = get_time_steps(
+            *[
+                t
+                for t in self.buffer
+                if self.get_value(t) <= self.env.failure_threshold()
+            ]
+        )
+        if not successful:
+            balanced = unsuccessful
+        elif not unsuccessful:
+            balanced = successful
+        else:
+            balanced = [ts for (s, u) in zip(successful, unsuccessful) for ts in [s, u]]
+        self.rng.shuffle(balanced)
+        return [
+            self.env.state_str(ts.state)
+            + self.env.action_str(ts.action)
+            + self.env.state_str(ts.next_state)
+            for ts in balanced
+        ]
+
+    def sample_reward(self, action: int, done: bool) -> List[str]:
+        rewards = defaultdict(list)
+        for t in self.buffer:
+            for ts in t:
+                if ts.action == action and ts.done == done:
+                    rewards[ts.reward].append(ts)
+        balanced = [ts for time_steps in zip(*rewards.values()) for ts in time_steps]
+        self.rng.shuffle(balanced)
+        return [
+            self.env.state_str(ts.state)
+            + self.env.action_str(ts.action)
+            + self.env.reward_str(ts.reward)
+            + self.env.reward_stop()
+            for ts in balanced
+        ]
+
+    def sample_best(self) -> List[str]:
         trajectories = list(self.success_buffer)
         trajectories = [
             trajectory[start:stop]
@@ -131,17 +170,13 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             if self.get_value(trajectory[start:stop]) > self.env.failure_threshold()
         ]
         self.rng.shuffle(trajectories)
-        prompts = [to_string(*t, env=self.env) for t in trajectories]
-        return list(prompts)
+
+        return [to_string(*t, env=self.env) for t in trajectories]
 
     def generate_action(self, completions: List[str]) -> Optional[str]:
         maybe_action = self.predict(
             completions,
             get_prompts=self.sample_best,
-            max_prompts=unique_permutations(
-                "\n".join([to_string(s, env=self.env) for s in t])
-                for t in self.success_buffer
-            ),
             name="action",
             stop=self.env.action_stop(),
             valid=lambda s: self.env.action(s) is not None,
@@ -178,7 +213,6 @@ class Q(Model[ObsType, ActType]):
                 Colorize.print_blue("action:", end=" ")
                 Colorize.print_cyan(a)
                 trajectory_strings = [
-                    self.env.initial_str(),
                     self.env.state_str(state),
                     self.env.action_str(a),
                 ]
@@ -195,8 +229,17 @@ class Q(Model[ObsType, ActType]):
         return action
 
     def ready(self) -> bool:
+        actions = list(range(self.env.action_space.n))
         return (
-            all(bool(self.sample(a)) for a in range(self.env.action_space.n))
+            all(
+                [bool(self.sample_done(a)) for a in actions]
+                + [bool(self.sample_next_state(a)) for a in actions]
+                + [
+                    bool(self.sample_reward(a, d))
+                    for a in actions
+                    for d in [True, False]
+                ]
+            )
             and super().ready()
         )
 
@@ -209,34 +252,36 @@ class Q(Model[ObsType, ActType]):
         initial_str = self.env.initial_str()
         state_str = self.env.state_str(state)
         action_str = self.env.action_str(action)
-        completions = [s for s in [initial_str, state_str, action_str] if s]
-        query = list(completions)
-
-        def sample() -> List[str]:
-            return self.sample(action=action)
-
-        max_prompts = unique_permutations(sample())
+        completions = [s for s in [state_str, action_str] if s]
         while True:
             if t == self.max_steps:
                 break
-            if self.env.reward_stop():
-                reward_str = self.predict(
-                    completions,
-                    max_prompts=max_prompts,
-                    name="reward",
-                    get_prompts=sample,
-                    stop=self.env.reward_stop(),
-                    valid=self.env.valid_reward,
-                )
-                if reward_str is None:
-                    break
-                completions.append(reward_str)
-                query.append(reward_str)
-            state_str = self.predict(
-                completions,
-                max_prompts=max_prompts,
+            query = [state_str + action_str]
+            done_str = self.predict(
+                query,
                 name="state",
-                get_prompts=sample,
+                get_prompts=lambda: self.sample_done(action),
+                stop=self.env.done_stop(),
+                valid=self.env.valid_done,
+            )
+            completions.append(done_str)
+            done = self.env.done(done_str)
+            reward_str = self.predict(
+                query,
+                name="reward",
+                get_prompts=lambda: self.sample_reward(action=action, done=done),
+                stop=self.env.reward_stop(),
+                valid=self.env.valid_reward,
+            )
+            if reward_str is None:
+                break
+            completions.append(reward_str)
+            if done:
+                break
+            state_str = self.predict(
+                query,
+                name="state",
+                get_prompts=lambda: self.sample_next_state(action=action),
                 stop=self.env.state_stop(),
                 valid=self.env.valid_state,
             )
@@ -244,9 +289,6 @@ class Q(Model[ObsType, ActType]):
                 break
             completions.append(state_str)
             query = [initial_str, state_str]
-            if self.env.done(*completions):
-                break
-
             action_str = self.generate_action(query)
             action = self.env.action(action_str)
             completions.append(action_str)

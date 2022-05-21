@@ -48,7 +48,16 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
         ...
 
     @abc.abstractmethod
-    def done(self, *completions: str) -> bool:
+    def done(self, done_str: str) -> bool:
+        ...
+
+    @staticmethod
+    @abc.abstractmethod
+    def done_stop() -> str:
+        ...
+
+    @abc.abstractmethod
+    def done_str(self, done: bool) -> str:
         ...
 
     @abc.abstractmethod
@@ -82,8 +91,12 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
         matches = re.findall(r"reward == (\d)", prompt)
         return sum([gamma**t * float(x) for t, x in enumerate(matches)])
 
+    @abc.abstractmethod
+    def reward_str(self, reward: float) -> str:
+        ...
+
     @staticmethod
-    def reward_stop() -> Optional[str]:
+    def reward_stop() -> str:
         return "\n"
 
     @staticmethod
@@ -102,6 +115,10 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
         return self.state_str(ts.next_state)
 
     def ts_to_string(self, ts: TimeStep) -> str:
+        ...
+
+    @abc.abstractmethod
+    def valid_done(self, done_str: str) -> bool:
         ...
 
     @abc.abstractmethod

@@ -54,6 +54,7 @@ class Alien(NamedTuple):
 class Obs(NamedTuple):
     agent: int
     alien: Alien
+    num_shot_down: int
 
 
 @dataclass
@@ -90,12 +91,14 @@ class Env(base_env.Env[Obs, int]):
     def alien_str() -> str:
         return "alien"
 
-    def done(self, *completions: str) -> bool:
-        *_, state_or_reward = completions
-        landed = bool(re.findall(r"alien == C\(\d, 0\)", state_or_reward))
-        return_ = self.quantify("".join(completions), gamma=1)
-        max_return = return_ >= self.optimal_undiscounted
-        return landed or max_return
+    def done(self, done_str: str) -> bool:
+        return "assert done" in done_str
+
+    def done_str(self, done: bool) -> str:
+        return f"assert{' ' if done else ' not '}done"
+
+    def done_stop(self) -> str:
+        return "\n"
 
     def failure_threshold(self) -> float:
         return 0
@@ -112,9 +115,9 @@ class Env(base_env.Env[Obs, int]):
                 f"{self.alien_str()}.x "
                 + ("==" if state.alien.over(state.agent) else "!=")
                 + f" {self.ship()}.x",
-                f"{self.alien_str()}.y "
-                + ("==" if state.alien.landed() else ">")
-                + " 0",
+                # f"{self.alien_str()}.y "
+                # + ("==" if state.alien.landed() else ">")
+                # + " 0",
             ]
         )
         # if state.alien.xy is not None:
@@ -126,7 +129,7 @@ class Env(base_env.Env[Obs, int]):
 
     @classmethod
     def initial_str(cls) -> str:
-        return f"\n{cls.ship()}, {cls.alien_str()} = reset()\n"
+        return f"{cls.ship()}, {cls.alien_str()} = reset()\n"
 
     def max_trajectory(self) -> int:
         return self.width * self.optimal_undiscounted
@@ -145,7 +148,15 @@ class Env(base_env.Env[Obs, int]):
         self.alien = Alien.spawn(alien_x, self.height)
         self.t = 0
         self.r = 0
-        return Obs(self.agent, self.alien)
+        return Obs(agent=self.agent, alien=self.alien, num_shot_down=self.r)
+
+    def reward_str(self, reward: float) -> str:
+        string = f"assert reward == {int(reward)}\nalien."
+        if reward == 1:
+            string += "spawn"
+        else:
+            string += "descend"
+        return string
 
     @staticmethod
     def reward_stop() -> str:
@@ -155,18 +166,27 @@ class Env(base_env.Env[Obs, int]):
     def ship() -> str:
         return "ship"
 
+    @staticmethod
+    def state_stop() -> str:
+        return "\n"
+
     def state_str(self, state: Obs) -> str:
-        state_str = f"assert {self.ship()} == C{(state.agent, 0)} and {self.alien_str()} == {str(state.alien)}"
+        assertions = [
+            f"{self.ship()} == C{(state.agent, 0)}",
+            f"{self.alien_str()} == {str(state.alien)}",
+            f"num_shot_down == {state.num_shot_down}",
+        ]
         hint_str = self.hint_str(state)
         if self.hint and hint_str:
-            state_str += f" and {hint_str}"
+            assertions += [hint_str]
+        state_str = "assert " + " and ".join(assertions)
         return state_str + self.state_stop()
 
     def start_states(self) -> Optional[Iterable[Obs]]:
         for agent in range(self.width):
             for alien_x in range(self.width):
                 alien = Alien.spawn(alien_x, self.height)
-                yield Obs(agent, alien)
+                yield Obs(agent, alien, num_shot_down=0)
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
         if action == 1:
@@ -181,37 +201,39 @@ class Env(base_env.Env[Obs, int]):
             self.alien = self.alien.spawn(self.random.choice(self.width), self.height)
 
         self.t += 1
+        max_return = self.r >= self.optimal_undiscounted
+        done = self.alien.landed() or max_return
         self.alien = self.alien.descend()
         info = dict(optimal=self.optimal_undiscounted)
         self.agent += action - 1
         self.agent = int(np.clip(self.agent, 0, self.width - 1))
-        max_return = self.r >= self.optimal_undiscounted
-        done = self.alien.landed() or max_return
         # print(f"landed={landed}, return={self.r}, done={done}")
-        state = Obs(self.agent, self.alien)
+        state = Obs(self.agent, self.alien, self.r)
         return state, reward, done, info
 
     def ts_to_string(self, ts: TimeStep) -> str:
-        reward_str = (
-            "assert "
-            + " and ".join(
-                (["alien is None"] if (ts.reward > 0 and self.hint) else [])
-                + [f"reward == {ts.reward}"]
-            )
-            + f"\nalien.{'spawn' if ts.reward > 0 else 'descend'}"
-        )
-
-        s = "".join(
-            [
-                self.state_str(ts.state),
-                self.action_str(ts.action),
-                reward_str,
-                self.reward_stop(),
-            ]
-        )
-        if self.hint and ts.reward == 1 and "is None" not in s:
+        parts = [
+            self.state_str(ts.state),
+            self.action_str(ts.action),
+            self.reward_str(ts.reward),
+            self.reward_stop(),
+            self.done_str(ts.done),
+        ]
+        if ts.done:
+            parts += [self.state_str(ts.next_state), self.state_stop()]
+        s = "".join(parts)
+        if (
+            self.hint
+            and ts.reward == 1
+            and f"{self.alien_str()}.x == {self.ship()}.x" not in s
+        ):
             breakpoint()
-        if self.hint and ts.action == 1 and ts.reward == 0 and "is None" in s:
+        if (
+            self.hint
+            and ts.reward == 0
+            and ts.action == 1
+            and f"{self.alien_str()}.x != {self.ship()}.x" not in s
+        ):
             breakpoint()
         if ts.reward == 1:
             if "spawn()" not in s:
@@ -220,6 +242,13 @@ class Env(base_env.Env[Obs, int]):
             if "descend()" not in s:
                 breakpoint()
         return s
+
+    def valid_done(self, done_str: str) -> bool:
+        return (
+            done_str.startswith("assert")
+            and "done" in done_str
+            and done_str.endswith(self.done_stop())
+        )
 
     def valid_reward(self, reward_str: str) -> bool:
         return bool(
