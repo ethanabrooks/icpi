@@ -188,11 +188,6 @@ class Q(Model[ObsType, ActType]):
                     stop=[self.env.action_stop(), self.env.state_stop()],
                 )
                 state_or_reward = state_or_reward.lstrip() + self.env.state_stop()
-            if self.debug >= 2:
-                Colorize.print_blue("state/reward", end=" ")
-                Colorize.print_cyan(state_or_reward)
-            if self.debug >= 4:
-                breakpoint()
             completions.append(state_or_reward)
             if self.env.done(*completions):
                 break
@@ -204,12 +199,6 @@ class Q(Model[ObsType, ActType]):
 
             action_str = action_str.lstrip() + self.env.action_stop()
             t += 1
-
-            if self.debug >= 2:
-                Colorize.print_blue("action", end=" ")
-                Colorize.print_cyan(action_str)
-            if self.debug >= 4:
-                breakpoint()
             completions.append(action_str)
 
         return " ".join(completions)
