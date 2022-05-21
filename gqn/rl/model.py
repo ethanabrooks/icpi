@@ -178,7 +178,8 @@ class Q(Model[ObsType, ActType]):
 
         while True:
             if t == self.max_steps:
-                Colorize.print_green("OUT OF TIME")
+                if self.debug >= 1:
+                    Colorize.print_green("OUT OF TIME")
                 break
             predicted_state = self.predict(
                 completions,
