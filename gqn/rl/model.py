@@ -129,15 +129,14 @@ class Q(Model[ObsType, ActType]):
         assert isinstance(self.env.action_space, Discrete)
         actions = range(self.env.action_space.n)
 
-        def get_values():
+        def get_rollouts():
             for action in actions:
                 yield self.value(trajectory, state, action)
 
-        values = list(get_values())
-        action_values = list(zip(actions, values))
-        self.rng.shuffle(action_values)
+        action_rollouts = list(zip(actions, get_rollouts()))
+        self.rng.shuffle(action_rollouts)
         action, value = max(
-            action_values,
+            action_rollouts,
             key=lambda x: (self.env.quantify(x[1]), self.rng.random()),
         )
 
@@ -146,7 +145,7 @@ class Q(Model[ObsType, ActType]):
             Colorize.print_header("Q prompts")
             Colorize.print_blue("state:", end=" ")
             Colorize.print_cyan(state)
-            for a, v in zip(actions, values):
+            for a, r in action_rollouts:
                 Colorize.print_blue("action:", end=" ")
                 Colorize.print_cyan(a)
                 trajectory_strings = [
@@ -155,10 +154,10 @@ class Q(Model[ObsType, ActType]):
                 ]
                 trajectory_str = " ".join(trajectory_strings)
                 print("value:", trajectory_str, end="")
-                if not v.startswith(trajectory_str):
+                if not r.startswith(trajectory_str):
                     print(trajectory_str)
                     breakpoint()
-                Colorize.print_cyan(v[len(trajectory_str) :])
+                Colorize.print_cyan(r[len(trajectory_str) :])
             Colorize.print_blue("chosen", end=" ")
             Colorize.print_cyan(action)
         if self.debug >= 3:
