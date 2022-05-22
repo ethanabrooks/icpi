@@ -115,7 +115,7 @@ def train(
         while not done:
             use_model = (rng.random() < use_model_prob) and q.ready()
             if use_model:
-                action = q.act(trajectory, state)
+                action = q.act(state)
             else:
                 action = env.action_space.sample()
             next_state, reward, done, info = env.step(action)

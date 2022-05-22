@@ -41,13 +41,13 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     success_buffer: Deque[List[TimeStep]]
     temperature: float
 
-    def act(self, trajectory: List[TimeStep], state: ObsType) -> ActType:
+    def act(self, state: ObsType) -> ActType:
         if self.ready():
-            return self._act(trajectory, state)
+            return self._act(state)
         return self.env.action_space.sample()
 
     @abc.abstractmethod
-    def _act(self, trajectory: List[TimeStep], state: ObsType) -> ActType:
+    def _act(self, state: ObsType) -> ActType:
         ...
 
     def get_value(self, trajectory: List[TimeStep]) -> float:
@@ -191,13 +191,13 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
 
 @dataclass
 class Q(Model[ObsType, ActType]):
-    def _act(self, trajectory: List[TimeStep], state: ObsType) -> ActType:
+    def _act(self, state: ObsType) -> ActType:
         assert isinstance(self.env.action_space, Discrete)
         actions = range(self.env.action_space.n)
 
         def get_values():
             for action in actions:
-                yield self.value(trajectory, state, action)
+                yield self.value(state, action)
 
         values = list(get_values())
         action_values = list(zip(actions, values))
@@ -247,7 +247,7 @@ class Q(Model[ObsType, ActType]):
             and super().ready()
         )
 
-    def value(self, trajectory: List[TimeStep], state: ObsType, action: ActType) -> str:
+    def value(self, state: ObsType, action: ActType) -> str:
         if self.debug >= 2:
             Colorize.print_header(
                 f"Computing Q value for state {state} and action {action}:"
@@ -301,7 +301,7 @@ class Q(Model[ObsType, ActType]):
 
 
 class Pi(Model[ObsType, ActType]):
-    def _act(self, trajectory: List[TimeStep], state: ObsType) -> ActType:
+    def _act(self, state: ObsType) -> ActType:
         if self.debug >= 2:
             Colorize.print_header(f"Computing pi action for state {state}:")
         state = self.env.state_str(state)
