@@ -115,9 +115,9 @@ class Env(base_env.Env[Obs, int]):
                 f"{self.alien_str()}.x "
                 + ("==" if state.alien.over(state.agent) else "!=")
                 + f" {self.ship()}.x",
-                # f"{self.alien_str()}.y "
-                # + ("==" if state.alien.landed() else ">")
-                # + " 0",
+                f"{self.alien_str()}.y "
+                + ("==" if state.alien.landed() else ">")
+                + " 0",
             ]
         )
         # if state.alien.xy is not None:
