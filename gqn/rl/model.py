@@ -195,15 +195,15 @@ class Q(Model[ObsType, ActType]):
         assert isinstance(self.env.action_space, Discrete)
         actions = range(self.env.action_space.n)
 
-        def get_values():
+        def get_rollouts():
             for action in actions:
-                yield self.value(state, action)
+                yield self.rollout(state, action)
 
-        values = list(get_values())
-        action_values = list(zip(actions, values))
-        self.rng.shuffle(action_values)
+        rollouts = list(get_rollouts())
+        action_rollouts = list(zip(actions, rollouts))
+        self.rng.shuffle(action_rollouts)
         action, value = max(
-            action_values,
+            action_rollouts,
             key=lambda x: (self.env.quantify(x[1]), self.rng.random()),
         )
 
@@ -212,7 +212,7 @@ class Q(Model[ObsType, ActType]):
             Colorize.print_header("Q prompts")
             Colorize.print_blue("state:", end=" ")
             Colorize.print_cyan(state)
-            for a, v in zip(actions, values):
+            for a, v in zip(actions, rollouts):
                 Colorize.print_blue("action:", end=" ")
                 Colorize.print_cyan(a)
                 trajectory_strings = [
@@ -220,7 +220,7 @@ class Q(Model[ObsType, ActType]):
                     self.env.action_str(a),
                 ]
                 trajectory_str = "".join(trajectory_strings)
-                print("value:", trajectory_str, end="")
+                print("rollout:", trajectory_str, end="")
                 if not v.startswith(trajectory_str):
                     print(trajectory_str)
                     breakpoint()
@@ -247,10 +247,10 @@ class Q(Model[ObsType, ActType]):
             and super().ready()
         )
 
-    def value(self, state: ObsType, action: ActType) -> str:
+    def rollout(self, state: ObsType, action: ActType) -> str:
         if self.debug >= 2:
             Colorize.print_header(
-                f"Computing Q value for state {state} and action {action}:"
+                f"Computing Q rollout for state {state} and action {action}:"
             )
         t = 0
         state_str = self.env.state_str(state)
