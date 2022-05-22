@@ -66,14 +66,14 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             prompts = get_prompts()
             for _ in range(self.max_prompts):
                 prompts = get_prompts()
-                if "\n".join(prompts) not in previous_prompts:
+                if "".join(prompts) not in previous_prompts:
                     break
-            previous_prompts.add("\n".join(prompts))
+            previous_prompts.add("".join(prompts))
 
-            new_prompt = "\n".join([*prompts, "".join(query)])
+            new_prompt = "".join([*prompts, "".join(query)])
             if self.debug >= 2:
                 print()
-                print("\n".join(prompts))
+                print("".join(prompts), end="")
                 Colorize.print_bold("".join(query))
             if self.debug >= 4:
                 breakpoint()
@@ -111,6 +111,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             + self.env.action_str(ts.action)
             + self.env.done_str(ts.done)
             + self.env.done_stop()
+            + "\n"
             for ts in balanced
         ]
 
@@ -142,6 +143,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             self.env.state_str(ts.state)
             + self.env.action_str(ts.action)
             + self.env.state_str(ts.next_state)
+            + "\n"
             for ts in balanced
         ]
 
@@ -158,6 +160,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             + self.env.action_str(ts.action)
             + self.env.reward_str(ts.reward)
             + self.env.reward_stop()
+            + "\n"
             for ts in balanced
         ]
 
@@ -173,9 +176,9 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
 
         return [to_string(*t, env=self.env) for t in trajectories]
 
-    def generate_action(self, completions: List[str]) -> Optional[str]:
+    def generate_action(self, state: str) -> Optional[str]:
         maybe_action = self.predict(
-            completions,
+            ["", self.env.initial_str(), state],
             get_prompts=self.sample_best,
             name="action",
             stop=self.env.action_stop(),
@@ -224,6 +227,7 @@ class Q(Model[ObsType, ActType]):
                 Colorize.print_cyan(v[len(trajectory_str) :])
             Colorize.print_blue("chosen", end=" ")
             Colorize.print_cyan(action)
+
         if self.debug >= 3:
             breakpoint()
         return action
@@ -249,7 +253,6 @@ class Q(Model[ObsType, ActType]):
                 f"Computing Q value for state {state} and action {action}:"
             )
         t = 0
-        initial_str = self.env.initial_str()
         state_str = self.env.state_str(state)
         action_str = self.env.action_str(action)
         completions = [s for s in [state_str, action_str] if s]
@@ -288,8 +291,7 @@ class Q(Model[ObsType, ActType]):
             if state_str is None:
                 break
             completions.append(state_str)
-            query = [initial_str, state_str]
-            action_str = self.generate_action(query)
+            action_str = self.generate_action(state_str)
             action = self.env.action(action_str)
             completions.append(action_str)
             query.append(action_str)
@@ -304,9 +306,7 @@ class Pi(Model[ObsType, ActType]):
             Colorize.print_header(f"Computing pi action for state {state}:")
         state = self.env.state_str(state)
 
-        completions = [self.env.initial_str(), state]
-
-        action_str = self.generate_action(completions)
+        action_str = self.generate_action(state)
         action = self.env.action(action_str)
         assert action is not None
         return action
