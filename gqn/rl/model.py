@@ -174,7 +174,17 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         ]
         self.rng.shuffle(trajectories)
 
-        return [to_string(*t, env=self.env) for t in trajectories]
+        return [
+            self.env.initial_str()
+            + "".join(
+                [
+                    self.env.state_str(ts.state) + self.env.action_str(ts.action)
+                    for ts in t
+                ]
+            )
+            + "\n"
+            for t in trajectories
+        ]
 
     def generate_action(self, state: str) -> Optional[str]:
         maybe_action = self.predict(
