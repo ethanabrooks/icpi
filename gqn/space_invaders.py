@@ -220,7 +220,7 @@ class Env(base_env.Env[Obs, int]):
             self.done_str(ts.done),
         ]
         if ts.done:
-            parts += [self.state_str(ts.next_state), self.state_stop()]
+            parts += ["\n", self.state_str(ts.next_state), self.state_stop()]
         s = "".join(parts)
         if (
             self.hint

@@ -151,9 +151,15 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
         ]
 
     def done(self, *completions: str) -> bool:
-        *_, state_or_reward = completions
-        # return bool(re.findall(r"ball.y == 0", state_or_reward))
-        return bool(re.findall(r"ball == C\(\d+, 0\)", state_or_reward))
+        *_, last_state = completions
+        return last_state == "assert done\n"
+
+    @staticmethod
+    def done_stop() -> str:
+        return "\n"
+
+    def done_str(self, done: bool) -> str:
+        return f"assert{' ' if done else ' not '}done"
 
     def failure_threshold(self) -> float:
         return 0
@@ -175,7 +181,7 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
 
     @staticmethod
     def initial_str() -> str:
-        return "\npaddle, ball = reset()\n"
+        return "paddle, ball = reset()\n"
 
     def max_trajectory(self) -> int:
         return self.env.rows
@@ -186,7 +192,10 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
 
     @staticmethod
     def reward_stop() -> str:
-        return ""
+        return "\n"
+
+    def reward_str(self, reward: float) -> str:
+        return f"assert reward == {int(reward)}"
 
     def seed(self, seed: Optional[int] = None):
         self._rng = np.random.RandomState(seed)
@@ -201,8 +210,7 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
         state_str = f"assert paddle == C({state.paddle_x}, 0) and ball == C({state.ball_x}, {state.ball_y})"
         if self.hint:
             state_str += f" and {self.hint_str(state)}"
-        reward = f" and reward == {1 if (state.ball_x == state.paddle_x and state.ball_y == 0) else 0}"
-        return state_str + reward + self.state_stop()
+        return state_str + self.state_stop()
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
         assert isinstance(self.env, Env)
@@ -232,11 +240,28 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
         return s
 
     def ts_to_string(self, ts: TimeStep) -> str:
-        return "".join(
-            [
-                self.state_str(ts.state),
-                self.action_str(ts.action),
-            ]
+        parts = [
+            self.state_str(ts.state),
+            self.action_str(ts.action),
+            self.reward_str(ts.reward),
+            self.reward_stop(),
+            self.done_str(ts.done),
+            self.done_stop(),
+        ]
+        if ts.done:
+            parts += [self.state_str(ts.next_state)]
+        s = "".join(parts)
+        if self.hint and ts.reward == 1 and "ball.x == paddle.x" not in s:
+            breakpoint()
+        if self.hint and ts.reward == 0 and ts.done and "ball.x != paddle.x" not in s:
+            breakpoint()
+        return s
+
+    def valid_done(self, done_str: str) -> bool:
+        return (
+            done_str.startswith("assert")
+            and "done" in done_str
+            and done_str.endswith(self.done_stop())
         )
 
     def valid_reward(self, reward_str: str) -> bool:
