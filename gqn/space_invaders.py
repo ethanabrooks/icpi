@@ -98,7 +98,7 @@ class Env(base_env.Env[Obs, int]):
         return landed or max_return
 
     def failure_threshold(self) -> float:
-        return 0
+        return -1e5
 
     @staticmethod
     def gamma() -> float:

@@ -156,7 +156,7 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
         return bool(re.findall(r"ball == C\(\d+, 0\)", state_or_reward))
 
     def failure_threshold(self) -> float:
-        return 0
+        return -1e5
 
     @staticmethod
     def gamma() -> float:

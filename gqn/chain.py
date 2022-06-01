@@ -49,7 +49,7 @@ class Env(base_env.Env[int, int]):
         return "try_goal" in "".join(completions)
 
     def failure_threshold(self) -> float:
-        return 0
+        return -1e5
 
     @staticmethod
     def gamma() -> float:
