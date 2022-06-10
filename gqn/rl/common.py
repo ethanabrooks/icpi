@@ -9,6 +9,7 @@ import bandit
 import cartpole
 import catch
 import chain
+import point_mass
 import space_invaders
 from base_env import Env, TimeStep
 from gym.wrappers import TimeLimit
@@ -71,6 +72,16 @@ def make_env(env_id: str, seed: int, hint: bool) -> Env:
         env = TimeLimit(
             chain.Env(goal=4, n=8, random_seed=seed, hint=hint),
             max_episode_steps=8,
+        )
+    elif env_id == "point-mass":
+        env = point_mass.Env(
+            hint=hint,
+            max_distance=10,
+            max_step=8,
+            _max_trajectory=8,
+            pos_threshold=1,
+            random_seed=seed,
+            vel_threshold=1,
         )
     elif env_id == "space-invaders":
         env = space_invaders.Env(
