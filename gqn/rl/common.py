@@ -76,7 +76,7 @@ def make_env(env_id: str, seed: int, hint: bool) -> Env:
     elif env_id == "point-mass":
         env = point_mass.Env(
             hint=hint,
-            max_distance=10,
+            max_distance=5,
             max_step=8,
             _max_trajectory=8,
             pos_threshold=1,
