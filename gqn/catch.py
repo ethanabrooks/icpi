@@ -175,7 +175,7 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
                 "ball.x "
                 + ("==" if obs.ball_x == obs.paddle_x else "!=")
                 + " paddle.x",
-                "ball.y " + ("==" if obs.ball_y == 0 else ">") + " 0",
+                f"ball.y == {int(obs.ball_y)}",
             ]
         )
 
