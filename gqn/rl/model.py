@@ -102,6 +102,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
 
     def sample_done(self, action: int) -> List[str]:
         time_steps = [ts for t in self.buffer for ts in t if ts.action == action]
+        self.rng.shuffle(time_steps)
         done = [ts for ts in time_steps if ts.done]
         not_done = [ts for ts in time_steps if not ts.done]
         balanced = [ts for (d, nd) in zip(done, not_done) for ts in [d, nd]]
@@ -124,13 +125,13 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
                 if ts.action == action and not ts.done
             ]
 
-        successful = get_time_steps(*self.success_buffer)
+        buffer = [t for t in self.buffer]
+        self.rng.shuffle(buffer)
+        successful = get_time_steps(
+            *[t for t in buffer if self.get_value(t) > self.env.failure_threshold()]
+        )
         unsuccessful = get_time_steps(
-            *[
-                t
-                for t in self.buffer
-                if self.get_value(t) <= self.env.failure_threshold()
-            ]
+            *[t for t in buffer if self.get_value(t) <= self.env.failure_threshold()]
         )
         if not successful:
             balanced = unsuccessful
@@ -149,7 +150,9 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
 
     def sample_reward(self, action: int, done: bool) -> List[str]:
         rewards = defaultdict(list)
-        for t in self.buffer:
+        buffer = [t for t in self.buffer]
+        self.rng.shuffle(buffer)
+        for t in buffer:
             for ts in t:
                 if ts.action == action and ts.done == done:
                     rewards[ts.reward].append(ts)
