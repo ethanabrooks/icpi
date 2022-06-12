@@ -140,7 +140,14 @@ def train(
         value_from_prompt = env.quantify(prompt)
         value_from_trajectory = get_value(*trajectory, gamma=env.gamma())
         if not value_from_prompt == value_from_trajectory:
-            print_rank0(local_rank, value_from_prompt, value_from_trajectory)
+            print_rank0(
+                local_rank,
+                f"value_from_prompt: {value_from_prompt}",
+            )
+            print_rank0(
+                local_rank,
+                f"value_from_trajectory: {value_from_trajectory}",
+            )
             breakpoint()
             env.quantify(prompt)
             get_value(*trajectory, gamma=env.gamma())

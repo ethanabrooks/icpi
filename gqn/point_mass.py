@@ -97,7 +97,8 @@ class Env(base_env.Env):
         hint_str = self.hint_str(state)
         if self.hint and hint_str:
             state_str += f" and {hint_str}"
-        return state_str + self.state_stop()
+        reward = f" and reward == {int(self.success(state.pos, state.vel))}"
+        return state_str + reward + self.state_stop()
 
     def valid_reward(self, reward_str: str) -> bool:
         return bool(
@@ -134,8 +135,19 @@ class Env(base_env.Env):
     def oot(self, t: int):
         return t >= self.max_step
 
+    def quantify(self, prompt: str, gamma: Optional[float] = None) -> float:
+        if gamma is None:
+            gamma = self.gamma()
+        matches = re.findall(r"reward == (\d)", prompt)
+        return sum([gamma ** (t - 1) * float(x) for t, x in enumerate(matches)])
+
     def reset(self):
-        pos = self.rng.uniform(-self.max_distance, self.max_distance)
+        pos = self.rng.choice(
+            [
+                self.rng.uniform(-self.max_distance, -self.pos_threshold),
+                self.rng.uniform(self.pos_threshold, self.max_distance),
+            ]
+        )
         vel = 0
         self.state = State(pos, vel)
         self.t = 0
@@ -149,17 +161,16 @@ class Env(base_env.Env):
     def success(self, pos, vel):
         return abs(pos) <= self.pos_threshold and abs(vel) <= self.vel_threshold
 
-    def ts_to_string(self, ts: TimeStep) -> str:
-        reward_str = f"assert reward == {int(ts.reward)}"
+    def termination_str(self, ts: TimeStep) -> str:
+        return ""
 
+    def ts_to_string(self, ts: TimeStep) -> str:
         parts = [
             self.state_str(ts.state),
             self.action_str(ts.action),
-            reward_str,
-            self.reward_stop(),
         ]
-        # if ts.done:
-        #     parts += [self.state_str(ts.next_state)]
+        if ts.done:
+            parts += [self.state_str(ts.next_state)]
         s = "".join(parts)
         return s
 
