@@ -90,6 +90,7 @@ class GPT3(LM):
                 openai.error.RateLimitError,
                 openai.error.ServiceUnavailableError,
                 openai.error.APIError,
+                openai.error.APIConnectionError,
             ) as e:
                 print(type(e))
                 print(e)
