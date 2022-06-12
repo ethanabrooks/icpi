@@ -88,17 +88,17 @@ class Env(base.Environment):
     def _step(self, action: int) -> dm_env.TimeStep:
         """Updates the environment according to the action."""
 
+        # Check for termination.
+        if self._ball_y == self._paddle_y:
+            reward = 1.0 if self._paddle_x == self._ball_x else 0
+            return dm_env.termination(reward=reward, observation=self._observation())
+
         # Move the paddle.
         dx = _ACTIONS[action]
         self._paddle_x = np.clip(self._paddle_x + dx, 0, self.columns - 1)
 
         # Drop the ball.
         self._ball_y -= 1
-
-        # Check for termination.
-        if self._ball_y == self._paddle_y:
-            reward = 1.0 if self._paddle_x == self._ball_x else 0
-            return dm_env.termination(reward=reward, observation=self._observation())
 
         return dm_env.transition(reward=0.0, observation=self._observation())
 
