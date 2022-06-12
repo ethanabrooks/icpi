@@ -26,7 +26,7 @@ class GPT3(LM):
                 self.wait_time = 0
             else:
                 raise ValueError(f"Unknown model {self.model_name}")
-        assert self.logprobs <= 5
+        assert self.logprobs <= 6
 
     def get_full_completion(
         self, prompt: str, stop: list[str], temperature: float, use_cache: bool = True
@@ -55,7 +55,7 @@ class GPT3(LM):
 
         self.print("Prompt:")
         self.print(prompt)
-        if self.debug >= 5:
+        if self.debug >= 6:
             breakpoint()
         wait_time = self.wait_time
         while True:
@@ -130,5 +130,5 @@ class GPT3(LM):
         return self.max_tokens_accepted_by_lm - self.max_tokens_in_completion - 100
 
     def print(self, *args, **kwargs):
-        if self.debug >= 5:
+        if self.debug >= 6:
             print(*args, **kwargs)

@@ -65,6 +65,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         stop: str,
         valid: Callable[[str], bool],
     ) -> Optional[str]:
+        breakpoint_threshold = 5 if name == "action" else 4
         previous_prompts = set()
         for _ in range(min(self.max_resamples, max_prompts)):
             prompts = get_prompts()
@@ -77,7 +78,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
                 print()
                 print("".join(prompts), end="")
                 Colorize.print_bold("".join(query))
-            if self.debug >= 4:
+            if self.debug >= breakpoint_threshold:
                 breakpoint()
             completion = self.lm(
                 new_prompt, stop=[stop], temperature=self.temperature, use_cache=True
@@ -87,7 +88,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             if self.debug >= 2:
                 Colorize.print_blue(name)
                 Colorize.print_cyan(completion)
-            if self.debug >= 4:
+            if self.debug >= breakpoint_threshold:
                 breakpoint()
             if valid(completion):
                 return completion
