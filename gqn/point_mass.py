@@ -86,6 +86,10 @@ class Env(base_env.Env):
     def initial_str() -> str:
         return "\npos, vel = reset()\n"
 
+    @classmethod
+    def log_gamma(cls) -> float:
+        return cls.gamma()
+
     def max_trajectory(self) -> int:
         return self._max_trajectory
 
@@ -127,6 +131,8 @@ class Env(base_env.Env):
         reward = float(success)
         self.t += 1
         done = self.oob(pos) or success or self.oot(self.t)
+        if success and self.t < self.min_steps:
+            breakpoint()
         return self.state, reward, done, self.info
 
     def oob(self, pos):
@@ -142,7 +148,7 @@ class Env(base_env.Env):
         return sum([gamma ** (t - 1) * float(x) for t, x in enumerate(matches)])
 
     def reset(self):
-        pos = self.rng.choice(
+        self.pos = pos = self.rng.choice(
             [
                 self.rng.uniform(-self.max_distance, -self.pos_threshold),
                 self.rng.uniform(self.pos_threshold, self.max_distance),
@@ -151,7 +157,9 @@ class Env(base_env.Env):
         vel = 0
         self.state = State(pos, vel)
         self.t = 0
-        min_steps = math.ceil(2 * math.sqrt(abs(pos) + 1) - 1)
+        self.dist_to_threshold = dist_to_threshold = abs(pos) - self.pos_threshold
+        self.half_dist = half_dist = dist_to_threshold / 2
+        self.min_steps = min_steps = math.ceil(2 * math.sqrt(half_dist) - 1)
         self.info = dict(min_steps=min_steps, optimal=self.gamma() ** min_steps)
         return self.state
 

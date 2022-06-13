@@ -122,6 +122,8 @@ def make_log(
     discounted = sum([gamma**t * r for t, r in enumerate(rewards)])
     undiscounted = sum(rewards)
     regret = info["optimal"] - discounted
+    if regret < 0:
+        breakpoint()
 
     prefix = "eval " if evaluation else ""
 
