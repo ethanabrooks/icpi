@@ -80,6 +80,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             completion = self.lm(
                 new_prompt, stop=[stop], temperature=self.temperature, use_cache=True
             )
+            completion = completion.replace("ball.x!=", "ball.x !=")
             completion += stop
 
             if self.debug >= 2:
