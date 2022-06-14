@@ -14,6 +14,7 @@ from run_logger import HasuraLogger
 
 
 def train(
+    argmax: bool,
     debug: int,
     env_id: str,
     eval_interval: Optional[int],
@@ -111,7 +112,7 @@ def train(
         rewards = []
         while not done:
             use_model = (rng.random() < use_model_prob) and q.ready()
-            if use_model:
+            if argmax and use_model:
                 action = q.act(trajectory, state)
             else:
                 action = env.action_space.sample()
