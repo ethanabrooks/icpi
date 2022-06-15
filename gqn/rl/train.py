@@ -27,6 +27,7 @@ def train(
     model_name: str,
     require_cache: bool,
     seed: int,
+    sil: bool,
     success_buffer_size: int,
     temperature: float,
     top_p: float,
@@ -156,7 +157,10 @@ def train(
         trajectory = trajectory[-env.max_trajectory() :]
         if not timed_out:
             buffer.append(trajectory)
-            if get_value(*trajectory, gamma=env.gamma()) > env.failure_threshold():
+            if (
+                not sil
+                or get_value(*trajectory, gamma=env.gamma()) > env.failure_threshold()
+            ):
                 success_buffer.append(trajectory)
 
     print("done!")
