@@ -79,9 +79,9 @@ def make_env(env_id: str, seed: int, hint: bool) -> Env:
             max_distance=5,
             max_step=8,
             _max_trajectory=8,
-            pos_threshold=1,
+            pos_threshold=2,
             random_seed=seed,
-            vel_threshold=1,
+            vel_threshold=2,
         )
     elif env_id == "space-invaders":
         env = space_invaders.Env(
