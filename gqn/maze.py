@@ -62,7 +62,7 @@ class Env(base_env.Env[C, int]):
         self.random = np.random.default_rng(self.random_seed)
         self.action_space = Discrete(len(self.actions()), seed=self.random_seed)
 
-        def chunk(*seq: T) -> Iterator[Tuple[T, T, T]]:
+        def patch(*seq: T) -> Iterator[Tuple[T, T, T]]:
             """
             :param seq: █ * █ ·   · █
             """
@@ -77,15 +77,15 @@ class Env(base_env.Env[C, int]):
         def parse_triple(
             top_str: str, middle_str: str, bottom_str: str
         ) -> Iterator[np.ndarray]:
-            chunks = [
-                list(chunk(*string[::2]))
+            patches = [
+                list(patch(*string[::2]))
                 for string in (top_str, middle_str, bottom_str)
             ]  # e.g. [
             # [(█ █),(   ),(  █), ...],
             # [(█*█),(█· ),( ·█), ...],
             # [(█ █),(███),(  █), ...],
             # ]
-            yield from zip(*chunks)  # e.g. [
+            yield from zip(*patches)  # e.g. [
             # [(█ █),(█*█),(█ █)],
             # [(   ),(█· ),(███)],
             # [(  █),( ·█),(  █)],
@@ -94,21 +94,48 @@ class Env(base_env.Env[C, int]):
         rows = MAP.split("\n")
 
         def parse_map() -> Iterator[np.array]:
-            chunks = list(chunk(*rows))
-            for c in chunks:
-                yield np.array(list(parse_triple(*c)))
+            patches = list(patch(*rows))
+            for p in patches:
+                yield np.array(list(parse_triple(*p)))
 
-        self.map = np.array(list(parse_map()))
+        self.patches = np.array(list(parse_map()))
         rows = rows[1::2]
         [goal_row] = [r for r in rows if GOAL in r]
-        self.goal = C(i=rows.index(goal_row), j=goal_row.index(GOAL))
-        self.height = len(rows[::2])
+        self.goal = C(i=rows.index(goal_row), j=goal_row[2::4].index(GOAL))
+        self.height = len(rows)
         self.width = None
         for row in rows:
             width = len(row[2::4])
             if self.width is None:
                 self.width = width
             assert self.width == width, f"{self.width} != {width}"
+        self.deltas = Actions[C](
+            left=C(0, -1),
+            down=C(1, 0),
+            up=C(-1, 0),
+            right=C(0, 1),
+        )
+        graph = {}
+        for i in range(self.height):
+            for j in range(self.width):
+                c = C(i, j)
+                adjacent = [
+                    c + delta
+                    for delta in astuple(self.deltas)
+                    if self.patches[c][delta + C(1, 1)] != WALL
+                ]
+                graph[c] = adjacent
+
+        # Bellman Ford
+        self.distance = np.inf * np.ones((self.height, self.width))
+        self.distance[self.goal] = 0
+        for _ in graph:
+            for n1, adjacent in graph.items():
+                for n2 in adjacent:
+                    distance = self.distance[n1] + 1
+                    if distance < self.distance[n2]:
+                        self.distance[n2] = distance
+        assert not np.any(np.isinf(self.distance))
 
     @staticmethod
     def action_stop() -> str:
@@ -123,11 +150,10 @@ class Env(base_env.Env[C, int]):
 
     def done(self, *completions: str) -> bool:
         *_, last_state, _ = completions
-        if not len(completions) == self.t + 1:
-            breakpoint()
-        return (f"state == {self.goal}" in last_state) or (
-            len(completions) > self.max_step
-        )
+        t = "".join(completions).count("assert reward ==")
+        # if not len(completions) == self.t + 1:
+        # breakpoint()
+        return (f"state == {self.goal}" in last_state) or (t > self.max_step)
 
     def failure_threshold(self) -> float:
         return 0
@@ -164,10 +190,11 @@ class Env(base_env.Env[C, int]):
         options: Optional[dict] = None,
     ) -> C:
         low = np.zeros(2)
-        high = np.array([self.height, self.width]) - 1
-        self._state = self._start_state = C(*self.random.integers(low=low, high=high))
+        high = np.array([self.height, self.width])
+        self._state = C(*self.random.integers(low=low, high=high))
         self.t = 0
-        return self._start_state
+        self.min_steps = self.distance[self._state]
+        return self._state
 
     def start_states(self) -> Optional[Iterable[C]]:
         for i in range(self.height):
@@ -183,18 +210,12 @@ class Env(base_env.Env[C, int]):
         return state_str + self.state_stop()
 
     def step(self, action: int) -> Tuple[C, float, bool, dict]:
-        optimal = None  # TODO
+        optimal = self.gamma() ** self.min_steps
         info = dict(optimal=optimal)
         success = self.success(self._state)
-        deltas = Actions[C](
-            left=C(0, -1),
-            down=C(1, 0),
-            up=C(-1, 0),
-            right=C(0, 1),
-        )
-        delta = astuple(deltas)[action]
-        chunk = self.map[self._state]
-        obstructed = chunk[delta + C(1, 1)] == WALL
+        delta = astuple(self.deltas)[action]
+        patch = self.patches[self._state]
+        obstructed = patch[delta + C(1, 1)] == WALL
         if not obstructed:
             self._state += delta
             self._state = self._state.clip(self.height, self.width)
@@ -248,8 +269,8 @@ if __name__ == "__main__":
         t = False
         trajectory = []
         while not t:
-            a = env.action_space.sample()
-            # a = int(input("Action: ")) - 1
+            # a = env.action_space.sample()
+            a = int(input("Action: ")) - 1
             s_, r, t, i = env.step(a)
             ts = TimeStep(s, a, r, t, s_)
             trajectory.append(ts)
