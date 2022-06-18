@@ -150,10 +150,10 @@ class Env(base_env.Env[C, int]):
 
     def done(self, *completions: str) -> bool:
         *_, last_state, _ = completions
-        t = "".join(completions).count("assert reward ==")
+        t = "".join(completions).count("state, reward = ")
         # if not len(completions) == self.t + 1:
-        # breakpoint()
-        return (f"state == {self.goal}" in last_state) or (t > self.max_step)
+        #     breakpoint()
+        return ("assert reward == 1.0" in last_state) or (t >= self.max_step)
 
     def failure_threshold(self) -> float:
         return 0
