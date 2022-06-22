@@ -200,7 +200,7 @@ class Env(base_env.Env[C, int]):
         for i in range(self.height):
             for j in range(self.width):
                 coord = C(i, j)
-                if coord == self.goal:
+                if coord != self.goal:
                     yield coord
 
     def state_str(self, state: C) -> str:
