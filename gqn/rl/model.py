@@ -101,6 +101,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
                     Colorize.print_warning(f"Invalid {name}:", end=" ")
                     Colorize.print_cyan(completion)
                 self.breakpoint(T, 3)
+                valid(completion)
         return None
 
     def ready(self) -> bool:
