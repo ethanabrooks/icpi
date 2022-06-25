@@ -35,6 +35,7 @@ def no_logging(
     load_id: Optional[int] = None,
     local_rank: Optional[str] = None,
     require_cache: bool = False,
+    t_threshold: Optional[int] = None,
 ):
     logger = HasuraLogger(GRAPHQL_ENDPOINT)
     params = dict(get_config_params(config), debug=debug)
@@ -47,6 +48,7 @@ def no_logging(
         main_fn = deep_baseline
     if params["model_name"] == "tabular-q":
         main_fn = tabular_main
+    params.update(t_threshold=t_threshold)
     if isinstance(params["seed"], list):
         seeds = list(params["seed"])
         for seed in seeds:

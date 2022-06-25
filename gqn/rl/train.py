@@ -28,6 +28,7 @@ def train(
     require_cache: bool,
     seed: int,
     success_buffer_size: int,
+    t_threshold: Optional[int],
     temperature: float,
     top_p: float,
     total_steps: int,
@@ -73,6 +74,7 @@ def train(
         max_steps=env.max_trajectory(),
         rng=rng,
         success_buffer=success_buffer,
+        t_threshold=t_threshold,
         temperature=0,
     )
     q = Q(
@@ -85,6 +87,7 @@ def train(
         max_steps=env.max_trajectory(),
         rng=rng,
         success_buffer=success_buffer,
+        t_threshold=t_threshold,
         temperature=temperature,
     )
 
@@ -104,7 +107,14 @@ def train(
             local_rank=local_rank,
         )
         if eval_interval is not None and episodes % eval_interval == 0:
-            evaluate(logger, env, eval_interval, pi.act, **log_info)
+            evaluate(
+                act_fn=pi.act,
+                env=env,
+                eval_interval=eval_interval,
+                logger=logger,
+                T=T,
+                **log_info,
+            )
 
         done = False
         state = env.reset()
@@ -115,7 +125,7 @@ def train(
         while not done:
             use_model = (rng.random() < use_model_prob) and q.ready()
             if use_model:
-                action = q.act(state)
+                action = q.act(state, T)
             else:
                 action = env.action_space.sample()
             next_state, reward, done, info = env.step(action)
