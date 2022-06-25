@@ -43,15 +43,20 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     rng: Generator
     success_buffer: Deque[List[TimeStep]]
     temperature: float
+    t_threshold: Optional[int]
 
-    def act(self, trajectory: List[TimeStep], state: ObsType) -> ActType:
+    def act(self, trajectory: List[TimeStep], state: ObsType, T: int) -> ActType:
         if self.ready():
-            return self._act(trajectory, state)
+            return self._act(trajectory, state, T)
         return self.env.action_space.sample()
 
     @abc.abstractmethod
-    def _act(self, trajectory: List[TimeStep], state: ObsType) -> ActType:
+    def _act(self, trajectory: List[TimeStep], state: ObsType, T: int) -> ActType:
         ...
+
+    def breakpoint(self, T: int, threshold: int):
+        if self.debug >= threshold and T >= self.t_threshold:
+            breakpoint()
 
     def get_value(self, trajectory: List[TimeStep]) -> float:
         return get_value(*trajectory, gamma=self.env.gamma())
@@ -63,6 +68,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         max_prompts: int,
         name: str,
         stop: str,
+        T: int,
         valid: Callable[[str], bool],
     ) -> Optional[str]:
         breakpoint_threshold = 5 if name == "action" else 4
@@ -78,8 +84,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
                 print()
                 print("".join(prompts), end="")
                 Colorize.print_bold("".join(query))
-            if self.debug >= breakpoint_threshold:
-                breakpoint()
+            self.breakpoint(T, breakpoint_threshold)
             completion = self.lm(
                 new_prompt, stop=[stop], temperature=self.temperature, use_cache=True
             )
@@ -88,16 +93,14 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             if self.debug >= 2:
                 Colorize.print_blue(name)
                 Colorize.print_cyan(completion)
-            if self.debug >= breakpoint_threshold:
-                breakpoint()
+            self.breakpoint(T, breakpoint_threshold)
             if valid(completion):
                 return completion
             else:
                 if self.debug >= 3:
                     Colorize.print_warning(f"Invalid {name}:", end=" ")
                     Colorize.print_cyan(completion)
-                    breakpoint()
-                    valid(completion)
+                self.breakpoint(T, 3)
         return None
 
     def ready(self) -> bool:
@@ -136,7 +139,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         prompts = [to_string(*t, env=self.env) for t in trajectories]
         return list(prompts)
 
-    def generate_action(self, completions: List[str]) -> Optional[str]:
+    def generate_action(self, completions: List[str], T: int) -> Optional[str]:
         maybe_action = self.predict(
             completions,
             get_prompts=self.sample_best,
@@ -146,6 +149,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             ),
             name="action",
             stop=self.env.action_stop(),
+            T=T,
             valid=lambda s: self.env.action(s) is not None,
         )
         if maybe_action is None:
@@ -155,13 +159,13 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
 
 @dataclass
 class Q(Model[ObsType, ActType]):
-    def _act(self, trajectory: List[TimeStep], state: ObsType) -> ActType:
+    def _act(self, trajectory: List[TimeStep], state: ObsType, T: int) -> ActType:
         assert isinstance(self.env.action_space, Discrete)
         actions = range(self.env.action_space.n)
 
         def get_values():
             for action in actions:
-                yield self.value(trajectory, state, action)
+                yield self.value(state, action, T)
 
         values = list(get_values())
         action_values = list(zip(actions, values))
@@ -192,8 +196,8 @@ class Q(Model[ObsType, ActType]):
                 Colorize.print_cyan(v[len(trajectory_str) :])
             Colorize.print_blue("chosen", end=" ")
             Colorize.print_cyan(action)
-        if self.debug >= 3:
-            breakpoint()
+        threshold = 3
+        self.breakpoint(T, threshold)
         return action
 
     def ready(self) -> bool:
@@ -202,12 +206,12 @@ class Q(Model[ObsType, ActType]):
             and super().ready()
         )
 
-    def value(self, trajectory: List[TimeStep], state: ObsType, action: ActType) -> str:
+    def value(self, state: ObsType, action: ActType, T: int) -> str:
         if self.debug >= 2:
             Colorize.print_header(
                 f"Computing Q value for state {state} and action {action}:"
             )
-        t = 0
+        u = 0
         initial_str = self.env.initial_str()
         state_str = self.env.state_str(state)
         action_str = self.env.action_str(action)
@@ -219,7 +223,7 @@ class Q(Model[ObsType, ActType]):
 
         max_prompts = unique_permutations(sample())
         while True:
-            if t == self.max_steps:
+            if u == self.max_steps:
                 break
             if self.env.reward_stop():
                 reward_str = self.predict(
@@ -228,6 +232,7 @@ class Q(Model[ObsType, ActType]):
                     name="reward",
                     get_prompts=sample,
                     stop=self.env.reward_stop(),
+                    T=T,
                     valid=self.env.valid_reward,
                 )
                 if reward_str is None:
@@ -240,6 +245,7 @@ class Q(Model[ObsType, ActType]):
                 name="state",
                 get_prompts=sample,
                 stop=self.env.state_stop(),
+                T=T,
                 valid=self.env.valid_state,
             )
             if state_str is None:
@@ -249,24 +255,24 @@ class Q(Model[ObsType, ActType]):
             if self.env.done(*completions):
                 break
 
-            action_str = self.generate_action(query)
+            action_str = self.generate_action(query, T)
             action = self.env.action(action_str)
             completions.append(action_str)
             query.append(action_str)
-            t += 1
+            u += 1
 
         return "".join(completions)
 
 
 class Pi(Model[ObsType, ActType]):
-    def _act(self, trajectory: List[TimeStep], state: ObsType) -> ActType:
+    def _act(self, trajectory: List[TimeStep], state: ObsType, T: int) -> ActType:
         if self.debug >= 2:
             Colorize.print_header(f"Computing pi action for state {state}:")
         state = self.env.state_str(state)
 
         completions = [self.env.initial_str(), state]
 
-        action_str = self.generate_action(completions)
+        action_str = self.generate_action(completions, T)
         action = self.env.action(action_str)
         assert action is not None
         return action

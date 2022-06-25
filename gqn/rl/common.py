@@ -149,11 +149,12 @@ def make_log(
 
 
 def evaluate(
-    logger: HasuraLogger,
+    act_fn: Callable[[List[TimeStep], Any, int], int],
     env: Env,
     eval_interval: int,
-    act_fn: Callable[[List[TimeStep], Any], int],
-    **kwargs,
+    logger: HasuraLogger,
+    T: int,
+    **kwargs
 ):
     start_states = env.start_states()
     finite_start_states = start_states is not None
@@ -172,7 +173,7 @@ def evaluate(
         rewards = []
         t = 0
         while not done:
-            action = act_fn(trajectory, state)
+            action = act_fn(trajectory, state, T)
             next_state, reward, done, info = env.step(action)
             step = TimeStep(state, action, reward, done, next_state)
             trajectory.append(step)

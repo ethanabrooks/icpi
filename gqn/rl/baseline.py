@@ -88,10 +88,10 @@ def tabular_main(
 
         if episode % eval_interval == 0:
             evaluate(
-                logger=logger,
+                act_fn=lambda t, s: agent.act(s),
                 env=env,
                 eval_interval=eval_interval,
-                act_fn=lambda t, s: agent.act(s),
+                logger=logger,
                 **log_info,
             )
         rewards = []
@@ -167,15 +167,16 @@ class EvalCallback(BaseCallback):
 
     def _on_step(self):
         evaluate(
-            logger=self.run_logger,
+            act_fn=self.act,
             env=self.eval_env,
             eval_interval=self.eval_interval,
-            act_fn=self.act,
+            logger=self.run_logger,
             use_model_prob=0.0,
             success_buffer_size=0,
             gamma=self.eval_env.gamma(),
             start_time=self.start_time,
             step=self.model.num_timesteps,
+            T=0,
         )
 
     def act(self, _, state):
