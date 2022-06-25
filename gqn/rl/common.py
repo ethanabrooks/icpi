@@ -74,7 +74,7 @@ def make_env(env_id: str, seed: int, hint: bool) -> Env:
             max_episode_steps=8,
         )
     elif env_id == "maze":
-        env = maze.Env(hint=hint, max_step=8, random_seed=seed)
+        env = maze.Env(hint=hint, random_seed=seed)
     elif env_id == "space-invaders":
         env = space_invaders.Env(
             width=3,

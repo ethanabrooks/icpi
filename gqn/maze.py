@@ -53,7 +53,6 @@ REWARDS = {
 
 @dataclass
 class Env(base_env.Env[C, int]):
-    max_step: int
     random_seed: int
     goal: C = field(init=False)
     t: int = field(init=False)
@@ -178,9 +177,6 @@ class Env(base_env.Env[C, int]):
     def max_trajectory(self) -> int:
         return self.height + self.width
 
-    def oot(self, t: int):
-        return t >= self.max_step
-
     def render(self, mode="human"):
         pass
 
@@ -229,8 +225,7 @@ class Env(base_env.Env[C, int]):
             self._state += delta
             self._state = self._state.clip(self.height, self.width)
         self.t += 1
-        done = success or self.oot(self.t)
-        return self._state, float(success), done, info
+        return self._state, float(success), success, info
 
     def success(self, state: C) -> bool:
         return state == self.goal
@@ -278,7 +273,7 @@ if __name__ == "__main__":
     def get_value(*trajectory: TimeStep, gamma: float) -> float:
         return sum([gamma**t * ts.reward for t, ts in enumerate(trajectory)])
 
-    env = Env(hint=True, max_step=8, random_seed=0)
+    env = Env(hint=True, random_seed=0)
     while True:
         s = env.reset()
         print(env.initial_str() + env.state_str(s))
