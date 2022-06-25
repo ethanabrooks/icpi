@@ -12,7 +12,7 @@ OPENAI_MODELS = ["code-davinci-002", "text-davinci-002"]
 
 
 @dataclass
-class GPT3(LM):
+class API(LM):
     wait_time: Optional[float]
 
     def __post_init__(self):

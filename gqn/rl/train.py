@@ -7,10 +7,10 @@ from typing import Deque, List, Optional
 
 import numpy as np
 import openai
+from rl.api import API, OPENAI_MODELS
 from rl.common import evaluate, get_value, make_env, make_log, print_rank0
-from rl.gpt3 import OPENAI_MODELS
 from rl.huggingface import HF_MODELS
-from rl.model import GPT3, HuggingFaceModel, Pi, Q, TimeStep, to_string
+from rl.model import HuggingFaceModel, Pi, Q, TimeStep, to_string
 from run_logger import HasuraLogger
 
 
@@ -60,7 +60,7 @@ def train(
         wait_time=wait_time,
     )
     if model_name in OPENAI_MODELS:
-        lm = GPT3(**kwargs)
+        lm = API(**kwargs)
     elif model_name in HF_MODELS:
         del kwargs["wait_time"]
         kwargs["model_name"] = HF_MODELS[kwargs["model_name"]]

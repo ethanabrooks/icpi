@@ -7,7 +7,7 @@ from typing import Any, Callable, Dict, Generic, Iterator, List, Optional, Tuple
 import numpy as np
 from base_env import ActType, Env, ObsType, TimeStep
 from metrics.encoder import Encoder
-from rl.gpt3 import GPT3
+from rl.api import API
 
 
 def _get_prob(target: str, logprobs: List[Dict[str, float]]) -> Tuple[float, str]:
@@ -104,7 +104,7 @@ class Metric(abc.ABC):
         self,
         debug: int,
         encoder: Encoder,
-        gpt3: GPT3,
+        api: API,
         max_logprobs: int,
         prompt_size: int,
         rng: np.random.Generator,
@@ -157,7 +157,7 @@ class ProbabilityMetric(Metric, abc.ABC):
         self,
         debug: int,
         encoder: Encoder,
-        gpt3: GPT3,
+        api: API,
         max_logprobs: int,
         prompt_size: int,
         rng: np.random.Generator,
@@ -215,7 +215,7 @@ class ProbabilityMetric(Metric, abc.ABC):
                         return
 
             stop = "".join(reversed(list(get_common_suffix())))
-            completion = gpt3.get_full_completion(
+            completion = api.get_full_completion(
                 full_prompt, stop=[stop], temperature=0
             )
             logprobs = completion["top_logprobs"]
@@ -374,7 +374,7 @@ class Episode(ActMetric):
         self,
         debug: int,
         encoder: Encoder,
-        gpt3: GPT3,
+        api: API,
         max_logprobs: int,
         prompt_size: int,
         rng: np.random.Generator,
@@ -414,7 +414,7 @@ class Episode(ActMetric):
                     else:
                         if debug >= 0:
                             print("<", end="")
-                        completion = gpt3.get_full_completion(
+                        completion = api.get_full_completion(
                             prompt_with_query, stop=encoder.stop(), temperature=0
                         )
                         action_str = completion["completion"]

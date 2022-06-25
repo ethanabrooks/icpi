@@ -10,8 +10,8 @@ from typing import Callable, Deque, Generic, Hashable, Iterable, List, Optional,
 from base_env import ActType, Env, ObsType, TimeStep
 from gym.spaces import Discrete
 from numpy.random import Generator
+from rl.api import API
 from rl.common import Colorize, get_value
-from rl.gpt3 import GPT3
 from rl.huggingface import HuggingFaceModel
 
 
@@ -33,7 +33,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     buffer: Deque[List[TimeStep]]
     env: Env
     debug: int
-    lm: Union[GPT3, HuggingFaceModel]
+    lm: Union[API, HuggingFaceModel]
     max_prompts: int
     max_resamples: int
     max_steps: int

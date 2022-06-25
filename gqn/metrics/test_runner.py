@@ -8,7 +8,7 @@ import pandas as pd
 from base_env import ActType, ObsType
 from metrics.encoder import Encoder
 from metrics.metric import Metric, Trajectory
-from rl.gpt3 import GPT3
+from rl.api import API
 from run_logger import HasuraLogger
 from tqdm import tqdm
 
@@ -67,7 +67,7 @@ class TestRunner(Generic[ObsType, ActType]):
     ):
 
         logger = HasuraLogger(graphql_endpoint=os.getenv("GRAPHQL_ENDPOINT"))
-        gpt3 = GPT3(
+        api = API(
             debug=-1,
             logprobs=logprobs,
             logger=logger,
@@ -101,7 +101,7 @@ class TestRunner(Generic[ObsType, ActType]):
                                 debug=debug,
                                 encoder=encoder,
                                 failure_trajectories=failure_trajectories,
-                                gpt3=gpt3,
+                                api=api,
                                 max_logprobs=max_logprobs,
                                 prompt_size=prompt_size,
                                 rng=rng,
