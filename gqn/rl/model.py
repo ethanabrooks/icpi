@@ -111,7 +111,12 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         self.rng.shuffle(time_steps)
         done = [ts for ts in time_steps if ts.done]
         not_done = [ts for ts in time_steps if not ts.done]
-        balanced = [ts for (d, nd) in zip(done, not_done) for ts in [d, nd]]
+        if len(done) == 0:
+            balanced = not_done
+        elif len(not_done) == 0:
+            balanced = done
+        else:
+            balanced = [ts for (d, nd) in zip(done, not_done) for ts in [d, nd]]
         self.rng.shuffle(balanced)
         return [
             self.env.state_str(ts.state)
@@ -244,18 +249,12 @@ class Q(Model[ObsType, ActType]):
 
     def ready(self) -> bool:
         actions = list(range(self.env.action_space.n))
-        return (
-            all(
-                [bool(self.sample_done(a)) for a in actions]
-                + [bool(self.sample_next_state(a)) for a in actions]
-                + [
-                    bool(self.sample_reward(a, d))
-                    for a in actions
-                    for d in [True, False]
-                ]
-            )
-            and super().ready()
-        )
+        done_ready = [bool(self.sample_done(a)) for a in actions]
+        next_state_ready = [bool(self.sample_next_state(a)) for a in actions]
+        reward_ready_done = [bool(self.sample_reward(a, True)) for a in actions]
+        reward_ready_not_done = [bool(self.sample_reward(a, False)) for a in actions]
+        reward_ready = all(reward_ready_done) or all(reward_ready_not_done)
+        return all(done_ready + next_state_ready + [reward_ready]) and super().ready()
 
     def rollout(self, state: ObsType, action: ActType, T: int) -> str:
         if self.debug >= 2:
