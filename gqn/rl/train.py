@@ -6,7 +6,6 @@ from copy import deepcopy
 from typing import Deque, List, Optional
 
 import numpy as np
-import openai
 from rl.api import API, OPENAI_MODELS
 from rl.common import evaluate, get_value, make_env, make_log, print_rank0
 from rl.huggingface import HF_MODELS
@@ -40,7 +39,6 @@ def train(
     local_rank = os.getenv("LOCAL_RANK", None)
     if local_rank is not None:
         local_rank = int(local_rank)
-    openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
     env = make_env(env_id=env_id, seed=seed, hint=hint)
     eval_env = deepcopy(env)

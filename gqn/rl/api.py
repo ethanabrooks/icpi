@@ -1,9 +1,11 @@
+import itertools
 import sys
 import time
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Iterator, Optional
 
 import openai
+import yaml
 from rl.common import Colorize
 from rl.lm import LM
 from transformers import GPT2TokenizerFast
@@ -14,11 +16,16 @@ OPENAI_MODELS = ["code-davinci-002", "text-davinci-002"]
 @dataclass
 class API(LM):
     wait_time: Optional[float]
+    api_key_index: int = 0
+    api_keys: Iterator[str] = field(init=False)
 
     def __post_init__(self):
         self.tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
         self.start_time = time.time()
         self.max_tokens_accepted_by_lm = 4000
+        with open(".api_keys.yml") as f:
+            api_keys = yaml.safe_load(f)
+        self.api_keys = itertools.cycle(api_keys)
         if self.wait_time is None:
             if self.model_name == "code-davinci-002":
                 self.wait_time = 4
@@ -65,6 +72,7 @@ class API(LM):
             try:
                 time.sleep(wait_time)
                 tick = time.time()
+                openai.api_key = next(self.api_keys)
                 choice, *_ = openai.Completion.create(
                     engine=self.model_name,
                     max_tokens=self.max_tokens_in_completion,
