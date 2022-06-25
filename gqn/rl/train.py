@@ -2,6 +2,7 @@ import math
 import os
 import time
 from collections import deque
+from copy import deepcopy
 from typing import Deque, List, Optional
 
 import numpy as np
@@ -40,6 +41,7 @@ def train(
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
     env = make_env(env_id=env_id, seed=seed, hint=hint)
+    eval_env = deepcopy(env)
 
     buffer: Deque[List[TimeStep]] = deque()
     success_buffer: Deque[List[TimeStep]] = deque(maxlen=success_buffer_size)
@@ -109,7 +111,7 @@ def train(
         if eval_interval is not None and episodes % eval_interval == 0:
             evaluate(
                 act_fn=pi.act,
-                env=env,
+                env=eval_env,
                 eval_interval=eval_interval,
                 logger=logger,
                 T=T,
