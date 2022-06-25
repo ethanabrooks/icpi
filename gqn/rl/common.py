@@ -9,6 +9,7 @@ import bandit
 import cartpole
 import catch
 import chain
+import maze
 import space_invaders
 from base_env import Env, TimeStep
 from gym.wrappers import TimeLimit
@@ -72,6 +73,8 @@ def make_env(env_id: str, seed: int, hint: bool) -> Env:
             chain.Env(goal=4, n=8, random_seed=seed, hint=hint),
             max_episode_steps=8,
         )
+    elif env_id == "maze":
+        env = maze.Env(hint=hint, max_step=8, random_seed=seed)
     elif env_id == "space-invaders":
         env = space_invaders.Env(
             width=3,
