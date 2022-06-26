@@ -89,7 +89,7 @@ class Env(base_env.Env):
         if gamma is None:
             gamma = self.gamma()
         matches = re.findall(r"reward == (\d)", prompt)
-        return sum([gamma ** (t - 1) * float(x) for t, x in enumerate(matches)])
+        return sum([gamma**t * float(x) for t, x in enumerate(matches)])
 
     def reset(self):
         self.pos = pos = self.rng.choice(
@@ -125,6 +125,7 @@ class Env(base_env.Env):
         return state_str + reward + self.state_stop()
 
     def step(self, action: int):
+        success = self.success(self.state.pos, self.state.vel)
         act_str = self.actions()[action]
         if act_str == "accel":
             accel = 1
@@ -137,7 +138,6 @@ class Env(base_env.Env):
         pos = self.state.pos + self.state.vel + accel / 2
         vel = self.state.vel + accel
         self.state = State(pos, vel)
-        success = self.success(pos, vel)
         reward = float(success)
         self.t += 1
         done = self.oob(pos) or success
