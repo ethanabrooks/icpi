@@ -75,14 +75,17 @@ def make_env(env_id: str, seed: int, hint: bool) -> Env:
             max_episode_steps=8,
         )
     elif env_id == "maze":
-        env = maze.Env(hint=hint, random_seed=seed)
+        env = TimeLimit(maze.Env(hint=hint, random_seed=seed), max_episode_steps=8)
     elif env_id == "point-mass":
-        env = point_mass.Env(
-            hint=hint,
-            max_distance=6,
-            _max_trajectory=8,
-            pos_threshold=2,
-            random_seed=seed,
+        env = TimeLimit(
+            point_mass.Env(
+                hint=hint,
+                max_distance=6,
+                _max_trajectory=8,
+                pos_threshold=2,
+                random_seed=seed,
+            ),
+            max_episode_steps=8,
         )
     elif env_id == "space-invaders":
         env = space_invaders.Env(
