@@ -21,7 +21,6 @@ class Env(base_env.Env):
     _max_trajectory: int
     pos_threshold: float
     random_seed: int
-    vel_threshold: float
     action_space: Discrete = field(init=False)
     info: dict = field(init=False)
     rng: np.random.Generator = field(init=False)
@@ -68,14 +67,7 @@ class Env(base_env.Env):
             pos_hint = f"{-self.pos_threshold} <= pos <= {self.pos_threshold}"
         else:
             raise RuntimeError()
-        if state.vel < -self.vel_threshold:
-            vel_hint = f"vel < {-self.vel_threshold}"
-        elif state.vel > self.vel_threshold:
-            vel_hint = f"{self.vel_threshold} < vel"
-        elif -self.vel_threshold <= state.vel <= self.vel_threshold:
-            vel_hint = f"{-self.vel_threshold} <= vel <= {self.vel_threshold}"
-        else:
-            raise RuntimeError()
+        vel_hint = f"vel {'==' if state.vel == 0 else '!='} 0"
         hint = " and ".join([pos_hint, vel_hint])
         return hint
 
@@ -154,7 +146,7 @@ class Env(base_env.Env):
         return self.state, reward, done, self.info
 
     def success(self, pos, vel):
-        return abs(pos) <= self.pos_threshold and abs(vel) <= self.vel_threshold
+        return abs(pos) <= self.pos_threshold and vel == 0
 
     def termination_str(self, ts: TimeStep) -> str:
         return ""
@@ -196,7 +188,6 @@ if __name__ == "__main__":
         _max_trajectory=6,
         pos_threshold=1,
         random_seed=0,
-        vel_threshold=1,
     )
 
     while True:
