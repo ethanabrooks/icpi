@@ -259,7 +259,7 @@ class Env(base_env.Env[C, int]):
 
     def valid_reward(self, reward_str: str) -> bool:
         return bool(
-            re.findall(r"assert reward == [0-9]+", reward_str)
+            re.findall(r"assert reward == \d+", reward_str)
         ) and reward_str.endswith(self.reward_stop())
 
     def valid_state(self, state_str: str) -> bool:

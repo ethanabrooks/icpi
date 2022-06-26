@@ -10,6 +10,7 @@ import cartpole
 import catch
 import chain
 import maze
+import point_mass
 import space_invaders
 from base_env import Env, TimeStep
 from gym.wrappers import TimeLimit
@@ -75,6 +76,15 @@ def make_env(env_id: str, seed: int, hint: bool) -> Env:
         )
     elif env_id == "maze":
         env = maze.Env(hint=hint, random_seed=seed)
+    elif env_id == "point-mass":
+        env = point_mass.Env(
+            hint=hint,
+            max_distance=6,
+            _max_trajectory=8,
+            pos_threshold=2,
+            random_seed=seed,
+            vel_threshold=0,
+        )
     elif env_id == "space-invaders":
         env = space_invaders.Env(
             width=3,
