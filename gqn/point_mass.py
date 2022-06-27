@@ -89,6 +89,7 @@ class Env(base_env.Env):
         if gamma is None:
             gamma = self.gamma()
         matches = re.findall(r"reward == (\d)", prompt)
+        matches = matches[: self.max_trajectory()]
         return sum([gamma**t * float(x) for t, x in enumerate(matches)])
 
     def reset(self):
