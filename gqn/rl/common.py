@@ -14,6 +14,7 @@ import point_mass
 import space_invaders
 from base_env import Env, TimeStep
 from gym.wrappers import TimeLimit
+from ray import tune
 from run_logger import HasuraLogger
 
 
@@ -145,6 +146,7 @@ def make_log(
             "success buffer": num_success,
         },
     )
+    tune.report(**log)
     print_rank0(local_rank, log, pretty=True)
     if logger.run_id is not None:
         logger.log(**log)

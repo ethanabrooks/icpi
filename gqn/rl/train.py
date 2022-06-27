@@ -37,6 +37,7 @@ def train(
     total_steps: int,
     wait_time: Optional[float],
 ):
+    print("TRAINING")
     local_rank = os.getenv("LOCAL_RANK", None)
     if local_rank is not None:
         local_rank = int(local_rank)

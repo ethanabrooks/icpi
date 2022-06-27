@@ -17,16 +17,19 @@ RUN apt-get update -q \
     apt-get install -yq \
       # git-state
       git \
-
+\
       # primary interpreter
       python3.9 \
-
+\
       # for shelve
       python3.9-gdb \
-
+\
       # redis-python
       redis \
-
+\
+      # for ray
+      rsync \
+\
  && apt-get clean
 
 FROM base AS python-deps
@@ -35,13 +38,13 @@ FROM base AS python-deps
 RUN apt-get update -q \
  && DEBIAN_FRONTEND="noninteractive" \
     apt-get install -yq \
-
+\
       # required by poetry
       python3-pip \
-
+\
       # required for redis
       gcc \
-
+\
  && apt-get clean
 
 WORKDIR "/deps"
