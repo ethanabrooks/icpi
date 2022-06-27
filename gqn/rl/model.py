@@ -36,7 +36,6 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     lm: Union[API, HuggingFaceModel]
     max_prompts: int
     max_resamples: int
-    max_steps: int
     rng: Generator
     success_buffer: Deque[List[TimeStep]]
     temperature: float
@@ -207,6 +206,8 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
 
 @dataclass
 class Q(Model[ObsType, ActType]):
+    max_steps: int
+
     def _act(self, state: ObsType, T: int) -> ActType:
         assert isinstance(self.env.action_space, Discrete)
         actions = range(self.env.action_space.n)

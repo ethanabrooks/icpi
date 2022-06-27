@@ -75,7 +75,6 @@ def train(
         lm=lm,
         max_prompts=max_prompts,
         max_resamples=max_resamples,
-        max_steps=env.max_trajectory(),
         rng=rng,
         success_buffer=success_buffer,
         t_threshold=t_threshold,
