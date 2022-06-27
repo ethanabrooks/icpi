@@ -174,7 +174,7 @@ class Env(base_env.Env[C, int]):
     def log_gamma(cls) -> float:
         return cls.gamma()
 
-    def max_trajectory(self) -> int:
+    def max_q_steps(self) -> int:
         return self.height + self.width
 
     def render(self, mode="human"):

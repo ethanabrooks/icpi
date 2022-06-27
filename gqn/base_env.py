@@ -82,7 +82,7 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
         return 1.0
 
     @abc.abstractmethod
-    def max_trajectory(self) -> int:
+    def max_q_steps(self) -> int:
         ...
 
     def quantify(self, prompt: str, gamma: Optional[float] = None) -> float:

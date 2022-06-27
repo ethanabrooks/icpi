@@ -79,7 +79,7 @@ class Env(base_env.Env):
     def log_gamma(cls) -> float:
         return cls.gamma()
 
-    def max_trajectory(self) -> int:
+    def max_q_steps(self) -> int:
         return self._max_trajectory
 
     def oob(self, pos):
@@ -89,7 +89,7 @@ class Env(base_env.Env):
         if gamma is None:
             gamma = self.gamma()
         matches = re.findall(r"reward == (\d)", prompt)
-        matches = matches[: self.max_trajectory()]
+        matches = matches[: self.max_q_steps()]
         return sum([gamma**t * float(x) for t, x in enumerate(matches)])
 
     def reset(self):

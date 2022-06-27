@@ -131,7 +131,7 @@ class Env(base_env.Env[Obs, int]):
     def initial_str(cls) -> str:
         return f"{cls.ship()}, {cls.alien_str()} = reset()\n"
 
-    def max_trajectory(self) -> int:
+    def max_q_steps(self) -> int:
         return self.width * self.optimal_undiscounted
 
     def render(self, mode="human"):

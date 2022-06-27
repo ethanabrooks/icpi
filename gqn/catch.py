@@ -183,7 +183,7 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
     def initial_str() -> str:
         return "paddle, ball = reset()\n"
 
-    def max_trajectory(self) -> int:
+    def max_q_steps(self) -> int:
         return self.env.rows
 
     def reset(self):
