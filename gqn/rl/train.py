@@ -161,7 +161,6 @@ def train(
             env.quantify(prompt)
             get_value(*trajectory, gamma=env.gamma())
 
-        trajectory = trajectory[-env.max_trajectory() :]
         if not timed_out:
             buffer.append(trajectory)
             if (
