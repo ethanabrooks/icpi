@@ -6,13 +6,12 @@ from pathlib import Path
 from shlex import quote
 from typing import Optional
 
-import run_logger
-from dollar_lambda import CommandTree, argument
+from dollar_lambda import CommandTree, argument, flag, nonpositional, option
 from git import Repo
 from rl.baseline import deep_baseline, tabular_main
 from rl.train import train
 from run_logger import HasuraLogger
-from run_logger.main import get_config_params
+from run_logger.main import get_config_params, get_load_params
 from vega_charts import line
 
 tree = CommandTree()
@@ -26,49 +25,72 @@ def validate_local_rank(s: str):
     return s
 
 
+def main(model_name: str, seed: "int | list[int]", **kwargs):
+    if model_name.startswith("baseline"):
+        train_fn = deep_baseline
+    elif model_name == "tabular-q":
+        train_fn = tabular_main
+    else:
+        train_fn = train
+    kwargs.update(model_name=model_name, seed=seed)
+    if isinstance(seed, list):
+        seeds = list(seed)
+        for seed in seeds:
+            kwargs.update(seed=seed)
+            train_fn(**kwargs)
+    else:
+        train_fn(**kwargs)
+
+
+ALLOW_DIRTY_FLAG = flag("allow_dirty", default=False)  # must be set from CLI
+LOCAL_RANK_ARG = argument("local_rank", type=validate_local_rank).optional().ignore()
+REQUIRE_CACHE_FLAG = flag("require_cache", default=False)  # must be set from CLI
+
+
 @tree.command(
-    parsers=dict(local_rank=argument("local_rank", type=validate_local_rank).optional())
+    parsers=dict(
+        kwargs=nonpositional(
+            option("debug", type=int, default=0),
+            REQUIRE_CACHE_FLAG,
+            option("t_threshold", type=int, default=None),
+            LOCAL_RANK_ARG,
+        )
+    )
 )
-def no_logging(
+def no_log(
     config: str = DEFAULT_CONFIG,
-    debug: int = 0,
     load_id: Optional[int] = None,
-    local_rank: Optional[str] = None,
-    require_cache: bool = False,
-    t_threshold: Optional[int] = None,
+    **kwargs,
 ):
     logger = HasuraLogger(GRAPHQL_ENDPOINT)
-    params = dict(get_config_params(config), debug=debug)
-    if "require_cache" not in params:
-        params.update(require_cache=require_cache)
+    params = get_config_params(config)
     if load_id is not None:
-        params.update(run_logger.get_load_params(load_id=load_id, logger=logger))
-    main_fn = train
-    if params["model_name"].startswith("baseline"):
-        main_fn = deep_baseline
-    if params["model_name"] == "tabular-q":
-        main_fn = tabular_main
-    params.update(t_threshold=t_threshold)
-    if isinstance(params["seed"], list):
-        seeds = list(params["seed"])
-        for seed in seeds:
-            params.update(seed=seed)
-            main_fn(**params, logger=logger)
-    else:
-        main_fn(**params, logger=logger)
+        load_params = get_load_params(load_id=load_id, logger=logger)
+        params.update(load_params)  # load params > config params
+    params.update(kwargs)  # kwargs params > load params > config params
+    main(logger=logger, **params)
 
 
-@tree.subcommand(parsers=dict(name=argument("name")))
+@tree.subcommand(
+    parsers=dict(
+        name=argument("name"),
+        kwargs=nonpositional(
+            LOCAL_RANK_ARG,
+            REQUIRE_CACHE_FLAG,
+        ),
+    )
+)
 def log(
     name: str,
     allow_dirty: bool = False,
     config: str = DEFAULT_CONFIG,
-    require_cache: bool = False,
     sweep_id: Optional[int] = None,
+    repo: Repo = Repo("."),
+    **kwargs,
 ):
-    repo = Repo(".")
     if not allow_dirty:
         assert not repo.is_dirty()
+
     metadata = dict(
         reproducibility=(
             dict(
@@ -90,31 +112,18 @@ def log(
         for y in ["regret", "return", "use_model_prob", "eval regret", "eval return"]
     ] + [line.spec(x="hours", y="seconds per query", visualizer_url=visualizer_url)]
 
-    params, logger = run_logger.initialize(
-        graphql_endpoint=GRAPHQL_ENDPOINT,
-        config=config,
-        charts=charts,
-        metadata=metadata,
-        name=name if sweep_id is None else None,
-        load_id=None,
-        sweep_id=sweep_id,
+    logger = HasuraLogger(GRAPHQL_ENDPOINT)
+    params = get_config_params(config)
+    sweep_params = logger.create_run(
+        metadata=metadata, sweep_id=sweep_id, charts=charts
     )
-    if "require_cache" not in params:
-        params.update(require_cache=require_cache)
-
-    main_fn = train
-    if params["model_name"].startswith("baseline"):
-        main_fn = deep_baseline
-    if params["model_name"] == "tabular-q":
-        main_fn = tabular_main
-
-    if isinstance(params["seed"], list) and sweep_id is None:
-        seeds = list(params["seed"])
-        for seed in seeds:
-            params.update(seed=seed)
-            main_fn(**params, debug=0, logger=logger)
-    else:
-        main_fn(**params, debug=0, logger=logger)
+    if sweep_params is not None:
+        params.update(sweep_params)  # sweep params > config params
+    params.update(kwargs)  # kwargs params > sweep params > config params
+    logger.update_metadata(  # this updates the metadata stored in the database
+        dict(parameters=kwargs, run_id=logger.run_id, name=name)
+    )  # todo: encapsulate in HasuraLogger
+    main(**params, debug=0, logger=logger)
 
 
 if __name__ == "__main__":
