@@ -161,12 +161,13 @@ def train(
             env.quantify(prompt)
             get_value(*trajectory, gamma=env.gamma())
 
-        if not timed_out:
-            buffer.append(trajectory)
-            if (
-                not sil
-                or get_value(*trajectory, gamma=env.gamma()) > env.failure_threshold()
-            ):
-                success_buffer.append(trajectory)
+        if timed_out:
+            trajectory[-1].done = False
+        buffer.append(trajectory)
+        if (
+            not sil
+            or get_value(*trajectory, gamma=env.gamma()) > env.failure_threshold()
+        ):
+            success_buffer.append(trajectory)
 
     print("done!")
