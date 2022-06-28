@@ -1,3 +1,5 @@
 - runs without hints
 - runs without Q
 - runs with optimal Q
+- TimeLimit termination confuses done prediction
+- Allow repeats in order to achieve balance?
