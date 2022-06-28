@@ -50,11 +50,25 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     def _act(self, state: ObsType, T: int) -> ActType:
         ...
 
+    def balance(self, *lists: List) -> List[List]:
+        if not lists:
+            return [[]]
+        max_len = max(len(l) for l in lists)
+        return [self.extend(l, max_len) for l in lists]
+
     def breakpoint(self, T: int, threshold: int):
         if self.debug >= threshold and (
             self.t_threshold is None or T >= self.t_threshold
         ):
             breakpoint()
+
+    def extend(self, lst: List, length: int) -> List:
+        lst = list(lst)
+        self.rng.shuffle(lst)
+        lst = list(itertools.islice(itertools.cycle(lst), length))
+        self.rng.shuffle(lst)
+        assert len(lst) == length
+        return lst
 
     def get_value(self, trajectory: List[TimeStep]) -> float:
         return get_value(*trajectory, gamma=self.env.gamma())
@@ -116,6 +130,9 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         elif len(not_done) == 0:
             balanced = done
         else:
+            done, not_done = self.balance(done, not_done)
+            # if len(done) > 3:
+            #     breakpoint()
             balanced = [ts for (d, nd) in zip(done, not_done) for ts in [d, nd]]
         self.rng.shuffle(balanced)
         return [
@@ -149,6 +166,9 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         elif not unsuccessful:
             balanced = successful
         else:
+            successful, unsuccessful = self.balance(successful, unsuccessful)
+            # if len(successful) > 3:
+            #     breakpoint()
             balanced = [ts for (s, u) in zip(successful, unsuccessful) for ts in [s, u]]
         self.rng.shuffle(balanced)
         return [
@@ -167,7 +187,10 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             for ts in t:
                 if ts.action == action and ts.done == done:
                     rewards[ts.reward].append(ts)
-        balanced = [ts for time_steps in zip(*rewards.values()) for ts in time_steps]
+        balanced = self.balance(*rewards.values())
+        # if rewards and max(len(r) for r in rewards.values()) > 3:
+        #     breakpoint()
+        balanced = [ts for time_steps in zip(*balanced) for ts in time_steps]
         self.rng.shuffle(balanced)
         return [
             self.env.state_str(ts.state)
