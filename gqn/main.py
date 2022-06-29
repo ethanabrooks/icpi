@@ -6,12 +6,17 @@ from pathlib import Path
 from shlex import quote
 from typing import Optional
 
+import ray
+import yaml
 from dollar_lambda import CommandTree, argument, flag, nonpositional, option
 from git import Repo
+from ray import tune
 from rl.baseline import deep_baseline, tabular_main
 from rl.train import train
 from run_logger import HasuraLogger
 from run_logger.main import get_config_params, get_load_params
+from sweep_logger import create_sweep
+from sweep_logger.create_sweep import SweepMethod, compute_remaining_runs
 from vega_charts import line
 
 tree = CommandTree()
@@ -71,16 +76,7 @@ def no_logging(
     main(logger=logger, **params)
 
 
-@tree.subcommand(
-    parsers=dict(
-        name=argument("name"),
-        kwargs=nonpositional(
-            LOCAL_RANK_ARG,
-            REQUIRE_CACHE_FLAG,
-        ),
-    )
-)
-def logging(
+def _logging(
     allow_dirty: bool,
     name: str,
     repo: Repo,
@@ -120,3 +116,76 @@ def logging(
         dict(parameters=kwargs, run_id=logger.run_id, name=name)
     )  # todo: encapsulate in HasuraLogger
     main(**kwargs)
+
+
+@tree.subcommand(
+    parsers=dict(
+        kwargs=nonpositional(
+            argument("name"),
+            LOCAL_RANK_ARG,
+            REQUIRE_CACHE_FLAG,
+        ),
+    )
+)
+def logging(**kwargs):
+    return _logging(**kwargs)
+
+
+def trainable(config: dict):
+    return _logging(**config)
+
+
+@tree.subcommand(
+    parsers=dict(
+        name=argument("name"),
+        kwargs=nonpositional(
+            ALLOW_DIRTY_FLAG,
+            LOCAL_RANK_ARG,
+            REQUIRE_CACHE_FLAG,
+        ),
+    )
+)
+def sweep(
+    name: str,
+    config: str = DEFAULT_CONFIG,
+    grid_search: bool = False,
+    num_runs: Optional[int] = None,
+    **kwargs,
+):
+    config_path = Path(config)
+    with config_path.open() as f:
+        config = yaml.load(f, yaml.FullLoader)
+
+    config = dict(
+        name=name,
+        repo=Repo("."),
+        **kwargs,
+        **{
+            k: (tune.grid_search(v) if grid_search else tune.choice(v))
+            if isinstance(v, list)
+            else v
+            for k, v in config.items()
+        },
+    )
+    method = SweepMethod.grid if grid_search else SweepMethod.random
+    if num_runs is None:
+        num_runs = compute_remaining_runs(config)
+    sweep_id = create_sweep.run(
+        config=config_path,
+        graphql_endpoint=GRAPHQL_ENDPOINT,
+        log_level="INFO",
+        method=method.name,
+        name=name,
+        project=None,
+        remaining_runs=num_runs,
+    )
+    config.update(sweep_id=sweep_id)
+    print("Initializing...")
+    ray.init()
+    print("Running...")
+    analysis = tune.run(trainable, config=config, num_samples=num_runs)
+    print(analysis.stats())
+
+
+if __name__ == "__main__":
+    tree()
