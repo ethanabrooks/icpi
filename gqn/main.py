@@ -6,12 +6,17 @@ from pathlib import Path
 from shlex import quote
 from typing import Optional
 
+import ray
+import yaml
 from dollar_lambda import CommandTree, argument, flag, nonpositional, option
 from git import Repo
+from ray import tune
 from rl.baseline import deep_baseline, tabular_main
 from rl.train import train
 from run_logger import HasuraLogger
 from run_logger.main import get_config_params, get_load_params
+from sweep_logger import create_sweep
+from sweep_logger.create_sweep import SweepMethod, compute_remaining_runs
 from vega_charts import line
 
 tree = CommandTree()
@@ -71,21 +76,11 @@ def no_log(
     main(logger=logger, **params)
 
 
-@tree.subcommand(
-    parsers=dict(
-        name=argument("name"),
-        kwargs=nonpositional(
-            LOCAL_RANK_ARG,
-            REQUIRE_CACHE_FLAG,
-        ),
-    )
-)
-def log(
+def _log(
+    allow_dirty: bool,
     name: str,
-    allow_dirty: bool = False,
-    config: str = DEFAULT_CONFIG,
-    sweep_id: Optional[int] = None,
-    repo: Repo = Repo("."),
+    repo: Repo,
+    sweep_id: Optional[int],
     **kwargs,
 ):
     if not allow_dirty:
@@ -113,17 +108,82 @@ def log(
     ] + [line.spec(x="hours", y="seconds per query", visualizer_url=visualizer_url)]
 
     logger = HasuraLogger(GRAPHQL_ENDPOINT)
-    params = get_config_params(config)
-    sweep_params = logger.create_run(
-        metadata=metadata, sweep_id=sweep_id, charts=charts
-    )
-    if sweep_params is not None:
-        params.update(sweep_params)  # sweep params > config params
-    params.update(kwargs)  # kwargs params > sweep params > config params
+    logger.create_run(metadata=metadata, sweep_id=sweep_id, charts=charts)
     logger.update_metadata(  # this updates the metadata stored in the database
         dict(parameters=kwargs, run_id=logger.run_id, name=name)
     )  # todo: encapsulate in HasuraLogger
-    main(**params, debug=0, logger=logger)
+    main(**kwargs, debug=0, logger=logger)
+
+
+@tree.subcommand(
+    parsers=dict(
+        kwargs=nonpositional(
+            argument("name"),
+            LOCAL_RANK_ARG,
+            REQUIRE_CACHE_FLAG,
+            ALLOW_DIRTY_FLAG,
+        ),
+    )
+)
+def log(config: str = DEFAULT_CONFIG, **kwargs):
+    repo = Repo(".")
+    params = get_config_params(config)
+    params.update(kwargs)
+    return _log(**params, repo=repo, sweep_id=None)
+
+
+def trainable(config: dict):
+    return _log(**config)
+
+
+@tree.subcommand(
+    parsers=dict(
+        name=argument("name"),
+        kwargs=nonpositional(
+            ALLOW_DIRTY_FLAG,
+            LOCAL_RANK_ARG,
+            REQUIRE_CACHE_FLAG,
+        ),
+    )
+)
+def sweep(
+    name: str,
+    config: str = DEFAULT_CONFIG,
+    random_search: bool = False,
+    num_runs: Optional[int] = None,
+    **kwargs,
+):
+    config_path = Path(config)
+    with config_path.open() as f:
+        config = yaml.load(f, yaml.FullLoader)
+    if num_runs is None:
+        num_runs = compute_remaining_runs(config)
+
+    config = dict(
+        name=name,
+        repo=Repo("."),
+        **kwargs,
+        **{
+            k: (tune.choice(v) if random_search else tune.grid_search(v))
+            if isinstance(v, list)
+            else v
+            for k, v in config.items()
+        },
+    )
+    method = SweepMethod.random if random_search else SweepMethod.grid
+    sweep_id = create_sweep.run(
+        config=config_path,
+        graphql_endpoint=GRAPHQL_ENDPOINT,
+        log_level="INFO",
+        method=method.name,
+        name=name,
+        project=None,
+        remaining_runs=num_runs,
+    )
+    config.update(sweep_id=sweep_id)
+    ray.init()
+    analysis = tune.run(trainable, config=config)
+    print(analysis.stats())
 
 
 if __name__ == "__main__":
