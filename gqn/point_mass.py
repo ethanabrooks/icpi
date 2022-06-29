@@ -122,8 +122,7 @@ class Env(base_env.Env):
         hint_str = self.hint_str(state)
         if self.hint and hint_str:
             state_str += f" and {hint_str}"
-        reward = f" and reward == {int(self.success(state.pos, state.vel))}"
-        return state_str + reward + self.state_stop()
+        return state_str + self.state_stop()
 
     def step(self, action: int):
         success = self.success(self.state.pos, self.state.vel)
@@ -153,9 +152,12 @@ class Env(base_env.Env):
         return ""
 
     def ts_to_string(self, ts: TimeStep) -> str:
+        reward_str = f"assert reward == {ts.reward}"
         parts = [
             self.state_str(ts.state),
             self.action_str(ts.action),
+            reward_str,
+            self.reward_stop(),
         ]
         if ts.done:
             parts += [self.state_str(ts.next_state)]
