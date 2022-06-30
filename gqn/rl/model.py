@@ -275,11 +275,14 @@ class Q(Model[ObsType, ActType]):
     def ready(self) -> bool:
         actions = list(range(self.env.action_space.n))
         done_ready = [bool(self.sample_done(a)) for a in actions]
-        next_state_ready = [bool(self.sample_next_state(a)) for a in actions]
+        next_state_ready = any([bool(self.sample_next_state(a)) for a in actions])
         reward_ready_done = [bool(self.sample_reward(a, True)) for a in actions]
         reward_ready_not_done = [bool(self.sample_reward(a, False)) for a in actions]
-        reward_ready = all(reward_ready_done) or all(reward_ready_not_done)
-        return all(done_ready + next_state_ready + [reward_ready]) and super().ready()
+        reward_ready = [
+            done or not_done
+            for done, not_done in zip(reward_ready_done, reward_ready_not_done)
+        ]
+        return all(done_ready + reward_ready + [next_state_ready]) and super().ready()
 
     def rollout(self, state: ObsType, action: ActType, T: int) -> str:
         if self.debug >= 2:
