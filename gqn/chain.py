@@ -45,8 +45,14 @@ class Env(base_env.Env[int, int]):
             "right",
         ]
 
-    def done(self, *completions: str) -> bool:
-        return "try_goal" in "".join(completions)
+    def done(self, done_str: str) -> bool:
+        return "assert done" in done_str
+
+    def done_stop(self) -> str:
+        return "\n"
+
+    def done_str(self, done: bool) -> str:
+        return f"assert{' ' if done else ' not '}done"
 
     def failure_threshold(self) -> float:
         return 0
@@ -81,6 +87,9 @@ class Env(base_env.Env[int, int]):
     ) -> int:
         self._state = self._start_state = self.random.choice(self.n)
         return self._start_state
+
+    def reward_str(self, reward: float) -> str:
+        return f"assert reward == {int(reward)}"
 
     def start_states(self) -> Optional[Iterable[int]]:
         return range(self.n)
@@ -121,9 +130,16 @@ class Env(base_env.Env[int, int]):
             breakpoint()
         return s
 
+    def valid_done(self, done_str: str) -> bool:
+        return (
+            done_str.startswith("assert")
+            and "done" in done_str
+            and done_str.endswith(self.done_stop())
+        )
+
     def valid_reward(self, reward_str: str) -> bool:
         return bool(
-            re.findall(r"assert reward == [0-9]+", reward_str)
+            re.findall(r"assert reward == \d+", reward_str)
         ) and reward_str.endswith(self.reward_stop())
 
     def valid_state(self, state_str: str) -> bool:
