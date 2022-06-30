@@ -103,8 +103,9 @@ class Env(base_env.Env):
         self.state = State(pos, vel)
         self.t = 0
         self.dist_to_threshold = dist_to_threshold = abs(pos) - self.pos_threshold
-        self.half_dist = half_dist = dist_to_threshold / 2
-        self.min_steps = min_steps = math.ceil(2 * math.sqrt(half_dist) - 1)
+        sqrt = math.sqrt(dist_to_threshold)
+        n = math.ceil(sqrt)
+        self.min_steps = min_steps = 2 * n
         self.info = dict(min_steps=min_steps, optimal=self.gamma() ** min_steps)
         return self.state
 
@@ -187,9 +188,9 @@ if __name__ == "__main__":
 
     env = Env(
         hint=True,
-        max_distance=10,
+        max_distance=6,
         _max_trajectory=6,
-        pos_threshold=1,
+        pos_threshold=2,
         random_seed=0,
     )
 
@@ -205,7 +206,7 @@ if __name__ == "__main__":
             ts = base_env.TimeStep(s, a, r, t, s_)
             trajectory.append(ts)
             completions = [env.ts_to_string(ts) for ts in trajectory]
-            done_estimate = env.done(*completions, env.state_str(s_))
+            # done_estimate = env.done(*completions, env.state_str(s_))
             prompt = "".join(completions)
             value_from_prompt = env.quantify(prompt)
             value_from_trajectory = get_value(*trajectory, gamma=env.gamma())
@@ -214,10 +215,10 @@ if __name__ == "__main__":
                 breakpoint()
                 env.quantify(prompt)
                 get_value(*trajectory, gamma=env.gamma())
-            if not done_estimate == t:
-                state_str = env.state_str(s_)
-                breakpoint()
-                env.done(*completions, state_str)
+            # if not done_estimate == t:
+            #     state_str = env.state_str(s_)
+            #     breakpoint()
+            #     env.done(*completions, state_str)
             if t:
                 print("Min Steps", i["min_steps"])
                 print("T", env.t)
