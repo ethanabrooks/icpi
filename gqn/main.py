@@ -112,7 +112,7 @@ def _log(
     logger.update_metadata(  # this updates the metadata stored in the database
         dict(parameters=kwargs, run_id=logger.run_id, name=name)
     )  # todo: encapsulate in HasuraLogger
-    main(**kwargs, debug=0, logger=logger)
+    main(**kwargs, logger=logger)
 
 
 @tree.subcommand(
@@ -129,7 +129,7 @@ def log(config: str = DEFAULT_CONFIG, **kwargs):
     repo = Repo(".")
     params = get_config_params(config)
     params.update(kwargs)
-    return _log(**params, repo=repo, sweep_id=None)
+    return _log(**params, debug=0, repo=repo, sweep_id=None)
 
 
 def trainable(config: dict):
@@ -162,6 +162,7 @@ def sweep(
     config = dict(
         name=name,
         repo=Repo("."),
+        debug=-1,  # do not print <>
         **kwargs,
         **{
             k: (tune.choice(v) if random_search else tune.grid_search(v))
