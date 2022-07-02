@@ -16,6 +16,7 @@ class API(LM):
     wait_time: Optional[float]
     completion_count: int = 0
     completion_times: float = 0
+    error_count: int = 0
     query_count: int = 0
     query_tick: float = time.time()
     query_times: float = 0
@@ -88,6 +89,8 @@ class API(LM):
                             "hours": (time.time() - self.start_time) / 3600,
                             "run ID": self.logger.run_id,
                             "seconds per query": self.query_times / self.query_count,
+                            "API error probability": self.error_count
+                            / self.query_count,
                         },
                     )
                 # if not choice.text:
@@ -104,6 +107,7 @@ class API(LM):
                 print(e)
                 sys.stdout.flush()
                 time.sleep(1 if self.wait_time == 0 else self.wait_time)
+                self.error_count += 1
                 continue
             except openai.error.InvalidRequestError as e:
                 print("Invalid request error:")

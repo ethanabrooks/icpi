@@ -115,6 +115,7 @@ def _log(
             for x in ["step", "hours"]:
                 yield x, y
         for y in [
+            "API error probability",
             "seconds per query",
             "seconds per completion",
         ]:
