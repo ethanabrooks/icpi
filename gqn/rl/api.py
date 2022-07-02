@@ -14,7 +14,11 @@ OPENAI_MODELS = ["code-davinci-002", "text-davinci-002"]
 @dataclass
 class API(LM):
     wait_time: Optional[float]
+    completion_count: int = 0
+    completion_times: float = 0
+    query_count: int = 0
     query_tick: float = time.time()
+    query_times: float = 0
 
     def __post_init__(self):
         self.tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
@@ -60,6 +64,7 @@ class API(LM):
             breakpoint()
         wait_time = self.wait_time
         completion_tick = time.time()
+        self.completion_count += 1
         while True:
             # print("Prompt:", prompt.split("\n")[-1])
             wait_time = min(wait_time, 60)
@@ -68,6 +73,7 @@ class API(LM):
                 time_since_last_query = time.time() - self.query_tick
                 time.sleep(max(0.0, wait_time - time_since_last_query))
                 self.query_tick = time.time()
+                self.query_count += 1
                 choice, *_ = openai.Completion.create(
                     engine=self.model_name,
                     max_tokens=self.max_tokens_in_completion,
@@ -76,13 +82,14 @@ class API(LM):
                     temperature=0.1,
                     stop=stop,
                 ).choices
+                self.query_times += time.time() - self.query_tick
 
                 if self.logger.run_id is not None:
                     self.logger.log(
                         **{
                             "hours": (time.time() - self.start_time) / 3600,
                             "run ID": self.logger.run_id,
-                            "seconds per query": time.time() - self.query_tick,
+                            "seconds per query": self.query_times / self.query_count,
                         },
                     )
                 # if not choice.text:
@@ -124,12 +131,14 @@ class API(LM):
             self.print("Completion:", completion.split("\n")[0])
             if self.debug >= 6:
                 breakpoint()
+            self.completion_times += time.time() - completion_tick
             if self.logger.run_id is not None:
                 self.logger.log(
                     **{
                         "hours": (time.time() - self.start_time) / 3600,
                         "run ID": self.logger.run_id,
-                        "seconds per completion": time.time() - completion_tick,
+                        "seconds per completion": self.completion_times
+                        / self.completion_count,
                     },
                 )
             return dict(
