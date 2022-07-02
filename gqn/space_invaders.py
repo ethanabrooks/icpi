@@ -1,6 +1,7 @@
+import itertools
 import re
-from dataclasses import dataclass
-from typing import Iterable, NamedTuple, Optional, Tuple
+from dataclasses import dataclass, field
+from typing import Iterable, List, NamedTuple, Optional, Tuple
 
 import base_env
 import gym
@@ -53,16 +54,21 @@ class Alien(NamedTuple):
 
 class Obs(NamedTuple):
     agent: int
-    alien: Alien
-    num_shot_down: int
+    aliens: List[Alien]
+
+    def num_shot_down(self):
+        return sum(1 for a in self.aliens if a.is_dead())
 
 
 @dataclass
 class Env(base_env.Env[Obs, int]):
     height: int
-    optimal_undiscounted: int
+    n_aliens: int
     random_seed: int
     width: int
+    aliens: List[Alien] = field(init=False)
+    random: np.random.Generator = field(init=False)
+    action_space: gym.spaces.Discrete = field(init=False)
 
     def __post_init__(self):
         self.random = np.random.default_rng(self.random_seed)
@@ -76,7 +82,7 @@ class Env(base_env.Env[Obs, int]):
 
     def action_str(self, action: int) -> str:
         if action == 1:
-            return f"reward = {self.ship()}.{self.actions()[action]}({self.alien_str()}){self.action_stop()}"
+            return f"reward = {self.ship()}.{self.actions()[action]}(aliens){self.action_stop()}"
         else:
             return f"{self.ship()}.{self.actions()[action]}(){self.action_stop()}"
 
@@ -87,18 +93,14 @@ class Env(base_env.Env[Obs, int]):
             "right",
         ]
 
-    @staticmethod
-    def alien_str() -> str:
-        return "alien"
-
     def done(self, done_str: str) -> bool:
         return "assert done" in done_str
 
     def done_str(self, done: bool) -> str:
-        return f"assert{' ' if done else ' not '}done"
+        return f"assert{' ' if done else ' not '}done\nfor a in aliens:\n    a.descend"
 
     def done_stop(self) -> str:
-        return "\n"
+        return "()\n"
 
     def failure_threshold(self) -> float:
         return 0
@@ -108,18 +110,15 @@ class Env(base_env.Env[Obs, int]):
         return 0.8
 
     def hint_str(self, state: Obs) -> str:
-        if state.alien.is_dead():
-            return ""
-        hint = " and ".join(
-            [
-                f"{self.alien_str()}.x "
-                + ("==" if state.alien.over(state.agent) else "!=")
-                + f" {self.ship()}.x",
-                f"{self.alien_str()}.y "
-                + ("==" if state.alien.landed() else ">")
-                + " 0",
-            ]
-        )
+        assertions = [
+            f"ship.x == aliens[{i}].x"
+            for i, a in enumerate(state.aliens)
+            if a.over(state.agent)
+        ]
+        landed = [f"aliens[{i}].y" for i, a in enumerate(state.aliens) if a.landed()]
+        if landed:
+            assertions.append(" == ".join(landed + ["0"]))
+        hint = " and ".join(assertions)
         # if state.alien.xy is not None:
         #     if state.agent == state.alien.xy.x:
         #         breakpoint()
@@ -129,10 +128,10 @@ class Env(base_env.Env[Obs, int]):
 
     @classmethod
     def initial_str(cls) -> str:
-        return f"{cls.ship()}, {cls.alien_str()} = reset()\n"
+        return f"{cls.ship()}, aliens = reset()\n"
 
     def max_q_steps(self) -> int:
-        return self.width * self.optimal_undiscounted
+        return self.width * self.n_aliens
 
     def render(self, mode="human"):
         pass
@@ -144,23 +143,18 @@ class Env(base_env.Env[Obs, int]):
         return_info: bool = False,
         options: Optional[dict] = None,
     ) -> Obs:
-        self.agent, alien_x = self.random.choice(self.width, size=2)
-        self.alien = Alien.spawn(alien_x, self.height)
-        self.t = 0
-        self.r = 0
-        return Obs(agent=self.agent, alien=self.alien, num_shot_down=self.r)
+        self.agent, *alien_xs = self.random.choice(
+            self.width, size=self.n_aliens + 1, replace=False
+        )
+        self.aliens = [Alien.spawn(x, self.height) for x in alien_xs]
+        return Obs(agent=self.agent, aliens=self.aliens)
 
     def reward_str(self, reward: float) -> str:
-        string = f"assert reward == {int(reward)}\nalien."
-        if reward == 1:
-            string += "spawn"
-        else:
-            string += "descend"
-        return string
+        return f"assert reward == {int(reward)}"
 
     @staticmethod
     def reward_stop() -> str:
-        return "()\n"
+        return "\n"
 
     @staticmethod
     def ship() -> str:
@@ -173,9 +167,9 @@ class Env(base_env.Env[Obs, int]):
     def state_str(self, state: Obs) -> str:
         assertions = [
             f"{self.ship()} == C{(state.agent, 0)}",
-            f"{self.alien_str()} == {str(state.alien)}",
-            f"num_shot_down == {state.num_shot_down}",
+            f"aliens == [{', '.join(str(a) for a in state.aliens)}]",
         ]
+
         hint_str = self.hint_str(state)
         if self.hint and hint_str:
             assertions += [hint_str]
@@ -183,32 +177,30 @@ class Env(base_env.Env[Obs, int]):
         return state_str + self.state_stop()
 
     def start_states(self) -> Optional[Iterable[Obs]]:
-        for agent in range(self.width):
-            for alien_x in range(self.width):
-                alien = Alien.spawn(alien_x, self.height)
-                yield Obs(agent, alien, num_shot_down=0)
+        for agent, *aliens in itertools.permutations(range(self.n_aliens)):
+            aliens = [Alien.spawn(x, self.height) for x in aliens]
+            yield Obs(agent, aliens)
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
-        if action == 1:
-            reward = float(self.alien.over(self.agent))
-            self.r += reward
-            self.alien = self.alien.take_fire(self.agent)
-        else:
-            reward = 0
+        new_aliens = []
+        reward = 0
+        done = False
+        for alien in self.aliens:
+            if action == 1:
+                reward += alien.over(self.agent)
+                alien = alien.take_fire(self.agent)
+            if alien.landed():
+                done = True
+            new_aliens.append(alien.descend())
 
-        dead = self.alien.is_dead()
-        if dead:
-            self.alien = self.alien.spawn(self.random.choice(self.width), self.height)
-
-        self.t += 1
-        max_return = self.r >= self.optimal_undiscounted
-        done = self.alien.landed() or max_return
-        self.alien = self.alien.descend()
-        info = dict(optimal=self.optimal_undiscounted)
+        self.aliens = new_aliens
+        if all(a.is_dead() for a in self.aliens):
+            done = True
+        info = dict(optimal=self.n_aliens)
         self.agent += action - 1
         self.agent = int(np.clip(self.agent, 0, self.width - 1))
         # print(f"landed={landed}, return={self.r}, done={done}")
-        state = Obs(self.agent, self.alien, self.r)
+        state = Obs(self.agent, self.aliens)
         return state, reward, done, info
 
     def ts_to_string(self, ts: TimeStep) -> str:
@@ -218,29 +210,30 @@ class Env(base_env.Env[Obs, int]):
             self.reward_str(ts.reward),
             self.reward_stop(),
             self.done_str(ts.done),
+            self.done_stop(),
         ]
         if ts.done:
-            parts += ["\n", self.state_str(ts.next_state), self.state_stop()]
+            parts += [self.state_str(ts.next_state), self.state_stop()]
         s = "".join(parts)
-        if (
-            self.hint
-            and ts.reward == 1
-            and f"{self.alien_str()}.x == {self.ship()}.x" not in s
-        ):
-            breakpoint()
-        if (
-            self.hint
-            and ts.reward == 0
-            and ts.action == 1
-            and f"{self.alien_str()}.x != {self.ship()}.x" not in s
-        ):
-            breakpoint()
-        if ts.reward == 1:
-            if "spawn()" not in s:
-                breakpoint()
-        else:
-            if "descend()" not in s:
-                breakpoint()
+        # if (
+        #     self.hint
+        #     and ts.reward == 1
+        #     and f"{self.alien_str()}.x == {self.ship()}.x" not in s
+        # ):
+        #     breakpoint()
+        # if (
+        #     self.hint
+        #     and ts.reward == 0
+        #     and ts.action == 1
+        #     and f"{self.alien_str()}.x != {self.ship()}.x" not in s
+        # ):
+        #     breakpoint()
+        # if ts.reward == 1:
+        #     if "spawn()" not in s:
+        #         breakpoint()
+        # else:
+        #     if "descend()" not in s:
+        #         breakpoint()
         return s
 
     def valid_done(self, done_str: str) -> bool:
@@ -268,9 +261,9 @@ if __name__ == "__main__":
 
     max_step = 8
     env = Env(
-        width=3,
-        height=4,
-        optimal_undiscounted=3,
+        width=4,
+        height=5,
+        n_aliens=2,
         random_seed=0,
         hint=True,
     )
@@ -282,15 +275,15 @@ if __name__ == "__main__":
         completions = []
         while not t:
             a = env.action_space.sample()
-            # a = int(input("Action: ")) - 1
+            a = int(input("Action: ")) - 1
             s_, r, t, i = env.step(a)
             ts = TimeStep(s, a, r, t, s_)
             trajectory.append(ts)
             completions = [env.ts_to_string(ts) for ts in trajectory]
-            done_estimate = env.done(*completions, env.state_str(s_))
-            if not done_estimate == t:
-                breakpoint()
-                env.done(*completions, env.state_str(s_))
+            # done_estimate = env.done(*completions, env.state_str(s_))
+            # if not done_estimate == t:
+            #     breakpoint()
+            #     env.done(*completions, env.state_str(s_))
             prompt = "".join(completions)
             value_from_prompt = env.quantify(prompt)
             value_from_trajectory = get_value(*trajectory, gamma=env.gamma())
@@ -299,6 +292,8 @@ if __name__ == "__main__":
                 breakpoint()
                 env.quantify(prompt)
                 get_value(*trajectory, gamma=env.gamma())
-            print(env.ts_to_string(ts) + env.state_str(ts.next_state))
+            print(env.ts_to_string(ts) + "\n" + env.state_str(ts.next_state))
+            if t:
+                breakpoint()
             s = s_
         # breakpoint()

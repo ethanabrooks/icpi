@@ -90,9 +90,9 @@ def make_env(env_id: str, seed: int, hint: bool) -> Env:
         )
     elif env_id == "space-invaders":
         env = space_invaders.Env(
-            width=3,
-            height=4,
-            optimal_undiscounted=3,
+            width=4,
+            height=5,
+            n_aliens=2,
             random_seed=seed,
             hint=hint,
         )
