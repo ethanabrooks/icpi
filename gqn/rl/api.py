@@ -14,6 +14,7 @@ OPENAI_MODELS = ["code-davinci-002", "text-davinci-002"]
 @dataclass
 class API(LM):
     wait_time: Optional[float]
+    query_tick: float = time.time()
 
     def __post_init__(self):
         self.tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
@@ -64,8 +65,9 @@ class API(LM):
             wait_time = min(wait_time, 60)
             sys.stdout.flush()
             try:
-                time.sleep(wait_time)
-                query_tick = time.time()
+                time_since_last_query = time.time() - self.query_tick
+                time.sleep(max(0.0, wait_time - time_since_last_query))
+                self.query_tick = time.time()
                 choice, *_ = openai.Completion.create(
                     engine=self.model_name,
                     max_tokens=self.max_tokens_in_completion,
@@ -80,7 +82,7 @@ class API(LM):
                         **{
                             "hours": (time.time() - self.start_time) / 3600,
                             "run ID": self.logger.run_id,
-                            "seconds per query": time.time() - query_tick,
+                            "seconds per query": time.time() - self.query_tick,
                         },
                     )
                 # if not choice.text:
