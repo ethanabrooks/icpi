@@ -78,6 +78,7 @@ def no_log(
 
 def _log(
     allow_dirty: bool,
+    eval_interval: Optional[int],
     name: str,
     repo: Repo,
     sweep_id: Optional[int],
@@ -103,13 +104,14 @@ def _log(
     assert visualizer_url is not None, "VISUALIZER_URL must be set"
 
     def xy():
-        for y in [
+        ys = [
             "regret",
             "return",
             "use_model_prob",
-            "eval regret",
-            "eval return",
-        ]:
+        ]
+        if eval_interval is not None:
+            ys.extend(["eval regret", "eval return"])
+        for y in ys:
             for x in ["step", "hours"]:
                 yield x, y
         for y in [
@@ -125,7 +127,7 @@ def _log(
     logger.update_metadata(  # this updates the metadata stored in the database
         dict(parameters=kwargs, run_id=logger.run_id, name=name)
     )  # todo: encapsulate in HasuraLogger
-    main(**kwargs, logger=logger)
+    main(**kwargs, eval_interval=eval_interval, logger=logger)
 
 
 @tree.subcommand(
