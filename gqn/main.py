@@ -101,11 +101,24 @@ def _log(
 
     visualizer_url = os.getenv("VISUALIZER_URL")
     assert visualizer_url is not None, "VISUALIZER_URL must be set"
-    charts = [
-        line.spec(x=x, y=y, visualizer_url=visualizer_url)
-        for x in ["step", "hours"]
-        for y in ["regret", "return", "use_model_prob", "eval regret", "eval return"]
-    ] + [line.spec(x="hours", y="seconds per query", visualizer_url=visualizer_url)]
+
+    def xy():
+        for y in [
+            "regret",
+            "return",
+            "use_model_prob",
+            "eval regret",
+            "eval return",
+        ]:
+            for x in ["step", "hours"]:
+                yield x, y
+        for y in [
+            "seconds per query",
+            "seconds per completion",
+        ]:
+            yield "hours", y
+
+    charts = [line.spec(x=x, y=y, visualizer_url=visualizer_url) for x, y in xy()]
 
     logger = HasuraLogger(GRAPHQL_ENDPOINT)
     logger.create_run(metadata=metadata, sweep_id=sweep_id, charts=charts)

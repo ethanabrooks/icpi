@@ -58,13 +58,14 @@ class API(LM):
         if self.debug >= 5:
             breakpoint()
         wait_time = self.wait_time
+        completion_tick = time.time()
         while True:
             # print("Prompt:", prompt.split("\n")[-1])
             wait_time = min(wait_time, 60)
             sys.stdout.flush()
             try:
                 time.sleep(wait_time)
-                tick = time.time()
+                query_tick = time.time()
                 choice, *_ = openai.Completion.create(
                     engine=self.model_name,
                     max_tokens=self.max_tokens_in_completion,
@@ -79,7 +80,7 @@ class API(LM):
                         **{
                             "hours": (time.time() - self.start_time) / 3600,
                             "run ID": self.logger.run_id,
-                            "seconds per query": time.time() - tick,
+                            "seconds per query": time.time() - query_tick,
                         },
                     )
                 # if not choice.text:
@@ -121,6 +122,14 @@ class API(LM):
             self.print("Completion:", completion.split("\n")[0])
             if self.debug >= 6:
                 breakpoint()
+            if self.logger.run_id is not None:
+                self.logger.log(
+                    **{
+                        "hours": (time.time() - self.start_time) / 3600,
+                        "run ID": self.logger.run_id,
+                        "seconds per completion": time.time() - completion_tick,
+                    },
+                )
             return dict(
                 prompt=prompt,
                 completion=completion,
