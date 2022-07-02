@@ -62,16 +62,14 @@ class API(LM):
         self.print(prompt)
         if self.debug >= 5:
             breakpoint()
-        wait_time = self.wait_time
         completion_tick = time.time()
         self.completion_count += 1
         while True:
             # print("Prompt:", prompt.split("\n")[-1])
-            wait_time = min(wait_time, 60)
             sys.stdout.flush()
             try:
                 time_since_last_query = time.time() - self.query_tick
-                time.sleep(max(0.0, wait_time - time_since_last_query))
+                time.sleep(max(0.0, self.wait_time - time_since_last_query))
                 self.query_tick = time.time()
                 self.query_count += 1
                 choice, *_ = openai.Completion.create(
@@ -105,9 +103,7 @@ class API(LM):
                 print(type(e))
                 print(e)
                 sys.stdout.flush()
-                wait_time *= 2
-                if wait_time == 0:
-                    wait_time = 1
+                time.sleep(1 if self.wait_time == 0 else self.wait_time)
                 continue
             except openai.error.InvalidRequestError as e:
                 print("Invalid request error:")
