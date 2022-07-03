@@ -5,6 +5,8 @@ from typing import Generic, Iterable, Optional, TypeVar
 
 import gym
 
+from rl.lm import Data
+
 ObsType = TypeVar("ObsType")
 ActType = TypeVar("ActType")
 
@@ -20,6 +22,7 @@ class TimeStep(Generic[ObsType, ActType]):
 
 @dataclass
 class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
+    data: Data
     hint: bool
 
     def action(self, action_str: Optional[str]) -> Optional[ActType]:
@@ -70,7 +73,13 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
         ...
 
     def hint_stop(self) -> Optional[str]:
-        return "\n" if self.hint else None
+        if not self.hint:
+            return None
+        if self.data == Data.code:
+            return "\n"
+        elif self.data == Data.natural_language:
+            return ". "
+        raise RuntimeError("Invalid data")
 
     @staticmethod
     @abc.abstractmethod
@@ -88,20 +97,31 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
     def quantify(self, prompt: str, gamma: Optional[float] = None) -> float:
         if gamma is None:
             gamma = self.gamma()
-        matches = re.findall(r"reward == (\d)", prompt)
+        if self.data == Data.code:
+            matches = re.findall(r"reward == (\d+)", prompt)
+        elif self.data == Data.natural_language:
+            matches = re.findall(r"Receive (\d+)", prompt)
+        else:
+            raise RuntimeError("Invalid data")
         return sum([gamma**t * float(x) for t, x in enumerate(matches)])
 
     @abc.abstractmethod
     def reward_str(self, reward: float) -> str:
         ...
 
-    @staticmethod
-    def reward_stop() -> str:
-        return "\n"
+    def reward_stop(self) -> str:
+        if self.data == Data.code:
+            return "\n"
+        elif self.data == Data.natural_language:
+            return ". "
+        raise RuntimeError("Invalid data")
 
-    @staticmethod
-    def state_stop() -> str:
-        return "\n"
+    def state_stop(self) -> str:
+        if self.data == Data.code:
+            return "\n"
+        elif self.data == Data.natural_language:
+            return ". "
+        raise RuntimeError("Invalid data")
 
     @abc.abstractmethod
     def start_states(self) -> Optional[Iterable[ObsType]]:

@@ -43,8 +43,6 @@ def train(
         local_rank = int(local_rank)
     openai.api_key = os.getenv("OPENAI_API_KEY")
     rng = np.random.default_rng(seed)
-    env = make_env(env_id=env_id, seed=seed, hint=hint)
-    eval_env = deepcopy(env)
 
     buffer: Deque[List[TimeStep]] = deque()
     success_buffer: Deque[List[TimeStep]] = deque(maxlen=success_buffer_size)
@@ -56,7 +54,6 @@ def train(
         max_tokens_in_completion=max_tokens,
         model_name=model_name,
         require_cache=require_cache,
-        stop=[env.action_stop(), env.state_stop()],
         top_p=top_p,
     )
     if model_name in OPENAI_MODELS:
@@ -71,6 +68,9 @@ def train(
         lm = HuggingFaceModel(seed=seed, **kwargs)
     else:
         raise RuntimeError(f"Unknown model {model_name}")
+
+    env = make_env(data=lm.trained_on(), env_id=env_id, seed=seed, hint=hint)
+    eval_env = deepcopy(env)
 
     pi = Pi(
         buffer=buffer,

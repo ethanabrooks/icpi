@@ -5,7 +5,7 @@ from typing import Optional
 
 import openai
 from rl.common import Colorize
-from rl.lm import LM, Data
+from rl.lm import Data, LM
 from transformers import GPT2TokenizerFast
 
 OPENAI_MODELS = ["code-davinci-002", "text-davinci-002"]

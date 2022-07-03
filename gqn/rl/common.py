@@ -16,6 +16,8 @@ from base_env import Env, TimeStep
 from gym.wrappers import TimeLimit
 from run_logger import HasuraLogger
 
+from rl.lm import Data
+
 
 class Color(Enum):
     HEADER = "\033[95m"
@@ -62,24 +64,27 @@ class Colorize:
         return Colorize(Color.WARNING).print(*objects, sep=sep, end=end, file=file)
 
 
-def make_env(env_id: str, seed: int, hint: bool) -> Env:
+def make_env(data: Data, env_id: str, seed: int, hint: bool) -> Env:
     if env_id == "bandit":
-        env = bandit.Env(num_steps=5, random_seed=seed, hint=hint)
+        env = bandit.Env(data=data, num_steps=5, random_seed=seed, hint=hint)
     elif env_id == "cartpole":
         env = cartpole.Wrapper(cartpole.Env(max_episode_steps=5, seed=seed))
     elif env_id == "catch":
-        env = catch.Wrapper(catch.Env(columns=5, rows=10, seed=seed), hint=hint)
+        env = catch.Wrapper(data=data, env=catch.Env(columns=5, rows=10, seed=seed), hint=hint)
     elif env_id == "chain":
         env = TimeLimit(
-            chain.Env(goal=4, n=8, random_seed=seed, hint=hint),
+            chain.Env(data=data, goal=4, n=8, random_seed=seed, hint=hint),
             max_episode_steps=8,
         )
     elif env_id == "maze":
-        env = TimeLimit(maze.Env(hint=hint, random_seed=seed), max_episode_steps=8)
+        env = TimeLimit(
+            maze.Env(data=data, hint=hint, random_seed=seed), max_episode_steps=8
+        )
     elif env_id == "point-mass":
         max_steps = 8
         env = TimeLimit(
             point_mass.Env(
+                data=data,
                 hint=hint,
                 max_distance=6,
                 _max_trajectory=max_steps,
@@ -90,6 +95,7 @@ def make_env(env_id: str, seed: int, hint: bool) -> Env:
         )
     elif env_id == "space-invaders":
         env = space_invaders.Env(
+            data=data,
             width=4,
             height=5,
             n_aliens=2,

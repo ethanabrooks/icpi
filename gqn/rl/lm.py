@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import List, Optional
+from typing import List
 
 from run_logger import HasuraLogger
 from transformers import PreTrainedTokenizer
@@ -23,7 +23,6 @@ class LM(ABC):
     top_p: float
     max_tokens_in_completion: int
     require_cache: bool
-    stop: Optional[List[str]]
     tokenizer: PreTrainedTokenizer = field(init=False)
 
     def __call__(

@@ -27,6 +27,8 @@ from bsuite.experiments.catch import sweep
 from dm_env import specs
 from gym.spaces import Discrete, MultiDiscrete
 
+from rl.lm import Data
+
 _ACTIONS = (-1, 0, 1)  # Left, no-op, right.
 
 BALL_CODE = 1.0
@@ -128,8 +130,9 @@ class Env(base.Environment):
 class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
     metadata = {"render.modes": []}
 
-    def __init__(self, env: Env, hint: bool):
+    def __init__(self, data: Data, env: Env, hint: bool):
         super().__init__(cast(gym.Env, env))
+        self.data = data
         self.hint = hint
         self.action_space = Discrete(3, seed=env.random_seed)
         spec = env.observation_spec()
