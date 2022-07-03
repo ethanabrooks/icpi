@@ -106,7 +106,6 @@ class API(LM):
                 print(type(e))
                 print(e)
                 sys.stdout.flush()
-                time.sleep(1 if self.wait_time == 0 else self.wait_time)
                 self.error_count += 1
                 continue
             except openai.error.InvalidRequestError as e:
