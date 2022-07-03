@@ -299,7 +299,7 @@ class Q(Model[ObsType, ActType]):
             query = [state_str + action_str]
             done_str = self.predict(
                 query,
-                name="state",
+                name="done",
                 get_prompts=lambda: self.sample_done(action),
                 stop=self.env.done_stop(),
                 T=T,
