@@ -25,6 +25,11 @@ class Fast(LM):
     def get_full_completion(
         self, prompt: str, stop: list[str], temperature: float, use_cache: bool = True
     ):
+        try:
+            [stop] = stop
+        except ValueError:
+            raise RuntimeError("Only one stop token is supported")
+
         if self.debug >= 0:
             print("<", end="")
 
@@ -32,7 +37,7 @@ class Fast(LM):
 
         if use_cache:
             completions = self.get_completions(
-                prompt, stop=stop, temperature=temperature
+                prompt, stop=[stop], temperature=temperature
             )
             if completions:
                 completion, *_ = completions
@@ -89,6 +94,7 @@ class Fast(LM):
 
             choice, *_ = response.json()["choices"]
             completion = choice["text"].lstrip()
+            completion = completion[: completion.find(stop)]  # TODO
             top_logprobs = []
             response = self.post_completion(
                 completion=completion,
