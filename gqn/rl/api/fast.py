@@ -73,7 +73,7 @@ class Fast(LM):
                     temperature=0.1,
                     top_p=1,
                     logprobs=self.logprobs,
-                    stop=stop,
+                    stop=[stop],
                     seed=self.seed,
                 ),
             )
@@ -98,7 +98,7 @@ class Fast(LM):
             response = self.post_completion(
                 completion=completion,
                 prompt=prompt,
-                stop=stop,
+                stop=[stop],
                 temperature=temperature,
                 top_logprobs=top_logprobs,
             )["insert_completions_one"]["completion"]
