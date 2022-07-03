@@ -47,18 +47,22 @@ def main(model_name: str, seed: "int | list[int]", **kwargs):
         train_fn(**kwargs)
 
 
-ALLOW_DIRTY_FLAG = flag("allow_dirty", default=False)  # must be set from CLI
+REQUIRE_CACHE_FLAG = flag("require_cache", default=False)
+
+# must be set from CLI
+ALLOW_DIRTY_FLAG = flag("allow_dirty", default=False)
 LOCAL_RANK_ARG = option("local_rank").optional().ignore()
-REQUIRE_CACHE_FLAG = flag("require_cache", default=False)  # must be set from CLI
+NO_CACHE_FLAG = flag("use_cache", default=True, string="--no-cache")
 
 
 @tree.command(
     parsers=dict(
         kwargs=nonpositional(
             option("debug", type=int, default=0),
-            REQUIRE_CACHE_FLAG,
             option("t_threshold", type=int, default=None),
             LOCAL_RANK_ARG,
+            NO_CACHE_FLAG,
+            REQUIRE_CACHE_FLAG,
         )
     )
 )
@@ -135,9 +139,10 @@ def _log(
     parsers=dict(
         kwargs=nonpositional(
             argument("name"),
-            LOCAL_RANK_ARG,
-            REQUIRE_CACHE_FLAG,
             ALLOW_DIRTY_FLAG,
+            LOCAL_RANK_ARG,
+            NO_CACHE_FLAG,
+            REQUIRE_CACHE_FLAG,
         ),
     )
 )
@@ -158,6 +163,7 @@ def trainable(config: dict):
         kwargs=nonpositional(
             ALLOW_DIRTY_FLAG,
             LOCAL_RANK_ARG,
+            NO_CACHE_FLAG,
             REQUIRE_CACHE_FLAG,
         ),
     )

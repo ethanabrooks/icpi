@@ -36,6 +36,7 @@ def train(
     temperature: float,
     top_p: float,
     total_steps: int,
+    use_cache: bool,
     wait_time: Optional[float],
 ):
     local_rank = os.getenv("LOCAL_RANK", None)
@@ -83,6 +84,7 @@ def train(
         success_buffer=success_buffer,
         t_threshold=t_threshold,
         temperature=0,
+        use_cache=use_cache,
     )
     q = Q(
         buffer=buffer,
@@ -96,6 +98,7 @@ def train(
         success_buffer=success_buffer,
         t_threshold=t_threshold,
         temperature=temperature,
+        use_cache=use_cache,
     )
 
     T = 0

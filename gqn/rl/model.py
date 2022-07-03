@@ -39,6 +39,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     success_buffer: Deque[List[TimeStep]]
     temperature: float
     t_threshold: Optional[int]
+    use_cache: bool
 
     def act(self, state: ObsType, T: int) -> ActType:
         if self.ready():
@@ -97,7 +98,10 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
                 Colorize.print_bold("".join(query))
             self.breakpoint(T, 4)
             completion = self.lm(
-                new_prompt, stop=[stop], temperature=self.temperature, use_cache=True
+                new_prompt,
+                stop=[stop],
+                temperature=self.temperature,
+                use_cache=self.use_cache,
             )
             completion = completion.replace("ball.x!=", "ball.x !=")
             completion += stop
