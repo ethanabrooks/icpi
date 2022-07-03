@@ -5,7 +5,7 @@ import operator
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from functools import reduce
-from typing import Callable, Deque, Generic, Hashable, Iterable, List, Optional, Union
+from typing import Callable, Deque, Generic, Hashable, Iterable, List, Optional
 
 from base_env import ActType, Env, ObsType, TimeStep
 from gym.spaces import Discrete

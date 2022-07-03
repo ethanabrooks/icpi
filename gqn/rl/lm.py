@@ -1,11 +1,17 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from enum import Enum, auto
 from typing import List, Optional
 
 from run_logger import HasuraLogger
 from transformers import PreTrainedTokenizer
 
 from gql import gql
+
+
+class Data(Enum):
+    code = auto()
+    natural_language = auto()
 
 
 @dataclass
@@ -98,3 +104,7 @@ query get_completion($prompt: String!, $temperature: numeric!, $top_p: numeric!,
                 top_p=self.top_p,
             ),
         )
+
+    @abstractmethod
+    def trained_on(self) -> Data:
+        ...

@@ -5,7 +5,7 @@ from typing import Optional
 
 import openai
 from rl.common import Colorize
-from rl.lm import LM
+from rl.lm import LM, Data
 from transformers import GPT2TokenizerFast
 
 OPENAI_MODELS = ["code-davinci-002", "text-davinci-002"]
@@ -152,3 +152,10 @@ class OpenAi(LM):
     def print(self, *args, **kwargs):
         if self.debug >= 5:
             print(*args, **kwargs)
+
+    def trained_on(self) -> Data:
+        training_data: dict[str, Data] = {
+            "code-davinci-002": Data.code,
+            "text-davinci-002": Data.natural_language,
+        }
+        return training_data[self.model_name]

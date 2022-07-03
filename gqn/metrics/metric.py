@@ -7,7 +7,7 @@ from typing import Any, Callable, Dict, Generic, Iterator, List, Optional, Tuple
 import numpy as np
 from base_env import ActType, Env, ObsType, TimeStep
 from metrics.encoder import Encoder
-from rl.api import API
+from rl.api.fast import API
 
 
 def _get_prob(target: str, logprobs: List[Dict[str, float]]) -> Tuple[float, str]:

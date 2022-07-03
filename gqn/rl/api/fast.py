@@ -2,10 +2,9 @@ import sys
 import time
 from dataclasses import dataclass
 
-import openai
 import requests
 from rl.common import Colorize
-from rl.lm import LM
+from rl.lm import LM, Data
 from transformers import GPT2TokenizerFast
 
 
@@ -129,3 +128,6 @@ class Fast(LM):
     def print(self, *args, **kwargs):
         if self.debug >= 5:
             print(*args, **kwargs)
+
+    def trained_on(self) -> Data:
+        return Data.natural_language

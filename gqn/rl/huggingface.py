@@ -1,13 +1,14 @@
 import os
 import sys
-from itertools import chain
 from dataclasses import dataclass, field
+from itertools import chain
 from typing import Callable, List, Optional, Union
 
 import deepspeed
 import numpy as np
 import torch
 from deepspeed import DeepSpeedEngine
+from rl.lm import LM, Data
 from torch.nn.functional import log_softmax
 from transformers import (
     AutoConfig,
@@ -18,8 +19,6 @@ from transformers import (
     StoppingCriteriaList,
 )
 from transformers.deepspeed import HfDeepSpeedConfig
-
-from rl.lm import LM
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -117,10 +116,14 @@ class HuggingFaceModel(LM):
             self.generate_fn = self.model.generate
 
         if self.stop:
-            stop_ids = list(set(chain.from_iterable(
-                self.tokenizer.encode(s, add_special_tokens=False)
-                for s in self.stop
-            )))
+            stop_ids = list(
+                set(
+                    chain.from_iterable(
+                        self.tokenizer.encode(s, add_special_tokens=False)
+                        for s in self.stop
+                    )
+                )
+            )
             self.stopping_criteria = StoppingCriteriaList()
             self.stopping_criteria.append(
                 TokenStoppingCriteria(stop_ids, device=self.local_device)
@@ -224,3 +227,14 @@ class HuggingFaceModel(LM):
     def print(self, *args, **kwargs):
         if self.debug >= 5 and self.local_rank == 0:
             print(*args, **kwargs)
+
+    def trained_on(self) -> Data:
+        training_data: dict[str, Data] = {
+            "xglm": Data.natural_language,
+            "gpt2": Data.natural_language,
+            "gptj": Data.natural_language,
+            "gptneo": Data.natural_language,
+            "fairseq13b": Data.natural_language,
+            "incoder6b": Data.code,
+        }
+        return training_data[self.model_name]
