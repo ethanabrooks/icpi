@@ -7,10 +7,11 @@ from typing import Deque, List, Optional
 
 import numpy as np
 import openai
-from rl.api import API, OPENAI_MODELS
+from rl.api.fast import Fast
+from rl.api.open_ai import OPENAI_MODELS, OpenAi
 from rl.common import evaluate, get_value, make_env, make_log, print_rank0
-from rl.huggingface import HF_MODELS
-from rl.model import HuggingFaceModel, Pi, Q, TimeStep, to_string
+from rl.huggingface import HF_MODELS, HuggingFaceModel
+from rl.model import Pi, Q, TimeStep, to_string
 from run_logger import HasuraLogger
 
 
@@ -57,10 +58,13 @@ def train(
         require_cache=require_cache,
         stop=[env.action_stop(), env.state_stop()],
         top_p=top_p,
-        wait_time=wait_time,
     )
     if model_name in OPENAI_MODELS:
-        lm = API(**kwargs)
+        lm = OpenAi(**kwargs, wait_time=wait_time)
+    elif model_name == "fast":
+        fast_url = os.getenv("FAST_URL")
+        assert fast_url is not None, "FAST_URL must be set"
+        lm = Fast(**kwargs, seed=seed, url=fast_url)
     elif model_name in HF_MODELS:
         del kwargs["wait_time"]
         kwargs["model_name"] = HF_MODELS[kwargs["model_name"]]

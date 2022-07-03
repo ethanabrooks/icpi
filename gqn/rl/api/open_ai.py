@@ -12,7 +12,7 @@ OPENAI_MODELS = ["code-davinci-002", "text-davinci-002"]
 
 
 @dataclass
-class API(LM):
+class OpenAi(LM):
     wait_time: Optional[float]
     completion_count: int = 0
     completion_times: float = 0

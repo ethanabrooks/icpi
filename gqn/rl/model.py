@@ -10,9 +10,8 @@ from typing import Callable, Deque, Generic, Hashable, Iterable, List, Optional,
 from base_env import ActType, Env, ObsType, TimeStep
 from gym.spaces import Discrete
 from numpy.random import Generator
-from rl.api import API
 from rl.common import Colorize, get_value
-from rl.huggingface import HuggingFaceModel
+from rl.lm import LM
 
 
 def to_string(*trajectory: TimeStep, env) -> str:
@@ -33,7 +32,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     buffer: Deque[List[TimeStep]]
     env: Env
     debug: int
-    lm: Union[API, HuggingFaceModel]
+    lm: LM
     max_prompts: int
     max_resamples: int
     rng: Generator
