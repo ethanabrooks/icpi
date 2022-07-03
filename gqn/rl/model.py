@@ -304,6 +304,8 @@ class Q(Model[ObsType, ActType]):
                 T=T,
                 valid=self.env.valid_done,
             )
+            if done_str is None:
+                break
             completions.append(done_str)
             done = self.env.done(done_str)
             reward_str = self.predict(
