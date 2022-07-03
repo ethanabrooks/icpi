@@ -48,7 +48,7 @@ def main(model_name: str, seed: "int | list[int]", **kwargs):
 
 
 ALLOW_DIRTY_FLAG = flag("allow_dirty", default=False)  # must be set from CLI
-LOCAL_RANK_ARG = argument("local_rank", type=validate_local_rank).optional().ignore()
+LOCAL_RANK_ARG = option("local_rank").optional().ignore()
 REQUIRE_CACHE_FLAG = flag("require_cache", default=False)  # must be set from CLI
 
 
