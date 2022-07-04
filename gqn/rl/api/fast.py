@@ -12,7 +12,11 @@ from transformers import GPT2TokenizerFast
 class Fast(LM):
     seed: int
     url: str
+    completion_count: int = 0
+    completion_times: float = 0
+    error_count: int = 0
     query_count: int = 0
+    query_tick: float = time.time()
     query_times: float = 0
 
     def __post_init__(self):
@@ -55,6 +59,8 @@ class Fast(LM):
         self.print(prompt)
         if self.debug >= 5:
             breakpoint()
+        completion_tick = time.time()
+        self.completion_count += 1
         while True:
             # print("Prompt:", prompt.split("\n")[-1])
             sys.stdout.flush()
@@ -89,7 +95,10 @@ class Fast(LM):
                 )
 
             if not response.ok:
-                breakpoint()
+                print(response.text)
+                sys.stdout.flush()
+                self.error_count += 1
+                continue
 
             choice, *_ = response.json()["choices"]
             completion = choice["text"].lstrip()
@@ -109,11 +118,14 @@ class Fast(LM):
             self.print("Completion:", completion)
             if self.debug >= 6:
                 breakpoint()
+            self.completion_times += time.time() - completion_tick
             if self.logger.run_id is not None:
                 self.logger.log(
                     **{
                         "hours": (time.time() - self.start_time) / 3600,
                         "run ID": self.logger.run_id,
+                        "seconds per completion": self.completion_times
+                        / self.completion_count,
                     },
                 )
             return dict(
