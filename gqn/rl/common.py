@@ -70,7 +70,7 @@ def make_env(data: Data, env_id: str, seed: int, hint: bool) -> Env:
         env = cartpole.Wrapper(cartpole.Env(max_episode_steps=5, seed=seed))
     elif env_id == "catch":
         env = catch.Wrapper(
-            data=data, env=catch.Env(columns=4, rows=5, seed=seed), hint=hint
+            data=data, env=catch.Env(columns=5, rows=10, seed=seed), hint=hint
         )
     elif env_id == "chain":
         env = TimeLimit(
@@ -80,6 +80,10 @@ def make_env(data: Data, env_id: str, seed: int, hint: bool) -> Env:
     elif env_id == "maze":
         env = TimeLimit(
             maze.Env(data=data, hint=hint, random_seed=seed), max_episode_steps=8
+        )
+    elif env_id == "mini-catch":
+        env = catch.Wrapper(
+            data=data, env=catch.Env(columns=4, rows=5, seed=seed), hint=hint
         )
     elif env_id == "point-mass":
         max_steps = 8
