@@ -63,7 +63,16 @@ query get_completion($prompt: String!, $temperature: numeric!, $top_p: numeric!,
     def clip_prompt(self, prompt: str) -> str:
         tokens = self.tokenizer(prompt)["input_ids"]
         tokens = tokens[-self.max_prompt_tokens() :]
-        return self.tokenizer.decode(tokens, skip_special_tokens=True)
+        new_prompt = self.tokenizer.decode(tokens, skip_special_tokens=True)
+        new_prompt = new_prompt.replace("x!=", "x !=")
+        l = list(zip(reversed(prompt), reversed(new_prompt)))
+        for i, (old, new) in enumerate(reversed(l)):
+            if old != new:
+                print("old:", prompt[i : (i + 10)])
+                print("new:", new_prompt[i : (i + 10)])
+                print(f"{i}: {old} -> {new}")
+                breakpoint()
+        return new_prompt
 
     @abstractmethod
     def max_prompt_tokens(self) -> int:
