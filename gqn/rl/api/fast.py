@@ -22,7 +22,7 @@ class Fast(LM):
     def __post_init__(self):
         self.tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
         self.start_time = time.time()
-        self.max_tokens_accepted_by_lm = 4000
+        self.max_tokens_accepted_by_lm = 600
         assert self.logprobs == 0
 
     def get_full_completion(
