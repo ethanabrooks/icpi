@@ -111,7 +111,7 @@ class Env(base_env.Env[Obs, int]):
 
     def hint_str(self, state: Obs) -> str:
         assertions = [
-            "ship.x " + ("==" if a.over(self.agent) else "!=") + f" aliens[{i}].x"
+            "ship.x " + ("==" if a.over(state.agent) else "!=") + f" aliens[{i}].x"
             for i, a in enumerate(state.aliens)
             if not a.is_dead()
         ]
