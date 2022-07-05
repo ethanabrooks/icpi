@@ -109,23 +109,6 @@ class Env(base_env.Env[Obs, int]):
     def gamma() -> float:
         return 0.8
 
-    def hint_str(self, state: Obs) -> str:
-        assertions = [
-            "ship.x " + ("==" if a.over(state.agent) else "!=") + f" aliens[{i}].x"
-            for i, a in enumerate(state.aliens)
-            if not a.is_dead()
-        ]
-        # landed = [f"aliens[{i}].y" for i, a in enumerate(state.aliens) if a.landed()]
-        # if landed:
-        #     assertions.append(" == ".join(landed + ["0"]))
-        hint = " and ".join(assertions)
-        # if state.alien.xy is not None:
-        #     if state.agent == state.alien.xy.x:
-        #         breakpoint()
-        #     if 0 == state.alien.xy.y:
-        #         breakpoint()
-        return hint
-
     @classmethod
     def initial_str(cls) -> str:
         return f"{cls.ship()}, aliens = reset()\n"
@@ -163,13 +146,17 @@ class Env(base_env.Env[Obs, int]):
         return "\n"
 
     def state_str(self, state: Obs) -> str:
-        assertions = [f"{self.ship()} == C{(state.agent, 0)}"] + [
-            f"aliens[{i}] == {str(a)}" for i, a in enumerate(state.aliens)
-        ]
+        assertions = [f"{self.ship()} == C{(state.agent, 0)}"]
 
-        hint_str = self.hint_str(state)
-        if self.hint and hint_str:
-            assertions += [hint_str]
+        for i, a in enumerate(state.aliens):
+            assertions.append(f"aliens[{i}] == {str(a)}")
+            if self.hint and not a.is_dead():
+                assertions.append(
+                    "ship.x "
+                    + ("==" if a.over(state.agent) else "!=")
+                    + f" aliens[{i}].x"
+                )
+
         state_str = "assert " + " and ".join(assertions)
         return state_str + self.state_stop()
 
