@@ -97,10 +97,10 @@ class Env(base_env.Env[Obs, int]):
         return "assert done" in done_str
 
     def done_str(self, done: bool) -> str:
-        return f"assert{' ' if done else ' not '}done\nfor a in aliens:\n    a.descend"
+        return f"assert{' ' if done else ' not '}done"
 
     def done_stop(self) -> str:
-        return "()\n"
+        return "\n"
 
     def failure_threshold(self) -> float:
         return 0
@@ -111,13 +111,13 @@ class Env(base_env.Env[Obs, int]):
 
     def hint_str(self, state: Obs) -> str:
         assertions = [
-            f"ship.x == aliens[{i}].x"
+            "ship.x " + ("==" if a.over(self.agent) else "!=") + f" aliens[{i}].x"
             for i, a in enumerate(state.aliens)
-            if a.over(state.agent)
+            if not a.is_dead()
         ]
-        landed = [f"aliens[{i}].y" for i, a in enumerate(state.aliens) if a.landed()]
-        if landed:
-            assertions.append(" == ".join(landed + ["0"]))
+        # landed = [f"aliens[{i}].y" for i, a in enumerate(state.aliens) if a.landed()]
+        # if landed:
+        #     assertions.append(" == ".join(landed + ["0"]))
         hint = " and ".join(assertions)
         # if state.alien.xy is not None:
         #     if state.agent == state.alien.xy.x:
@@ -150,24 +150,21 @@ class Env(base_env.Env[Obs, int]):
         return Obs(agent=self.agent, aliens=self.aliens)
 
     def reward_str(self, reward: float) -> str:
-        return f"assert reward == {int(reward)}"
+        return f"assert reward == {int(reward)}\nfor a in aliens:\n    a.descend"
 
-    @staticmethod
-    def reward_stop() -> str:
-        return "\n"
+    def reward_stop(self) -> str:
+        return "()\n"
 
     @staticmethod
     def ship() -> str:
         return "ship"
 
-    @staticmethod
-    def state_stop() -> str:
+    def state_stop(self) -> str:
         return "\n"
 
     def state_str(self, state: Obs) -> str:
-        assertions = [
-            f"{self.ship()} == C{(state.agent, 0)}",
-            f"aliens == [{', '.join(str(a) for a in state.aliens)}]",
+        assertions = [f"{self.ship()} == C{(state.agent, 0)}"] + [
+            f"aliens[{i}] == {str(a)}" for i, a in enumerate(state.aliens)
         ]
 
         hint_str = self.hint_str(state)
