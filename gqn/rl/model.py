@@ -3,6 +3,7 @@ import itertools
 import math
 import operator
 from collections import Counter, defaultdict
+from copy import deepcopy
 from dataclasses import dataclass
 from functools import reduce
 from typing import Callable, Deque, Generic, Hashable, Iterable, List, Optional
@@ -233,6 +234,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
 @dataclass
 class Q(Model[ObsType, ActType]):
     max_steps: int
+    oracle_transitions: bool
 
     def _act(self, state: ObsType, T: int) -> ActType:
         assert isinstance(self.env.action_space, Discrete)
@@ -296,46 +298,59 @@ class Q(Model[ObsType, ActType]):
         state_str = self.env.state_str(state)
         action_str = self.env.action_str(action)
         completions = [s for s in [state_str, action_str] if s]
+        env = deepcopy(self.env)
         while True:
-            if t == self.max_steps:
-                break
             query = [state_str + action_str]
-            done_str = self.predict(
-                query,
-                name="done",
-                get_prompts=lambda: self.sample_done(action),
-                stop=self.env.done_stop(),
-                T=T,
-                valid=self.env.valid_done,
-            )
-            if done_str is None:
-                break
-            completions.append(done_str)
-            done = self.env.done(done_str)
-            reward_str = self.predict(
-                query,
-                name="reward",
-                get_prompts=lambda: self.sample_reward(action=action, done=done),
-                stop=self.env.reward_stop(),
-                T=T,
-                valid=self.env.valid_reward,
-            )
-            if reward_str is None:
-                break
-            completions.append(reward_str)
-            if done:
-                break
-            state_str = self.predict(
-                query,
-                name="state",
-                get_prompts=lambda: self.sample_next_state(action=action),
-                stop=self.env.state_stop(),
-                T=T,
-                valid=self.env.valid_state,
-            )
-            if state_str is None:
-                break
-            completions.append(state_str)
+            if self.oracle_transitions:
+                next_state, reward, done, _ = env.step(action)
+                completions.extend(
+                    [
+                        env.done_str(done) + env.done_stop(),
+                        env.reward_str(reward) + env.reward_stop(),
+                    ]
+                )
+                if done:
+                    break
+                completions.append(env.state_str(next_state) + env.state_stop())
+            else:
+                if t == self.max_steps:
+                    break
+                done_str = self.predict(
+                    query,
+                    name="done",
+                    get_prompts=lambda: self.sample_done(action),
+                    stop=self.env.done_stop(),
+                    T=T,
+                    valid=self.env.valid_done,
+                )
+                if done_str is None:
+                    break
+                completions.append(done_str)
+                done = self.env.done(done_str)
+                reward_str = self.predict(
+                    query,
+                    name="reward",
+                    get_prompts=lambda: self.sample_reward(action=action, done=done),
+                    stop=self.env.reward_stop(),
+                    T=T,
+                    valid=self.env.valid_reward,
+                )
+                if reward_str is None:
+                    break
+                completions.append(reward_str)
+                if done:
+                    break
+                state_str = self.predict(
+                    query,
+                    name="state",
+                    get_prompts=lambda: self.sample_next_state(action=action),
+                    stop=self.env.state_stop(),
+                    T=T,
+                    valid=self.env.valid_state,
+                )
+                if state_str is None:
+                    break
+                completions.append(state_str)
             action_str = self.generate_action(state_str, T)
             action = self.env.action(action_str)
             completions.append(action_str)
