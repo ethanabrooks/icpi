@@ -26,7 +26,6 @@ from bsuite.environments import base
 from bsuite.experiments.catch import sweep
 from dm_env import specs
 from gym.spaces import Discrete, MultiDiscrete
-
 from rl.lm import Data
 
 _ACTIONS = (-1, 0, 1)  # Left, no-op, right.
@@ -173,18 +172,25 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
 
     @classmethod
     def hint_str(cls, obs: Obs) -> str:
+        if obs.paddle_x < obs.ball_x:
+            operator = "<"
+        elif obs.paddle_x > obs.ball_x:
+            operator = ">"
+        else:
+            assert obs.paddle_x == obs.ball_x
+            operator = "=="
         return " and ".join(
             [
-                "ball.x "
-                + ("==" if obs.ball_x == obs.paddle_x else "!=")
-                + " paddle.x",
+                f"paddle.x == {obs.paddle_x}",
+                f"ball.x == {obs.ball_x}",
+                "paddle.x " + operator + " ball.x",
                 f"ball.y == {int(obs.ball_y)}",
             ]
         )
 
     @staticmethod
     def initial_str() -> str:
-        return "paddle, ball = reset()\n"
+        return "\npaddle, ball = reset()\n"
 
     def max_q_steps(self) -> int:
         return self.env.rows
@@ -231,13 +237,16 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
             self.hint
             and ts.reward == 0
             and ts.done
-            and ("ball.x != paddle.x" not in s or "ball.y == 0" not in s)
+            and (
+                ("paddle.x < ball.x" not in s or "paddle.x > ball.x" not in s)
+                or "ball.y == 0" not in s
+            )
         ):
             breakpoint()
         if (
             self.hint
             and ts.reward == 1
-            and ("ball.x == paddle.x" not in s or "ball.y == 0" not in s)
+            and ("paddle.x == ball.x" not in s and "ball.y == 0" not in s)
         ):
             breakpoint()
         return s
@@ -254,9 +263,14 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
         if ts.done:
             parts += [self.state_str(ts.next_state)]
         s = "".join(parts)
-        if self.hint and ts.reward == 1 and "ball.x == paddle.x" not in s:
+        if self.hint and ts.reward == 1 and "paddle.x == ball.x" not in s:
             breakpoint()
-        if self.hint and ts.reward == 0 and ts.done and "ball.x != paddle.x" not in s:
+        if (
+            self.hint
+            and ts.reward == 0
+            and ts.done
+            and ("paddle.x < ball.x" not in s and "paddle.x > ball.x" not in s)
+        ):
             breakpoint()
         return s
 

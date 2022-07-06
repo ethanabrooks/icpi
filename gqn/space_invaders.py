@@ -16,6 +16,9 @@ class C(NamedTuple):
     x: int
     y: int
 
+    def __str__(self):
+        return f"C{str(tuple(self))}"
+
 
 class Alien(NamedTuple):
     xy: Optional[C]
@@ -42,7 +45,10 @@ class Alien(NamedTuple):
         return not self.is_dead() and self.xy.x == x
 
     def __str__(self) -> str:
-        return str(None) if self.is_dead() else f"C{tuple(self.xy)}"
+        return str(None) if self.is_dead() else str(self.xy)
+
+    def __repr__(self):
+        return str(self)
 
     @classmethod
     def spawn(cls, x: int, y: int) -> "Alien":
@@ -50,6 +56,14 @@ class Alien(NamedTuple):
 
     def take_fire(self, ship: int) -> "Alien":
         return Alien(None if self.over(ship) else self.xy)
+
+    @property
+    def x(self):
+        return self.xy.x
+
+    @property
+    def y(self):
+        return self.xy.y
 
 
 class Obs(NamedTuple):
@@ -111,7 +125,7 @@ class Env(base_env.Env[Obs, int]):
 
     @classmethod
     def initial_str(cls) -> str:
-        return f"{cls.ship()}, aliens = reset()\n"
+        return f"\n{cls.ship()}, aliens = reset()\n"
 
     def max_q_steps(self) -> int:
         return self.width * self.n_aliens
@@ -146,16 +160,30 @@ class Env(base_env.Env[Obs, int]):
         return "\n"
 
     def state_str(self, state: Obs) -> str:
-        assertions = [f"{self.ship()} == C{(state.agent, 0)}"]
+        assertions = [
+            f"{self.ship()} == {C(state.agent, 0)}",
+            f"aliens == {state.aliens}",
+        ]
 
-        for i, a in enumerate(state.aliens):
-            assertions.append(f"aliens[{i}] == {str(a)}")
-            if self.hint and not a.is_dead():
-                assertions.append(
-                    "ship.x "
-                    + ("==" if a.over(state.agent) else "!=")
-                    + f" aliens[{i}].x"
-                )
+        if self.hint:
+            lhs = ["ship.x"]
+            rhs = [str(state.agent)]
+            for i, a in enumerate(state.aliens):
+                if not a.is_dead():
+                    lhs.append(f"aliens[{i}].x")
+                    rhs.append(str(a.x))
+            assertions.append(f"({', '.join(lhs)}) == ({', '.join(rhs)})")
+
+            for i, a in enumerate(state.aliens):
+                if not a.is_dead():
+                    if state.agent < a.x:
+                        operator = "<"
+                    elif state.agent > a.x:
+                        operator = ">"
+                    else:
+                        assert a.over(state.agent)
+                        operator = "=="
+                    assertions.append("ship.x " + operator + f" aliens[{i}].x")
 
         state_str = "assert " + " and ".join(assertions)
         return state_str + self.state_stop()
@@ -228,9 +256,9 @@ class Env(base_env.Env[Obs, int]):
         )
 
     def valid_reward(self, reward_str: str) -> bool:
-        return bool(
-            re.findall(r"reward == [0-9]+", reward_str)
-        ) and reward_str.endswith(self.reward_stop())
+        return bool(re.findall(r"reward == \d+", reward_str)) and reward_str.endswith(
+            self.reward_stop()
+        )
 
     def valid_state(self, state_str: str) -> bool:
         return bool(
