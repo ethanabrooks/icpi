@@ -1,3 +1,4 @@
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum, auto
@@ -64,7 +65,7 @@ query get_completion($prompt: String!, $temperature: numeric!, $top_p: numeric!,
         tokens = self.tokenizer(prompt)["input_ids"]
         tokens = tokens[-self.max_prompt_tokens() :]
         new_prompt = self.tokenizer.decode(tokens, skip_special_tokens=True)
-        new_prompt = new_prompt.replace("x!=", "x !=")
+        new_prompt = re.sub(r"(\S)!=", r"\1 !=", new_prompt)
         l = list(zip(reversed(prompt), reversed(new_prompt)))
         for i, (old, new) in enumerate(reversed(l)):
             if old != new:
