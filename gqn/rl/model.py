@@ -234,7 +234,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
 @dataclass
 class Q(Model[ObsType, ActType]):
     max_steps: int
-    oracle_transitions: bool
+    predict_transitions: bool
 
     def _act(self, state: ObsType, T: int) -> ActType:
         assert isinstance(self.env.action_space, Discrete)
@@ -301,18 +301,7 @@ class Q(Model[ObsType, ActType]):
         env = deepcopy(self.env)
         while True:
             query = [state_str + action_str]
-            if self.oracle_transitions:
-                next_state, reward, done, _ = env.step(action)
-                completions.extend(
-                    [
-                        env.done_str(done) + env.done_stop(),
-                        env.reward_str(reward) + env.reward_stop(),
-                    ]
-                )
-                if done:
-                    break
-                completions.append(env.state_str(next_state) + env.state_stop())
-            else:
+            if self.predict_transitions:
                 if t == self.max_steps:
                     break
                 done_str = self.predict(
@@ -351,6 +340,17 @@ class Q(Model[ObsType, ActType]):
                 if state_str is None:
                     break
                 completions.append(state_str)
+            else:
+                next_state, reward, done, _ = env.step(action)
+                completions.extend(
+                    [
+                        env.done_str(done) + env.done_stop(),
+                        env.reward_str(reward) + env.reward_stop(),
+                    ]
+                )
+                if done:
+                    break
+                completions.append(env.state_str(next_state) + env.state_stop())
             action_str = self.generate_action(state_str, T)
             action = self.env.action(action_str)
             completions.append(action_str)
