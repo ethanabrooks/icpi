@@ -37,6 +37,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     max_prompts: int
     max_resamples: int
     rng: Generator
+    sil: bool
     success_buffer: Deque[List[TimeStep]]
     temperature: float
     t_threshold: Optional[int]
@@ -159,12 +160,8 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
 
         buffer = [t for t in self.buffer]
         self.rng.shuffle(buffer)
-        successful = get_time_steps(
-            *[t for t in buffer if self.get_value(t) > self.env.failure_threshold()]
-        )
-        unsuccessful = get_time_steps(
-            *[t for t in buffer if self.get_value(t) <= self.env.failure_threshold()]
-        )
+        successful = get_time_steps(*[t for t in buffer if self.successful(t)])
+        unsuccessful = get_time_steps(*[t for t in buffer if not self.successful(t)])
         if not successful:
             balanced = unsuccessful
         elif not unsuccessful:
@@ -211,11 +208,14 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             trajectory[start:stop]
             for trajectory in trajectories
             for start, stop in itertools.combinations(range(len(trajectory) + 1), 2)
-            if self.get_value(trajectory[start:stop]) > self.env.failure_threshold()
+            if self.successful(trajectory[start:stop])
         ]
         self.rng.shuffle(trajectories)
 
         return [to_string(*t, env=self.env) for t in trajectories]
+
+    def successful(self, trajectory: List[TimeStep]) -> bool:
+        return not self.sil or self.get_value(trajectory) > self.env.failure_threshold()
 
     def generate_action(self, state: str, T: int) -> Optional[str]:
         maybe_action = self.predict(
