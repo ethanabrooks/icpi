@@ -136,7 +136,7 @@ class Env(base_env.Env):
             breakpoint()
             raise RuntimeError()
 
-        pos = self.state.pos + self.state.vel + accel / 2
+        pos = self.state.pos + self.state.vel
         vel = self.state.vel + accel
         self.state = State(pos, vel)
         reward = float(success)
