@@ -215,7 +215,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         return [to_string(*t, env=self.env) for t in trajectories]
 
     def successful(self, trajectory: List[TimeStep]) -> bool:
-        return not self.sil or self.get_value(trajectory) > self.env.failure_threshold()
+        return True
 
     def generate_action(self, state: str, T: int) -> Optional[str]:
         maybe_action = self.predict(

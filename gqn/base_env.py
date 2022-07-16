@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import Generic, Iterable, Optional, TypeVar
 
 import gym
-
 from rl.lm import Data
 
 ObsType = TypeVar("ObsType")
@@ -63,9 +62,8 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
     def done_str(self, done: bool) -> str:
         ...
 
-    @abc.abstractmethod
     def failure_threshold(self) -> float:
-        ...
+        raise RuntimeError("Not implemented")
 
     @staticmethod
     @abc.abstractmethod
