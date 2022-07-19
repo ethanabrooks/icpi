@@ -94,7 +94,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             previous_prompts.add("".join(prompts))
 
             new_prompt = "".join([*prompts, "".join(query)])
-            if self.debug >= 2:
+            if self.debug >= 2 and name == "reward":
                 print()
                 print("".join(prompts), end="")
                 Colorize.print_bold("".join(query))
@@ -108,10 +108,11 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             completion = completion.replace("ball.x!=", "ball.x !=")
             completion += stop
 
-            if self.debug >= 2:
+            if self.debug >= 2 and name == "reward":
                 Colorize.print_blue(name)
                 Colorize.print_cyan(completion)
-            self.breakpoint(T, 4)
+            if name == "reward":
+                self.breakpoint(T, 2)
             if valid(completion):
                 return completion
             else:
