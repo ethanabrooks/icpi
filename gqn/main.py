@@ -47,12 +47,11 @@ def main(model_name: str, seed: "int | list[int]", **kwargs):
         train_fn(**kwargs)
 
 
-REQUIRE_CACHE_FLAG = flag("require_cache", default=False)
-
 # must be set from CLI
 ALLOW_DIRTY_FLAG = flag("allow_dirty", default=False)
 LOCAL_RANK_ARG = option("local_rank").optional().ignore()
 NO_CACHE_FLAG = flag("use_cache", default=True, string="--no-cache")
+REQUIRE_CACHE_FLAG = flag("require_cache", default=False)
 
 
 @tree.command(
@@ -85,7 +84,9 @@ def _log(
     eval_interval: Optional[int],
     name: str,
     repo: Repo,
+    require_cache: bool,
     sweep_id: Optional[int],
+    use_cache: bool,
     **kwargs,
 ):
     if not allow_dirty:
@@ -135,7 +136,13 @@ def _log(
     logger.update_metadata(  # this updates the metadata stored in the database
         dict(parameters=kwargs, run_id=logger.run_id, name=name)
     )  # todo: encapsulate in HasuraLogger
-    main(**kwargs, eval_interval=eval_interval, logger=logger)
+    main(
+        **kwargs,
+        eval_interval=eval_interval,
+        logger=logger,
+        require_cache=require_cache,
+        use_cache=use_cache,
+    )
 
 
 @tree.subcommand(
