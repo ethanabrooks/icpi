@@ -125,7 +125,10 @@ def _log(
         ]:
             yield "hours", y
 
-    charts = [line.spec(x=x, y=y, visualizer_url=visualizer_url) for x, y in xy()]
+    charts = [
+        line.spec(color="seed", x=x, y=y, visualizer_url=visualizer_url)
+        for x, y in xy()
+    ]
 
     logger = HasuraLogger(GRAPHQL_ENDPOINT)
     logger.create_run(metadata=metadata, sweep_id=sweep_id, charts=charts)
