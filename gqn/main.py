@@ -6,6 +6,7 @@ from pathlib import Path
 from shlex import quote
 from typing import Optional
 
+import line
 import ray
 import yaml
 from dollar_lambda import CommandTree, argument, flag, nonpositional, option
@@ -17,7 +18,6 @@ from run_logger import HasuraLogger
 from run_logger.main import get_config_params, get_load_params
 from sweep_logger import create_sweep
 from sweep_logger.create_sweep import SweepMethod, compute_remaining_runs
-from vega_charts import line
 
 tree = CommandTree()
 
