@@ -8,3 +8,4 @@ config.yml
 .auto.sh
 .rsyncignore
 ignore.py
+.direnv/
