@@ -8,7 +8,7 @@ from rl.common import Colorize
 from rl.lm import Data, LM
 from transformers import GPT2TokenizerFast
 
-OPENAI_MODELS = ["code-davinci-002", "text-davinci-002"]
+OPENAI_MODELS = ["code-davinci-002", "code-cushman-001", "text-davinci-002"]
 
 
 @dataclass
@@ -155,6 +155,7 @@ class OpenAi(LM):
 
     def trained_on(self) -> Data:
         training_data: dict[str, Data] = {
+            "code-cushman-001": Data.code,
             "code-davinci-002": Data.code,
             "text-davinci-002": Data.natural_language,
         }
