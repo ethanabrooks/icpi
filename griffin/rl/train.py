@@ -10,7 +10,6 @@ import openai
 from rl.api.fast import Fast
 from rl.api.open_ai import OPENAI_MODELS, OpenAi
 from rl.common import evaluate, get_value, make_env, make_log, print_rank0
-from rl.huggingface import HF_MODELS, HuggingFaceModel
 from rl.model import Pi, Q, TimeStep, to_string
 from run_logger import HasuraLogger
 
@@ -59,15 +58,11 @@ def train(
         top_p=top_p,
     )
     if model_name in OPENAI_MODELS:
-        lm = OpenAi(**kwargs, wait_time=wait_time)
+        lm = OpenAi(**kwargs, wait_time=wait_time)  # type: ignore
     elif model_name == "fast":
         fast_url = os.getenv("FAST_URL")
         assert fast_url is not None, "FAST_URL must be set"
-        lm = Fast(**kwargs, seed=seed, url=fast_url)
-    elif model_name in HF_MODELS:
-        del kwargs["wait_time"]
-        kwargs["model_name"] = HF_MODELS[kwargs["model_name"]]
-        lm = HuggingFaceModel(seed=seed, **kwargs)
+        lm = Fast(**kwargs, seed=seed, url=fast_url)  # type: ignore
     else:
         raise RuntimeError(f"Unknown model {model_name}")
 
@@ -122,7 +117,7 @@ def train(
         )
         if eval_interval is not None and episodes % eval_interval == 0:
             evaluate(
-                act_fn=pi.act,
+                act_fn=pi.act,  # type: ignore
                 env=eval_env,
                 eval_interval=eval_interval,
                 logger=logger,
@@ -157,7 +152,7 @@ def train(
                     info=info,
                     rewards=rewards,
                     evaluation=False,
-                    **log_info,
+                    **log_info,  # type: ignore
                 )
             trajectory.append(step)
             state = next_state
