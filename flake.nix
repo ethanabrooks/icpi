@@ -50,9 +50,6 @@
                 };
               };
             };
-            python39Packages = prev.python39Packages.override {
-              overrides = pyfinal: pyprev: {gitpython = pyprev.GitPython;};
-            };
             thrift = prev.thrift.overrideAttrs (old: {
               # Concurrency test fails on Darwin
               # TInterruptTest, TNonblockingSSLServerTest
@@ -77,7 +74,32 @@
             astunparse = pyprev.astunparse.overridePythonAttrs (old: {
               buildInputs = (old.buildInputs or []) ++ [pyfinal.wheel];
             });
+            dollar-lambda = pyprev.dollar-lambda.overridePythonAttrs (old: {
+              buildInputs = (old.buildInputs or []) ++ [pyfinal.poetry];
+            });
+            vega-charts = pyprev.vega-charts.overridePythonAttrs (old: {
+              buildInputs = (old.buildInputs or []) ++ [pyfinal.poetry];
+            });
+            run-logger = pyprev.run-logger.overridePythonAttrs (old: {
+              buildInputs = (old.buildInputs or []) ++ [pyfinal.poetry];
+            });
+            sweep-logger = pyprev.sweep-logger.overridePythonAttrs (old: {
+              buildInputs = (old.buildInputs or []) ++ [pyfinal.poetry];
+            });
+            pandas-stubs = pyprev.pandas-stubs.overridePythonAttrs (old:{
+              # Prevent collisions with actual pandas installation.
+              postInstall = ''
+                rm -rf $out/${python.sitePackages}/pandas
+              '';
+            });
+            # Poetry2Nix tries to apply an override to lowercased
+            # gitpython (which does not exist). We first assign
+            # it to the GitPython that does exist to prevent a
+            # missing attribute error.
             gitpython = pyprev.GitPython;
+            # Then we replace the GitPython key with overridden version
+            # so that we get the fixes that poetry2nix applies.
+            GitPython = pyfinal.gitpython;
             orjson = python.pkgs.orjson.override {
               inherit (python) pythonOlder;
               inherit
