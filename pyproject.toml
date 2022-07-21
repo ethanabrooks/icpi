@@ -17,6 +17,7 @@ vega-charts = {git = "https://github.com/run-tracker/vega-charts.git", rev = "ma
 bsuite = "^0.3.5"
 ray = {version = "^1.13.0", extras = ["tune"]}
 dollar-lambda = {git = "https://github.com/ethanabrooks/dollar-lambda.git", rev = "main"}
+transformers = "^4.20.1"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.2.0"
