@@ -142,4 +142,4 @@ class Fast(LM):
             print(*args, **kwargs)
 
     def trained_on(self) -> Data:
-        return Data.natural_language
+        return Data.code
