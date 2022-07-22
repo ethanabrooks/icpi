@@ -105,6 +105,8 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
                 temperature=self.temperature,
                 use_cache=self.use_cache,
             )
+            if "state!=" in completion:
+                breakpoint()
             completion = completion.replace("ball.x!=", "ball.x !=")
             completion += stop
 
@@ -113,6 +115,8 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
                 Colorize.print_cyan(completion)
             self.breakpoint(T, 4)
             if valid(completion):
+                if "state!=" in completion:
+                    breakpoint()
                 return completion
             else:
                 if self.debug >= 3:
@@ -296,6 +300,8 @@ class Q(Model[ObsType, ActType]):
             )
         t = 0
         state_str = self.env.state_str(state)
+        if "state!=" in state_str:
+            breakpoint()
         action_str = self.env.action_str(action)
         completions = [s for s in [state_str, action_str] if s]
         env = deepcopy(self.env)
