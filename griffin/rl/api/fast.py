@@ -131,6 +131,8 @@ class Fast(LM):
                         / self.completion_count,
                     },
                 )
+            if "state!=" in completion:
+                breakpoint()
             return dict(
                 prompt=prompt,
                 completion=completion,
