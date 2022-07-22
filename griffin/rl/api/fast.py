@@ -1,3 +1,4 @@
+import re
 import sys
 import time
 from dataclasses import dataclass
@@ -103,6 +104,8 @@ class Fast(LM):
             choice, *_ = response.json()["choices"]
             completion = choice["text"].lstrip()
             completion = completion[: completion.find(stop)]  # TODO
+            completion = re.sub(r"(\S)!=", r"\1 !=", completion)
+
             top_logprobs = []
             response = self.post_completion(
                 completion=completion,
