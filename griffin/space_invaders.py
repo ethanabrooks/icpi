@@ -144,7 +144,7 @@ class Env(base_env.Env[Obs, int]):
             self.width, size=self.n_aliens + 1, replace=False
         )
         self.aliens = [Alien.spawn(x, self.height) for x in alien_xs]
-        return Obs(agent=self.agent, aliens=self.aliens)
+        return Obs(agent=self.agent, aliens=tuple(self.aliens))
 
     def reward_str(self, reward: float) -> str:
         return f"assert reward == {int(reward)}\nfor a in aliens:\n    a.descend"
@@ -191,7 +191,7 @@ class Env(base_env.Env[Obs, int]):
     def start_states(self) -> Optional[Iterable[Obs]]:
         for agent, *aliens in itertools.permutations(range(self.n_aliens)):
             aliens = [Alien.spawn(x, self.height) for x in aliens]
-            yield Obs(agent, aliens)
+            yield Obs(agent, tuple(aliens))
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
         new_aliens = []
@@ -212,7 +212,7 @@ class Env(base_env.Env[Obs, int]):
         self.agent += action - 1
         self.agent = int(np.clip(self.agent, 0, self.width - 1))
         # print(f"landed={landed}, return={self.r}, done={done}")
-        state = Obs(self.agent, self.aliens)
+        state = Obs(self.agent, tuple(self.aliens))
         return state, reward, done, info
 
     def ts_to_string(self, ts: TimeStep) -> str:

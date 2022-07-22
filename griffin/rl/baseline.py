@@ -9,6 +9,7 @@ import numpy as np
 from base_env import Env
 from numpy.random import Generator, default_rng
 from rl.common import evaluate, make_env, make_log
+from rl.lm import Data
 from run_logger import HasuraLogger
 from stable_baselines3 import DQN
 from stable_baselines3.common.callbacks import (
@@ -61,7 +62,7 @@ def tabular_main(
     total_steps: int,
     **kwargs,
 ):
-    env = make_env(env_id, seed, hint=False)
+    env = make_env(data=Data.code, env_id=env_id, seed=seed, hint=False)
     agent = TabularQAgent(
         env.action_space.n,
         learning_rate=1,
@@ -86,7 +87,7 @@ def tabular_main(
             step=T,
         )
 
-        if episode % eval_interval == 0:
+        if eval_interval is not None and episode % eval_interval == 0:
             evaluate(
                 act_fn=lambda t, s: agent.act(s),
                 env=env,
