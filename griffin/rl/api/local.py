@@ -10,7 +10,7 @@ from transformers import GPT2TokenizerFast
 
 
 @dataclass
-class Fast(LM):
+class Local(LM):
     seed: int
     url: str
     completion_count: int = 0
