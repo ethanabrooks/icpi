@@ -7,7 +7,7 @@ from typing import Deque, List, Optional
 
 import numpy as np
 import openai
-from rl.api.fast import Fast
+from rl.api.local import Local
 from rl.api.open_ai import OPENAI_MODELS, OpenAi
 from rl.common import evaluate, get_value, make_env, make_log, print_rank0
 from rl.huggingface import HF_MODELS, HuggingFaceModel
@@ -60,16 +60,14 @@ def train(
     )
     if model_name in OPENAI_MODELS:
         lm = OpenAi(**kwargs, wait_time=wait_time)
-    elif model_name == "fast":
-        fast_url = os.getenv("FAST_URL")
-        assert fast_url is not None, "FAST_URL must be set"
-        lm = Fast(**kwargs, seed=seed, url=fast_url)
     elif model_name in HF_MODELS:
         del kwargs["wait_time"]
         kwargs["model_name"] = HF_MODELS[kwargs["model_name"]]
         lm = HuggingFaceModel(seed=seed, **kwargs)
     else:
-        raise RuntimeError(f"Unknown model {model_name}")
+        url = os.getenv("LOCAL_URL")
+        assert url is not None, "LOCAL_URL must be set"
+        lm = Local(**kwargs, seed=seed, url=url)
 
     env = make_env(data=lm.trained_on(), env_id=env_id, seed=seed, hint=hint)
     eval_env = deepcopy(env)

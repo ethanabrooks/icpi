@@ -8,7 +8,7 @@ import pandas as pd
 from base_env import ActType, ObsType
 from metrics.encoder import Encoder
 from metrics.metric import Metric, Trajectory
-from rl.api.fast import API
+from rl.api.local import API
 from run_logger import HasuraLogger
 from tqdm import tqdm
 
