@@ -152,10 +152,6 @@ class Wrapper(gym.Wrapper, base_env.Env[Obs, int]):
             "right",
         ]
 
-    def done(self, *completions: str) -> bool:
-        *_, last_state = completions
-        return last_state == "assert done\n"
-
     @staticmethod
     def done_stop() -> str:
         return "\n"

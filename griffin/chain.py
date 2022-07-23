@@ -56,15 +56,6 @@ class Env(base_env.Env[int, int]):
             "right",
         ]
 
-    def done(self, done_str: str) -> bool:
-        if self.data == Data.code:
-            return "assert done" in done_str
-        elif self.data == Data.natural_language:
-            if done_str is None:
-                breakpoint()
-            return "not" not in done_str
-        raise RuntimeError("Invalid data")
-
     def done_stop(self) -> str:
         if self.data == Data.code:
             return "\n"

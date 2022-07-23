@@ -16,6 +16,7 @@ from run_logger import HasuraLogger
 
 def train(
     argmax: bool,
+    complex_prompts: bool,
     debug: int,
     env_id: str,
     eval_interval: Optional[int],
@@ -97,6 +98,7 @@ def train(
         predict_transitions=predict_transitions,
         rng=rng,
         sil=sil,
+        complex_prompts=complex_prompts,
         success_buffer=success_buffer,
         t_threshold=t_threshold,
         temperature=temperature,

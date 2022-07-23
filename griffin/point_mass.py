@@ -42,9 +42,6 @@ class Env(base_env.Env):
     def actions(self) -> "list[str]":
         return ["decel", "accel"]
 
-    def done(self, done_str: str) -> bool:
-        return "assert done" in done_str
-
     def done_str(self, done: bool) -> str:
         return f"assert{' ' if done else ' not '}done"
 
