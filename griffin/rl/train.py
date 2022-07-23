@@ -58,16 +58,21 @@ def train(
         require_cache=require_cache,
         top_p=top_p,
     )
+    local_models = ["InCoder", "GPT-J", "OPT-30B"]
     if model_name in OPENAI_MODELS:
         lm = OpenAi(**kwargs, wait_time=wait_time)
     elif model_name in HF_MODELS:
         del kwargs["wait_time"]
         kwargs["model_name"] = HF_MODELS[kwargs["model_name"]]
         lm = HuggingFaceModel(seed=seed, **kwargs)
-    else:
+    elif model_name in local_models:
         url = os.getenv("LOCAL_URL")
         assert url is not None, "LOCAL_URL must be set"
         lm = Local(**kwargs, seed=seed, url=url)
+    else:
+        raise RuntimeError(
+            f"Unknown model name: {model_name}. For local models, use one of: {', '.join(local_models)}"
+        )
 
     env = make_env(data=lm.trained_on(), env_id=env_id, seed=seed, hint=hint)
     eval_env = deepcopy(env)
