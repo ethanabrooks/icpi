@@ -1,6 +1,6 @@
 import math
 import re
-from dataclasses import dataclass, field, astuple
+from dataclasses import dataclass, field
 from typing import Iterable, Optional
 
 import base_env
@@ -107,7 +107,7 @@ class Env(base_env.Env):
         n = math.ceil(sqrt)
         self.min_steps = min_steps = 2 * n
         self.info = dict(min_steps=min_steps, optimal=self.gamma() ** min_steps)
-        return astuple(self.state)
+        return self.state
 
     def render(self, mode="human"):
         pass
@@ -143,7 +143,7 @@ class Env(base_env.Env):
         self.t += 1
         if success and self.t < self.min_steps:
             breakpoint()
-        return astuple(self.state), reward, success, self.info
+        return self.state, reward, success, self.info
 
     def success(self, pos, vel):
         return abs(pos) <= self.pos_threshold and vel == 0
