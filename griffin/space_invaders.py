@@ -107,9 +107,6 @@ class Env(base_env.Env[Obs, int]):
             "right",
         ]
 
-    def done(self, done_str: str) -> bool:
-        return "assert done" in done_str
-
     def done_str(self, done: bool) -> str:
         return f"assert{' ' if done else ' not '}done"
 

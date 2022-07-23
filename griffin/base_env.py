@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from typing import Generic, Iterable, Optional, TypeVar
 
 import gym
-
 from rl.lm import Data
 
 ObsType = TypeVar("ObsType")
@@ -50,9 +49,8 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
     def actions(self) -> "list[str]":
         ...
 
-    @abc.abstractmethod
     def done(self, done_str: str) -> bool:
-        ...
+        return "assert done" in done_str
 
     @staticmethod
     @abc.abstractmethod
@@ -148,3 +146,14 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
     @abc.abstractmethod
     def valid_state(self, state_str: str) -> bool:
         ...
+
+    @staticmethod
+    def valid_transition(transition_str: str) -> bool:
+        return (
+            transition_str.startswith("assert")
+            and "reward" in transition_str
+            and "done" in transition_str
+        )
+
+    def transition_stop(self) -> str:
+        return "done" + self.done_stop()

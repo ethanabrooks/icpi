@@ -129,6 +129,35 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     def ready(self) -> bool:
         return bool(self.sample_best())
 
+    def sample_best(self) -> List[str]:
+        trajectories = list(self.success_buffer)
+        trajectories = [
+            trajectory[start:stop]
+            for trajectory in trajectories
+            for start, stop in itertools.combinations(range(len(trajectory) + 1), 2)
+            if self.successful(trajectory[start:stop])
+        ]
+        self.rng.shuffle(trajectories)
+        return [to_string(*t, env=self.env) for t in trajectories]
+
+    def sample(self, action: ActType) -> List[str]:
+        trajectories = [
+            trajectory
+            for trajectory in self.buffer
+            if any(ts.action == action for ts in trajectory)
+        ]
+        self.rng.shuffle(trajectories)
+        trajectories_by_success = defaultdict(list)
+        for trajectory in trajectories:
+            trajectories_by_success[self.successful(trajectory)].append(trajectory)
+        trajectories = [
+            trajectory
+            for trajectories in zip(*trajectories_by_success.values())
+            for trajectory in trajectories
+        ]
+        self.rng.shuffle(trajectories)
+        return [to_string(*t, env=self.env) for t in trajectories]
+
     def sample_done(self, action: int) -> List[str]:
         time_steps = [ts for t in self.buffer for ts in t if ts.action == action]
         self.rng.shuffle(time_steps)
@@ -206,17 +235,21 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             for ts in balanced
         ]
 
-    def sample_best(self) -> List[str]:
-        trajectories = list(self.success_buffer)
-        trajectories = [
-            trajectory[start:stop]
-            for trajectory in trajectories
-            for start, stop in itertools.combinations(range(len(trajectory) + 1), 2)
-            if self.successful(trajectory[start:stop])
+    def sample_transition(self) -> List[str]:
+        buffer = [t for t in self.buffer]
+        self.rng.shuffle(buffer)
+        return [
+            self.env.state_str(ts.state)
+            + self.env.action_str(ts.action)
+            + self.env.reward_str(ts.reward)
+            + self.env.reward_stop()
+            + self.env.state_str(ts.next_state)
+            + self.env.done_str(ts.done)
+            + self.env.done_stop()
+            + "\n"
+            for t in buffer
+            for ts in t
         ]
-        self.rng.shuffle(trajectories)
-
-        return [to_string(*t, env=self.env) for t in trajectories]
 
     def successful(self, trajectory: List[TimeStep]) -> bool:
         return not self.sil or self.get_value(trajectory) > self.env.failure_threshold()
@@ -239,6 +272,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
 class Q(Model[ObsType, ActType]):
     max_steps: int
     predict_transitions: bool
+    complex_prompts: bool
 
     def _act(self, state: ObsType, T: int) -> ActType:
         assert isinstance(self.env.action_space, Discrete)
@@ -305,9 +339,10 @@ class Q(Model[ObsType, ActType]):
         action_str = self.env.action_str(action)
         completions = [s for s in [state_str, action_str] if s]
         env = deepcopy(self.env)
+        assert self.predict_transitions or self.complex_prompts
         while True:
             query = [state_str + action_str]
-            if self.predict_transitions:
+            if self.predict_transitions and self.complex_prompts:
                 if t == self.max_steps:
                     break
                 done_str = self.predict(
@@ -346,7 +381,20 @@ class Q(Model[ObsType, ActType]):
                 if state_str is None:
                     break
                 completions.append(state_str)
-            else:
+            elif not self.complex_prompts:
+                transition_str = self.predict(
+                    query,
+                    name="transition",
+                    get_prompts=self.sample_transition,
+                    stop=self.env.transition_stop(),
+                    T=T,
+                    valid=self.env.valid_transition,
+                )
+                completions.append(transition_str)
+                done = self.env.done(transition_str)
+                if done:
+                    break
+            elif not self.predict_transitions:
                 next_state, reward, done, _ = env.step(action)
                 completions.extend(
                     [
@@ -357,6 +405,8 @@ class Q(Model[ObsType, ActType]):
                 if done:
                     break
                 completions.append(env.state_str(next_state) + env.state_stop())
+            else:
+                raise RuntimeError("Unhandled case")
             action_str = self.generate_action(state_str, T)
             action = self.env.action(action_str)
             completions.append(action_str)
