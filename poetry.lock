@@ -307,7 +307,7 @@ woff = ["zopfli (>=0.1.4)", "brotlicffi (>=0.8.0)", "brotli (>=1.0.1)"]
 
 [[package]]
 name = "frozendict"
-version = "2.3.2"
+version = "2.3.4"
 description = "A simple immutable dictionary"
 category = "main"
 optional = false
@@ -358,8 +358,8 @@ requests = ">=2.12,<3"
 six = ">=1.10.0"
 
 [package.extras]
-dev = ["flake8 (==3.8.1)", "isort (==4.3.21)", "black (==19.10b0)", "mypy (==0.770)", "check-manifest (>=0.42,<1)", "pytest (==5.4.2)", "pytest-asyncio (==0.11.0)", "pytest-cov (==2.8.1)", "mock (==4.0.2)", "vcrpy (==4.0.2)", "coveralls (==2.0.0)"]
-test = ["pytest (==5.4.2)", "pytest-asyncio (==0.11.0)", "pytest-cov (==2.8.1)", "mock (==4.0.2)", "vcrpy (==4.0.2)", "coveralls (==2.0.0)"]
+test = ["coveralls (==2.0.0)", "vcrpy (==4.0.2)", "mock (==4.0.2)", "pytest-cov (==2.8.1)", "pytest-asyncio (==0.11.0)", "pytest (==5.4.2)"]
+dev = ["coveralls (==2.0.0)", "vcrpy (==4.0.2)", "mock (==4.0.2)", "pytest-cov (==2.8.1)", "pytest-asyncio (==0.11.0)", "pytest (==5.4.2)", "check-manifest (>=0.42,<1)", "mypy (==0.770)", "black (==19.10b0)", "isort (==4.3.21)", "flake8 (==3.8.1)"]
 
 [[package]]
 name = "graphql-core"
@@ -433,13 +433,13 @@ tqdm = "*"
 typing-extensions = ">=3.7.4.3"
 
 [package.extras]
-all = ["pytest", "pytest-cov", "datasets", "soundfile", "black (>=22.0,<23.0)", "isort (>=5.5.4)", "flake8 (>=3.8.3)"]
-dev = ["pytest", "pytest-cov", "datasets", "soundfile", "black (>=22.0,<23.0)", "isort (>=5.5.4)", "flake8 (>=3.8.3)"]
-fastai = ["toml", "fastai (>=2.4)", "fastcore (>=1.3.27)"]
-quality = ["black (>=22.0,<23.0)", "isort (>=5.5.4)", "flake8 (>=3.8.3)"]
-tensorflow = ["tensorflow", "pydot", "graphviz"]
-testing = ["pytest", "pytest-cov", "datasets", "soundfile"]
 torch = ["torch"]
+testing = ["soundfile", "datasets", "pytest-cov", "pytest"]
+tensorflow = ["graphviz", "pydot", "tensorflow"]
+quality = ["flake8 (>=3.8.3)", "isort (>=5.5.4)", "black (>=22.0,<23.0)"]
+fastai = ["fastcore (>=1.3.27)", "fastai (>=2.4)", "toml"]
+dev = ["flake8 (>=3.8.3)", "isort (>=5.5.4)", "black (>=22.0,<23.0)", "soundfile", "datasets", "pytest-cov", "pytest"]
+all = ["flake8 (>=3.8.3)", "isort (>=5.5.4)", "black (>=22.0,<23.0)", "soundfile", "datasets", "pytest-cov", "pytest"]
 
 [[package]]
 name = "identify"
@@ -812,7 +812,7 @@ numpy = ">=1.4"
 six = "*"
 
 [package.extras]
-test = ["pytest", "pytest-cov", "scipy"]
+test = ["scipy", "pytest-cov", "pytest"]
 
 [[package]]
 name = "pexpect"
@@ -875,11 +875,11 @@ scipy = ">=1.5.0"
 statsmodels = ">=0.13.2"
 
 [package.extras]
+test = ["pytest-cov", "flake8"]
+extra = ["geopandas", "scikit-learn", "scikit-misc", "adjusttext"]
+doc = ["jinja2 (<3.1)", "importlib-resources", "sphinx (>=3.0.0)", "numpydoc (>=0.9.1)", "nbsphinx", "jupyter"]
+dev = ["wheel", "twine"]
 all = ["plotnine", "plotnine", "plotnine", "plotnine"]
-dev = ["twine", "wheel"]
-doc = ["jupyter", "nbsphinx", "numpydoc (>=0.9.1)", "sphinx (>=3.0.0)", "importlib-resources", "jinja2 (<3.1)"]
-extra = ["adjusttext", "scikit-misc", "scikit-learn", "geopandas"]
-test = ["flake8", "pytest-cov"]
 
 [[package]]
 name = "pre-commit"
@@ -1208,7 +1208,7 @@ executing = "*"
 pure-eval = "*"
 
 [package.extras]
-tests = ["pytest", "typeguard", "pygments", "littleutils", "cython"]
+tests = ["cython", "littleutils", "pygments", "typeguard", "pytest"]
 
 [[package]]
 name = "statsmodels"
@@ -1422,6 +1422,14 @@ torchhub = ["filelock", "huggingface-hub (>=0.1.0,<1.0)", "importlib-metadata", 
 vision = ["pillow"]
 
 [[package]]
+name = "typing-extensions"
+version = "4.3.0"
+description = "Backported and Experimental Type Hints for Python 3.7+"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[[package]]
 name = "urllib3"
 version = "1.26.10"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
@@ -1623,23 +1631,23 @@ fonttools = [
     {file = "fonttools-4.34.4.zip", hash = "sha256:9a1c52488045cd6c6491fd07711a380f932466e317cb8e016fc4e99dc7eac2f0"},
 ]
 frozendict = [
-    {file = "frozendict-2.3.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:4fb171d1e84d17335365877e19d17440373b47ca74a73c06f65ac0b16d01e87f"},
-    {file = "frozendict-2.3.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c0a3640e9d7533d164160b758351aa49d9e85bbe0bd76d219d4021e90ffa6a52"},
-    {file = "frozendict-2.3.2-cp310-cp310-win_amd64.whl", hash = "sha256:87cfd00fafbc147d8cd2590d1109b7db8ac8d7d5bdaa708ba46caee132b55d4d"},
-    {file = "frozendict-2.3.2-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:fb09761e093cfabb2f179dbfdb2521e1ec5701df714d1eb5c51fa7849027be19"},
-    {file = "frozendict-2.3.2-cp36-cp36m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:82176dc7adf01cf8f0193e909401939415a230a1853f4a672ec1629a06ceae18"},
-    {file = "frozendict-2.3.2-cp36-cp36m-win_amd64.whl", hash = "sha256:c1c70826aa4a50fa283fe161834ac4a3ac7c753902c980bb8b595b0998a38ddb"},
-    {file = "frozendict-2.3.2-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:1db5035ddbed995badd1a62c4102b5e207b5aeb24472df2c60aba79639d7996b"},
-    {file = "frozendict-2.3.2-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4246fc4cb1413645ba4d3513939b90d979a5bae724be605a10b2b26ee12f839c"},
-    {file = "frozendict-2.3.2-cp37-cp37m-win_amd64.whl", hash = "sha256:680cd42fb0a255da1ce45678ccbd7f69da750d5243809524ebe8f45b2eda6e6b"},
-    {file = "frozendict-2.3.2-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:6a7f3a181d6722c92a9fab12d0c5c2b006a18ca5666098531f316d1e1c8984e3"},
-    {file = "frozendict-2.3.2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:b1cb866eabb3c1384a7fe88e1e1033e2b6623073589012ab637c552bf03f6364"},
-    {file = "frozendict-2.3.2-cp38-cp38-win_amd64.whl", hash = "sha256:952c5e5e664578c5c2ce8489ee0ab6a1855da02b58ef593ee728fc10d672641a"},
-    {file = "frozendict-2.3.2-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:608b77904cd0117cd816df605a80d0043a5326ee62529327d2136c792165a823"},
-    {file = "frozendict-2.3.2-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0eed41fd326f0bcc779837d8d9e1374da1bc9857fe3b9f2910195bbd5fff3aeb"},
-    {file = "frozendict-2.3.2-cp39-cp39-win_amd64.whl", hash = "sha256:bde28db6b5868dd3c45b3555f9d1dc5a1cca6d93591502fa5dcecce0dde6a335"},
-    {file = "frozendict-2.3.2-py3-none-any.whl", hash = "sha256:6882a9bbe08ab9b5ff96ce11bdff3fe40b114b9813bc6801261e2a7b45e20012"},
-    {file = "frozendict-2.3.2.tar.gz", hash = "sha256:7fac4542f0a13fbe704db4942f41ba3abffec5af8b100025973e59dff6a09d0d"},
+    {file = "frozendict-2.3.4-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:4a3b32d47282ae0098b9239a6d53ec539da720258bd762d62191b46f2f87c5fc"},
+    {file = "frozendict-2.3.4-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:84c9887179a245a66a50f52afa08d4d92ae0f269839fab82285c70a0fa0dd782"},
+    {file = "frozendict-2.3.4-cp310-cp310-win_amd64.whl", hash = "sha256:b98a0d65a59af6da03f794f90b0c3085a7ee14e7bf8f0ef36b079ee8aa992439"},
+    {file = "frozendict-2.3.4-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:3d8042b7dab5e992e30889c9b71b781d5feef19b372d47d735e4d7d45846fd4a"},
+    {file = "frozendict-2.3.4-cp36-cp36m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:25a6d2e8b7cf6b6e5677a1a4b53b4073e5d9ec640d1db30dc679627668d25e90"},
+    {file = "frozendict-2.3.4-cp36-cp36m-win_amd64.whl", hash = "sha256:dbbe1339ac2646523e0bb00d1896085d1f70de23780e4927ca82b36ab8a044d3"},
+    {file = "frozendict-2.3.4-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:95bac22f7f09d81f378f2b3f672b7a50a974ca180feae1507f5e21bc147e8bc8"},
+    {file = "frozendict-2.3.4-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:dae686722c144b333c4dbdc16323a5de11406d26b76d2be1cc175f90afacb5ba"},
+    {file = "frozendict-2.3.4-cp37-cp37m-win_amd64.whl", hash = "sha256:389f395a74eb16992217ac1521e689c1dea2d70113bcb18714669ace1ed623b9"},
+    {file = "frozendict-2.3.4-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:ccb6450a416c9cc9acef7683e637e28356e3ceeabf83521f74cc2718883076b7"},
+    {file = "frozendict-2.3.4-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:aca59108b77cadc13ba7dfea7e8f50811208c7652a13dc6c7f92d7782a24d299"},
+    {file = "frozendict-2.3.4-cp38-cp38-win_amd64.whl", hash = "sha256:3ec86ebf143dd685184215c27ec416c36e0ba1b80d81b1b9482f7d380c049b4e"},
+    {file = "frozendict-2.3.4-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:5809e6ff6b7257043a486f7a3b73a7da71cf69a38980b4171e4741291d0d9eb3"},
+    {file = "frozendict-2.3.4-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7c550ed7fdf1962984bec21630c584d722b3ee5d5f57a0ae2527a0121dc0414a"},
+    {file = "frozendict-2.3.4-cp39-cp39-win_amd64.whl", hash = "sha256:3e93aebc6e69a8ef329bbe9afb8342bd33c7b5c7a0c480cb9f7e60b0cbe48072"},
+    {file = "frozendict-2.3.4-py3-none-any.whl", hash = "sha256:d722f3d89db6ae35ef35ecc243c40c800eb344848c83dba4798353312cd37b15"},
+    {file = "frozendict-2.3.4.tar.gz", hash = "sha256:15b4b18346259392b0d27598f240e9390fafbff882137a9c48a1e0104fb17f78"},
 ]
 frozenlist = [
     {file = "frozenlist-1.3.0-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:d2257aaba9660f78c7b1d8fea963b68f3feffb1a9d5d05a18401ca9eb3e8d0a3"},
