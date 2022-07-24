@@ -5,7 +5,7 @@ from typing import Optional
 
 import openai
 from rl.common import Colorize
-from rl.lm import Data, LM
+from rl.lm import LM, Data
 from transformers import GPT2TokenizerFast
 
 OPENAI_MODELS = ["code-davinci-002", "code-cushman-001", "text-davinci-002"]
@@ -56,7 +56,6 @@ class OpenAi(LM):
             elif self.require_cache:
                 print(prompt)
                 Colorize.print_warning("No completions found in cache for this prompt.")
-                breakpoint()
                 exit()
 
         self.print("Prompt:")
