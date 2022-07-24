@@ -3,20 +3,13 @@ import math
 import time
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Hashable, Optional
+from typing import Hashable
 
 import numpy as np
-from base_env import Env
 from numpy.random import Generator, default_rng
 from rl.common import evaluate, make_env, make_log
 from rl.lm import Data
 from run_logger import HasuraLogger
-from stable_baselines3 import DQN
-from stable_baselines3.common.callbacks import (
-    BaseCallback,
-    CallbackList,
-    EveryNTimesteps,
-)
 
 
 @dataclass
@@ -60,7 +53,7 @@ def tabular_main(
     logger: HasuraLogger,
     seed: int,
     total_steps: int,
-    **kwargs,
+    **_,
 ):
     env = make_env(data=Data.code, env_id=env_id, seed=seed, hint=False)
     agent = TabularQAgent(
@@ -89,11 +82,11 @@ def tabular_main(
 
         if eval_interval is not None and episode % eval_interval == 0:
             evaluate(
-                act_fn=lambda t, s: agent.act(s),
+                act_fn=lambda _, s: agent.act(s),  # type: ignore
                 env=env,
                 eval_interval=eval_interval,
                 logger=logger,
-                **log_info,
+                **log_info,  # type: ignore
             )
         rewards = []
         t = 0
@@ -125,94 +118,5 @@ def tabular_main(
             info=info,
             rewards=rewards,
             evaluation=False,
-            **log_info,
+            **log_info,  # type: ignore
         )
-
-
-class LoggingCallback(BaseCallback):
-    def __init__(self, logger: HasuraLogger, start_time: float, verbose=0):
-        super().__init__(verbose)
-        self.run_logger = logger
-        self.start_time = start_time
-
-    def _on_step(self):
-        if np.sum(self.locals["dones"]) > 0:
-            assert len(self.locals["dones"]) == 1
-            make_log(
-                logger=self.run_logger,
-                info=self.locals["infos"][0],
-                rewards=self.locals["rewards"].tolist(),
-                evaluation=False,
-                use_model_prob=0.0,
-                num_success=0,
-                gamma=self.training_env.envs[0].gamma(),
-                start_time=self.start_time,
-                step=self.model.num_timesteps,
-            )
-
-
-class EvalCallback(BaseCallback):
-    def __init__(
-        self,
-        logger: HasuraLogger,
-        eval_env: Env,
-        eval_interval: int,
-        start_time: float,
-        verbose=0,
-    ):
-        super().__init__(verbose)
-        self.run_logger = logger
-        self.eval_env = eval_env
-        self.eval_interval = eval_interval
-        self.start_time = start_time
-
-    def _on_step(self):
-        evaluate(
-            act_fn=self.act,
-            env=self.eval_env,
-            eval_interval=self.eval_interval,
-            logger=self.run_logger,
-            use_model_prob=0.0,
-            success_buffer_size=0,
-            gamma=self.eval_env.gamma(),
-            start_time=self.start_time,
-            step=self.model.num_timesteps,
-            T=0,
-        )
-
-    def act(self, _, state):
-        return self.model.predict(np.array(state))[0].item()
-
-
-def deep_baseline(
-    logger: HasuraLogger,
-    model_name: str,
-    env_id: str,
-    total_steps: int,
-    eval_interval: Optional[int],
-    seed: int,
-    **_,
-):
-
-    train_env = make_env(env_id, seed, False)
-    eval_env = make_env(env_id, seed, False)
-    model = DQN(
-        "MlpPolicy",
-        train_env,
-        policy_kwargs=dict(net_arch=[3, 3]),
-        gamma=train_env.gamma(),
-        seed=seed,
-        verbose=0,
-    )
-
-    start_time = time.time()
-    eval_callback = EvalCallback(logger, eval_env, eval_interval, start_time)
-    model.learn(
-        total_timesteps=total_steps,
-        callback=CallbackList(
-            [
-                LoggingCallback(logger, start_time=start_time),
-                EveryNTimesteps(n_steps=eval_interval, callback=eval_callback),
-            ]
-        ),
-    )
