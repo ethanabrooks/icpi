@@ -49,8 +49,10 @@ RUN apt-get update -q \
 
 WORKDIR "/deps"
 
-COPY pyproject.toml poetry.lock /deps/
-RUN pip3 install poetry && poetry install
+COPY pyproject.toml poetry.lock typing-extensions.lock patch.py /deps/
+RUN pip3 install poetry tomli tomli-w \
+ && python3 patch.py \
+ && poetry install
 
 
 FROM base AS runtime
