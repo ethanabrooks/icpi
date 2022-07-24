@@ -10,7 +10,6 @@ import openai
 from rl.api.local import Local
 from rl.api.open_ai import OPENAI_MODELS, OpenAi
 from rl.common import evaluate, get_value, make_env, make_log, print_rank0
-from rl.huggingface import HF_MODELS, HuggingFaceModel
 from rl.model import Pi, Q, TimeStep, to_string
 from run_logger import HasuraLogger
 
@@ -61,10 +60,6 @@ def train(
     local_models = ["InCoder", "GPT-J", "OPT-30B"]
     if model_name in OPENAI_MODELS:
         lm = OpenAi(**kwargs, wait_time=wait_time)
-    elif model_name in HF_MODELS:
-        del kwargs["wait_time"]
-        kwargs["model_name"] = HF_MODELS[kwargs["model_name"]]
-        lm = HuggingFaceModel(seed=seed, **kwargs)
     elif model_name in local_models:
         url = os.getenv("LOCAL_URL")
         assert url is not None, "LOCAL_URL must be set"
@@ -125,7 +120,7 @@ def train(
         )
         if eval_interval is not None and episodes % eval_interval == 0:
             evaluate(
-                act_fn=pi.act,
+                act_fn=pi.act,  # type: ignore
                 env=eval_env,
                 eval_interval=eval_interval,
                 logger=logger,
@@ -160,7 +155,7 @@ def train(
                     info=info,
                     rewards=rewards,
                     evaluation=False,
-                    **log_info,
+                    **log_info,  # type: ignore
                 )
             trajectory.append(step)
             state = next_state

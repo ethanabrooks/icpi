@@ -12,7 +12,7 @@ import yaml
 from dollar_lambda import CommandTree, argument, flag, nonpositional, option
 from git import Repo
 from ray import tune
-from rl.baseline import deep_baseline, tabular_main
+from rl.baseline import tabular_main
 from rl.train import train
 from run_logger import HasuraLogger
 from run_logger.main import get_config_params, get_load_params
@@ -31,9 +31,7 @@ def validate_local_rank(s: str):
 
 
 def main(model_name: str, seed: "int | list[int]", **kwargs):
-    if model_name.startswith("baseline"):
-        train_fn = deep_baseline
-    elif model_name == "tabular-q":
+    if model_name == "tabular-q":
         train_fn = tabular_main
     else:
         train_fn = train
