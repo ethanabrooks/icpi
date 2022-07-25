@@ -382,6 +382,8 @@ class Q(Model[ObsType, ActType]):
                     break
                 completions.append(state_str)
             elif not self.complex_prompts:
+                if t == self.max_steps:
+                    break
                 transition_str = self.predict(
                     query,
                     name="transition",
@@ -390,6 +392,8 @@ class Q(Model[ObsType, ActType]):
                     T=T,
                     valid=self.env.valid_transition,
                 )
+                if transition_str is None:
+                    break
                 completions.append(transition_str)
                 done = self.env.done(transition_str)
                 if done:
