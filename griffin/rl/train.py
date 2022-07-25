@@ -58,7 +58,7 @@ def train(
         require_cache=require_cache,
         top_p=top_p,
     )
-    local_models = ["InCoder", "GPT-J", "OPT-30B"]
+    local_models = ["InCoder", "GPT-J", "OPT-30B", "OPT-66B"]
     if model_name in OPENAI_MODELS:
         lm = OpenAi(**kwargs, wait_time=wait_time)
     elif model_name in local_models:
