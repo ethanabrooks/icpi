@@ -79,6 +79,7 @@ def no_log(
 
 def _log(
     allow_dirty: bool,
+    debug: int,
     eval_interval: Optional[int],
     name: str,
     repo: Repo,
@@ -132,11 +133,16 @@ def _log(
     logger = HasuraLogger(GRAPHQL_ENDPOINT)
     logger.create_run(metadata=metadata, sweep_id=sweep_id, charts=charts)
     logger.update_metadata(  # this updates the metadata stored in the database
-        dict(parameters=kwargs, run_id=logger.run_id, name=name)
+        dict(
+            parameters=dict(eval_interval=eval_interval, **kwargs),
+            run_id=logger.run_id,
+            name=name,
+        )
     )  # todo: encapsulate in HasuraLogger
     main(
         **kwargs,
         eval_interval=eval_interval,
+        debug=debug,
         logger=logger,
         require_cache=require_cache,
         use_cache=use_cache,
