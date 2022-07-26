@@ -141,7 +141,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         return [to_string(*t, env=self.env) for t in trajectories]
 
     def sample_done(self, action: int) -> List[str]:
-        time_steps = [ts for t in self.buffer for ts in t if ts.action == action]
+        time_steps = [ts for t in self.buffer for ts in t]  # if ts.action == action]
         self.rng.shuffle(time_steps)
         done = [ts for ts in time_steps if ts.done]
         not_done = [ts for ts in time_steps if not ts.done]
@@ -170,7 +170,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
                 ts
                 for t in trajectories
                 for ts in t
-                if ts.action == action and not ts.done
+                # if ts.action == action and not ts.done
             ]
 
         buffer = [t for t in self.buffer]
@@ -201,8 +201,8 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         self.rng.shuffle(buffer)
         for t in buffer:
             for ts in t:
-                if ts.action == action and ts.done == done:
-                    rewards[ts.reward].append(ts)
+                # if ts.action == action and ts.done == done:
+                rewards[ts.reward].append(ts)
         balanced = self.balance(*rewards.values())
         # if rewards and max(len(r) for r in rewards.values()) > 3:
         #     breakpoint()
