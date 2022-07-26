@@ -140,24 +140,6 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         self.rng.shuffle(trajectories)
         return [to_string(*t, env=self.env) for t in trajectories]
 
-    def sample(self, action: ActType) -> List[str]:
-        trajectories = [
-            trajectory
-            for trajectory in self.buffer
-            if any(ts.action == action for ts in trajectory)
-        ]
-        self.rng.shuffle(trajectories)
-        trajectories_by_success = defaultdict(list)
-        for trajectory in trajectories:
-            trajectories_by_success[self.successful(trajectory)].append(trajectory)
-        trajectories = [
-            trajectory
-            for trajectories in zip(*trajectories_by_success.values())
-            for trajectory in trajectories
-        ]
-        self.rng.shuffle(trajectories)
-        return [to_string(*t, env=self.env) for t in trajectories]
-
     def sample_done(self, action: int) -> List[str]:
         time_steps = [ts for t in self.buffer for ts in t if ts.action == action]
         self.rng.shuffle(time_steps)
@@ -235,21 +217,23 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             for ts in balanced
         ]
 
-    def sample_transition(self) -> List[str]:
-        buffer = [t for t in self.buffer]
-        self.rng.shuffle(buffer)
-        return [
-            self.env.state_str(ts.state)
-            + self.env.action_str(ts.action)
-            + self.env.reward_str(ts.reward)
-            + self.env.reward_stop()
-            + self.env.state_str(ts.next_state)
-            + self.env.done_str(ts.done)
-            + self.env.done_stop()
-            + "\n"
-            for t in buffer
-            for ts in t
+    def sample_transition(self, action: int) -> List[str]:
+        trajectories = [
+            trajectory
+            for trajectory in self.buffer
+            if any(ts.action == action for ts in trajectory)
         ]
+        self.rng.shuffle(trajectories)
+        trajectories_by_success = defaultdict(list)
+        for trajectory in trajectories:
+            trajectories_by_success[self.successful(trajectory)].append(trajectory)
+        trajectories = [
+            trajectory
+            for trajectories in zip(*trajectories_by_success.values())
+            for trajectory in trajectories
+        ]
+        self.rng.shuffle(trajectories)
+        return [to_string(*t, env=self.env) for t in trajectories]
 
     def successful(self, trajectory: List[TimeStep]) -> bool:
         return not self.sil or self.get_value(trajectory) > self.env.failure_threshold()
@@ -387,7 +371,7 @@ class Q(Model[ObsType, ActType]):
                 transition_str = self.predict(
                     query,
                     name="transition",
-                    get_prompts=self.sample_transition,
+                    get_prompts=lambda: self.sample_transition(action=action),
                     stop=self.env.transition_stop(),
                     T=T,
                     valid=self.env.valid_transition,
