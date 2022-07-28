@@ -52,11 +52,11 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     def _act(self, state: ObsType, T: int) -> ActType:
         ...
 
-    def balance(self, *lists: List) -> List[List]:
-        if not lists:
-            return [[]]
-        max_len = max(len(l) for l in lists)
-        return [self.extend(l, max_len) for l in lists]
+    # def balance(self, *lists: List) -> List[List]:
+    #     if not lists:
+    #         return [[]]
+    #     max_len = max(len(l) for l in lists)
+    #     return [self.extend(l, max_len) for l in lists]
 
     def breakpoint(self, T: int, threshold: int):
         if self.debug >= threshold and (
@@ -143,25 +143,25 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     def sample_done(self, action: int) -> List[str]:
         time_steps = [ts for t in self.buffer for ts in t if ts.action == action]
         self.rng.shuffle(time_steps)
-        done = [ts for ts in time_steps if ts.done]
-        not_done = [ts for ts in time_steps if not ts.done]
-        if len(done) == 0:
-            balanced = not_done
-        elif len(not_done) == 0:
-            balanced = done
-        else:
-            done, not_done = self.balance(done, not_done)
-            # if len(done) > 3:
-            #     breakpoint()
-            balanced = [ts for (d, nd) in zip(done, not_done) for ts in [d, nd]]
-        self.rng.shuffle(balanced)
+        # done = [ts for ts in time_steps if ts.done]
+        # not_done = [ts for ts in time_steps if not ts.done]
+        # if len(done) == 0:
+        #     balanced = not_done
+        # elif len(not_done) == 0:
+        #     balanced = done
+        # else:
+        #     done, not_done = self.balance(done, not_done)
+        #     # if len(done) > 3:
+        #     #     breakpoint()
+        #     balanced = [ts for (d, nd) in zip(done, not_done) for ts in [d, nd]]
+        # self.rng.shuffle(balanced)
         return [
             self.env.state_str(ts.state)
             + self.env.action_str(ts.action)
             + self.env.done_str(ts.done)
             + self.env.done_stop()
             + "\n"
-            for ts in balanced
+            for ts in time_steps
         ]
 
     def sample_next_state(self, action: int) -> List[str]:
@@ -173,48 +173,53 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
                 if ts.action == action and not ts.done
             ]
 
-        buffer = [t for t in self.buffer]
+        buffer = list(get_time_steps(*self.buffer))
         self.rng.shuffle(buffer)
-        successful = get_time_steps(*[t for t in buffer if self.successful(t)])
-        unsuccessful = get_time_steps(*[t for t in buffer if not self.successful(t)])
-        if not successful:
-            balanced = unsuccessful
-        elif not unsuccessful:
-            balanced = successful
-        else:
-            successful, unsuccessful = self.balance(successful, unsuccessful)
-            # if len(successful) > 3:
-            #     breakpoint()
-            balanced = [ts for (s, u) in zip(successful, unsuccessful) for ts in [s, u]]
-        self.rng.shuffle(balanced)
+        # successful = get_time_steps(*[t for t in buffer if self.successful(t)])
+        # unsuccessful = get_time_steps(*[t for t in buffer if not self.successful(t)])
+        # if not successful:
+        #     balanced = unsuccessful
+        # elif not unsuccessful:
+        #     balanced = successful
+        # else:
+        #     successful, unsuccessful = self.balance(successful, unsuccessful)
+        #     # if len(successful) > 3:
+        #     #     breakpoint()
+        #     balanced = [ts for (s, u) in zip(successful, unsuccessful) for ts in [s, u]]
+        # self.rng.shuffle(balanced)
         return [
             self.env.state_str(ts.state)
             + self.env.action_str(ts.action)
             + self.env.state_str(ts.next_state)
             + "\n"
-            for ts in balanced
+            for ts in buffer
         ]
 
     def sample_reward(self, action: int, done: bool) -> List[str]:
-        rewards = defaultdict(list)
-        buffer = [t for t in self.buffer]
+        # rewards = defaultdict(list)
+        buffer = [
+            ts
+            for t in self.buffer
+            for ts in t
+            if ts.action == action and ts.done == done
+        ]
         self.rng.shuffle(buffer)
-        for t in buffer:
-            for ts in t:
-                if ts.action == action and ts.done == done:
-                    rewards[ts.reward].append(ts)
-        balanced = self.balance(*rewards.values())
+        # for t in buffer:
+        #     for ts in t:
+        #         if ts.action == action and ts.done == done:
+        #             rewards[ts.reward].append(ts)
+        # balanced = self.balance(*rewards.values())
         # if rewards and max(len(r) for r in rewards.values()) > 3:
         #     breakpoint()
-        balanced = [ts for time_steps in zip(*balanced) for ts in time_steps]
-        self.rng.shuffle(balanced)
+        # balanced = [ts for time_steps in zip(*balanced) for ts in time_steps]
+        # self.rng.shuffle(balanced)
         return [
             self.env.state_str(ts.state)
             + self.env.action_str(ts.action)
             + self.env.reward_str(ts.reward)
             + self.env.reward_stop()
             + "\n"
-            for ts in balanced
+            for ts in buffer
         ]
 
     def sample_transition(self, action: int) -> List[str]:
