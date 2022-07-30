@@ -16,7 +16,8 @@ from run_logger import HasuraLogger
 
 def train(
     argmax: bool,
-    complex_prompts: bool,
+    balance_prompts: bool,
+    constrain_prompts: bool,
     debug: int,
     env_id: str,
     eval_interval: Optional[int],
@@ -88,7 +89,9 @@ def train(
         use_cache=use_cache,
     )
     q = Q(
+        balance_prompts=balance_prompts,
         buffer=buffer,
+        constrain_prompts=constrain_prompts,
         debug=debug,
         env=env,
         lm=lm,
@@ -98,7 +101,6 @@ def train(
         predict_transitions=predict_transitions,
         rng=rng,
         sil=sil,
-        complex_prompts=complex_prompts,
         success_buffer=success_buffer,
         t_threshold=t_threshold,
         temperature=temperature,
