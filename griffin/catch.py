@@ -294,7 +294,7 @@ if __name__ == "__main__":
         return sum([gamma**t * ts.reward for t, ts in enumerate(trajectory)])
 
     max_step = 8
-    env = Wrapper(Env(columns=4, rows=5, seed=0), hint=True)
+    env = Wrapper(env=Env(columns=4, rows=5, seed=0), data=Data.code, hint=True)
     while True:
         s = env.reset()
         print(env.initial_str() + env.state_str(s))
@@ -305,6 +305,16 @@ if __name__ == "__main__":
             # a = int(input("Action: ")) - 1
             s_, r, t, i = env.step(a)
             ts = TimeStep(s, a, r, t, s_)
+            print(
+                env.initial_str()
+                + env.state_str(ts.state)
+                + env.action_str(ts.action)
+                + env.reward_str(ts.reward)
+                + env.reward_stop()
+                + env.done_str(ts.done)
+                + env.done_stop()
+            )
+            breakpoint()
             trajectory.append(ts)
             completions = [env.ts_to_string(ts) for ts in trajectory]
             with_termination = [*completions, env.termination_str(ts)]

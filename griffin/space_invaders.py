@@ -8,6 +8,7 @@ import gym
 import gym.spaces
 import numpy as np
 from base_env import TimeStep
+from rl.lm import Data
 
 DEAD = "dead"
 
@@ -275,6 +276,7 @@ if __name__ == "__main__":
         n_aliens=2,
         random_seed=0,
         hint=True,
+        data=Data.code,
     )
     while True:
         s = env.reset()
@@ -284,9 +286,19 @@ if __name__ == "__main__":
         completions = []
         while not t:
             a = env.action_space.sample()
-            a = int(input("Action: ")) - 1
+            # a = int(input("Action: ")) - 1
             s_, r, t, i = env.step(a)
             ts = TimeStep(s, a, r, t, s_)
+            print(
+                env.initial_str()
+                + env.state_str(ts.state)
+                + env.action_str(ts.action)
+                + env.reward_str(ts.reward)
+                + env.reward_stop()
+                + env.done_str(ts.done)
+                + env.done_stop()
+            )
+            breakpoint()
             trajectory.append(ts)
             completions = [env.ts_to_string(ts) for ts in trajectory]
             # done_estimate = env.done(*completions, env.state_str(s_))
