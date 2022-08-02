@@ -1116,7 +1116,7 @@ redis = "^3.5.3"
 type = "git"
 url = "https://github.com/ethanabrooks/run-logger.git"
 reference = "main"
-resolved_reference = "0be4d4e144dd54f459d2d91245730c985fd4e62d"
+resolved_reference = "371fa83b9c8d950b9774ea4b1dee80287a98bb75"
 
 [[package]]
 name = "rx"
@@ -1250,7 +1250,7 @@ run-logger = {git = "https://github.com/ethanabrooks/run-logger.git", rev = "mai
 type = "git"
 url = "https://github.com/run-tracker/sweep-logger.git"
 reference = "main"
-resolved_reference = "7e42a456a01a84a1aaf7635eabd7ed284453acd4"
+resolved_reference = "a488cca9f098a1f635a4e1a7d52a5177adf949cc"
 
 [[package]]
 name = "tabulate"

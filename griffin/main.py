@@ -12,7 +12,7 @@ import yaml
 from dollar_lambda import CommandTree, argument, flag, nonpositional, option
 from git import Repo
 from ray import tune
-from rl.baseline import tabular_main
+from rl.tabular_q import tabular_main
 from rl.train import train
 from run_logger import HasuraLogger
 from run_logger.main import get_config_params, get_load_params
