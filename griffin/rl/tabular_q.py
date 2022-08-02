@@ -14,11 +14,11 @@ from run_logger import HasuraLogger
 
 @dataclass
 class TabularQAgent:
-    n_actions: int
-    learning_rate: float
     discount_factor: float
-    seed: int
     initial_q_value: float
+    learning_rate: float
+    n_actions: int
+    seed: int
     q: defaultdict = field(init=False)
     _rng: Generator = field(init=False)
 
@@ -28,6 +28,14 @@ class TabularQAgent:
         )
         self._rng = default_rng(self.seed)
 
+    def act(self, state: Hashable) -> int:
+        q_vals = self.q[state]
+        best_actions = np.flatnonzero(q_vals == q_vals.max())
+        return self._rng.choice(best_actions)
+
+    def act_random(self) -> int:
+        return self._rng.integers(0, self.n_actions)
+
     def update(
         self, cur_state: Hashable, action: int, reward: float, next_state: Hashable
     ):
@@ -36,14 +44,6 @@ class TabularQAgent:
             reward + self.discount_factor * self.q[next_state].max() - prev_q
         )
         self.q[cur_state][action] = prev_q + self.learning_rate * prediction_error
-
-    def act_random(self) -> int:
-        return self._rng.integers(0, self.n_actions)
-
-    def act(self, state: Hashable) -> int:
-        q_vals = self.q[state]
-        best_actions = np.flatnonzero(q_vals == q_vals.max())
-        return self._rng.choice(best_actions)
 
 
 def tabular_main(
@@ -57,7 +57,7 @@ def tabular_main(
 ):
     env = make_env(data=Data.code, env_id=env_id, seed=seed, hint=False)
     agent = TabularQAgent(
-        env.action_space.n,
+        n_actions=env.action_space.n,
         learning_rate=1,
         discount_factor=env.gamma(),
         initial_q_value=1,
