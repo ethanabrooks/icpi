@@ -30,6 +30,7 @@ def unique_permutations(population: Iterable[Hashable]) -> int:
 
 @dataclass
 class Model(abc.ABC, Generic[ObsType, ActType]):
+    break_on_invalid: bool
     buffer: Deque[List[TimeStep]]
     env: Env
     debug: int
@@ -116,7 +117,8 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
                 if self.debug >= 3:
                     Colorize.print_warning(f"Invalid {name}:", end=" ")
                     Colorize.print_cyan(completion)
-                self.breakpoint(T, 3)
+                if self.break_on_invalid:
+                    self.breakpoint(T, 3)
                 valid(completion)
         return None
 
