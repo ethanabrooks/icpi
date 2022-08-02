@@ -17,6 +17,7 @@ from run_logger import HasuraLogger
 def train(
     argmax: bool,
     balance_prompts: bool,
+    break_on_invalid: bool,
     constrain_prompts: bool,
     debug: int,
     env_id: str,
@@ -75,6 +76,7 @@ def train(
     eval_env = deepcopy(env)
 
     pi = Pi(
+        break_on_invalid=break_on_invalid,
         buffer=buffer,
         debug=debug,
         env=env,
@@ -90,6 +92,7 @@ def train(
     )
     q = Q(
         balance_prompts=balance_prompts,
+        break_on_invalid=break_on_invalid,
         buffer=buffer,
         constrain_prompts=constrain_prompts,
         debug=debug,

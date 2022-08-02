@@ -55,6 +55,7 @@ REQUIRE_CACHE_FLAG = flag("require_cache", default=False)
 @tree.command(
     parsers=dict(
         kwargs=nonpositional(
+            option("break_on_invalid", type=bool, default=False),
             option("debug", type=int, default=0),
             option("t_threshold", type=int, default=None),
             LOCAL_RANK_ARG,
@@ -79,6 +80,7 @@ def no_log(
 
 def _log(
     allow_dirty: bool,
+    break_on_invalid: bool,
     debug: int,
     eval_interval: Optional[int],
     name: str,
@@ -141,8 +143,9 @@ def _log(
     )  # todo: encapsulate in HasuraLogger
     main(
         **kwargs,
-        eval_interval=eval_interval,
+        break_on_invalid=break_on_invalid,
         debug=debug,
+        eval_interval=eval_interval,
         logger=logger,
         require_cache=require_cache,
         use_cache=use_cache,
@@ -164,7 +167,7 @@ def log(config: str = DEFAULT_CONFIG, **kwargs):
     repo = Repo(".")
     params = get_config_params(config)
     params.update(kwargs)
-    return _log(**params, debug=0, repo=repo, sweep_id=None)
+    return _log(**params, break_on_invalid=False, debug=0, repo=repo, sweep_id=None)
 
 
 def trainable(config: dict):
