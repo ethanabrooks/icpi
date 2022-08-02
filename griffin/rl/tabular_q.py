@@ -37,13 +37,35 @@ class TabularQAgent:
         return self._rng.integers(0, self.n_actions)
 
     def update(
-        self, cur_state: Hashable, action: int, reward: float, next_state: Hashable
+        self,
+        cur_state: Hashable,
+        action: int,
+        reward: float,
+        done: bool,
+        next_state: Hashable,
     ):
         prev_q = self.q[cur_state][action]
-        prediction_error = (
-            reward + self.discount_factor * self.q[next_state].max() - prev_q
-        )
+        prediction_error = reward
+        if not done:
+            prediction_error += self.discount_factor * self.q[next_state].max() - prev_q
+        from rich.pretty import pprint
+
+        pprint(self.q)
+
         self.q[cur_state][action] = prev_q + self.learning_rate * prediction_error
+        for s, v in self.q.items():
+            if s == 4 and ((v[1] < v[0] and v[0] != 1) or (v[1] < v[2] and v[2] != 1)):
+                pprint(f"state: {s}; action: {action}; value {v}")
+                breakpoint()
+            if s != 4 and ((v[0] < v[1] and v[1] != 1) or (v[2] < v[1] and v[1] != 1)):
+                pprint(f"state: {s}; action: {action}; value {v}")
+                breakpoint()
+            if s < 4 and ((v[2] < v[1] and v[1] != 1) or (v[2] < v[0] and v[0] != 1)):
+                pprint(f"state: {s}; action: {action}; value {v}")
+                breakpoint()
+            if s > 4 and ((v[0] < v[1] and v[1] != 1) or (v[0] < v[2] and v[2] != 1)):
+                pprint(f"state: {s}; action: {action}; value {v}")
+                breakpoint()
 
 
 def tabular_main(
@@ -57,7 +79,7 @@ def tabular_main(
 ):
     env = make_env(data=Data.code, env_id=env_id, seed=seed, hint=False)
     agent = TabularQAgent(
-        env.action_space.n,
+        n_actions=env.action_space.n,
         learning_rate=1,
         discount_factor=env.gamma(),
         initial_q_value=1,
@@ -98,7 +120,11 @@ def tabular_main(
             action = agent.act(state) if use_agent else agent.act_random()
             next_state, reward, done, info = env.step(action)
             agent.update(
-                cur_state=state, action=action, reward=reward, next_state=next_state
+                cur_state=state,
+                done=done,
+                action=action,
+                reward=reward,
+                next_state=next_state,
             )
             state = next_state
             rewards.append(reward)
