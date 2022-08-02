@@ -213,7 +213,7 @@ if __name__ == "__main__":
     def get_value(*trajectory: TimeStep, gamma: float) -> float:
         return sum([gamma**t * ts.reward for t, ts in enumerate(trajectory)])
 
-    env = Env(goal=4, n=8, hint=True, random_seed=0, data=Data.natural_language)
+    env = Env(goal=4, n=8, hint=True, random_seed=0, data=Data.code)
     while True:
         s = env.reset()
         print(env.initial_str() + env.state_str(s))
@@ -224,6 +224,16 @@ if __name__ == "__main__":
             # a = int(input("Action: ")) - 1
             s_, r, t, i = env.step(a)
             ts = TimeStep(s, a, r, t, s_)
+            print(
+                env.initial_str()
+                + env.state_str(ts.state)
+                + env.action_str(ts.action)
+                + env.reward_str(ts.reward)
+                + env.reward_stop()
+                + env.done_str(ts.done)
+                + env.done_stop()
+            )
+            breakpoint()
             trajectory.append(ts)
             completions = [env.ts_to_string(ts) for ts in trajectory]
             # done_estimate = env.done(*completions, env.state_str(s_))
