@@ -37,13 +37,34 @@ class TabularQAgent:
         return self._rng.integers(0, self.n_actions)
 
     def update(
-        self, cur_state: Hashable, action: int, reward: float, next_state: Hashable
+        self,
+        cur_state: Hashable,
+        action: int,
+        reward: float,
+        done: bool,
+        next_state: Hashable,
     ):
         prev_q = self.q[cur_state][action]
-        prediction_error = (
-            reward + self.discount_factor * self.q[next_state].max() - prev_q
-        )
+        prediction_error = reward - prev_q
+        if not done:
+            prediction_error += self.discount_factor * self.q[next_state].max()
+
         self.q[cur_state][action] = prev_q + self.learning_rate * prediction_error
+        # from rich.pretty import pprint
+        #
+        # for s, v in self.q.items():
+        #     if s == 4 and ((v[1] < v[0] != 1) or (v[1] < v[2] != 1)):
+        #         pprint(f"state: {s}; action: {action}; value {v}")
+        #         breakpoint()
+        #     if s != 4 and ((v[0] < v[1] != 1) or (v[2] < v[1] != 1)):
+        #         pprint(f"state: {s}; action: {action}; value {v}")
+        #         breakpoint()
+        #     if s < 4 and ((v[2] < v[1] != 1) or (v[2] < v[0] != 1)):
+        #         pprint(f"state: {s}; action: {action}; value {v}")
+        #         breakpoint()
+        #     if s > 4 and ((v[0] < v[1] != 1) or (v[0] < v[2] != 1)):
+        #         pprint(f"state: {s}; action: {action}; value {v}")
+        #         breakpoint()
 
 
 def tabular_main(
@@ -97,8 +118,13 @@ def tabular_main(
             use_agent = rng.random() < use_agent_prob
             action = agent.act(state) if use_agent else agent.act_random()
             next_state, reward, done, info = env.step(action)
+            timed_out = info.get("TimeLimit.truncated", False)
             agent.update(
-                cur_state=state, action=action, reward=reward, next_state=next_state
+                cur_state=state,
+                done=False if timed_out else done,
+                action=action,
+                reward=reward,
+                next_state=next_state,
             )
             state = next_state
             rewards.append(reward)
