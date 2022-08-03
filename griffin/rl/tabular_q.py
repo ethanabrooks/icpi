@@ -118,10 +118,10 @@ def tabular_main(
             use_agent = rng.random() < use_agent_prob
             action = agent.act(state) if use_agent else agent.act_random()
             next_state, reward, done, info = env.step(action)
-            timed_out = info.get("TimeLimit.truncated", False)
+            # timed_out = info.get("TimeLimit.truncated", False)
             agent.update(
                 cur_state=state,
-                done=False if timed_out else done,
+                done=False,
                 action=action,
                 reward=reward,
                 next_state=next_state,
