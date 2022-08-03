@@ -19,6 +19,7 @@ ray = {version = "^1.13.0", extras = ["tune"]}
 dollar-lambda = {git = "https://github.com/ethanabrooks/dollar-lambda.git", rev = "main"}
 transformers = "^4.20.1"
 requests-toolbelt = "^0.9.1"
+rich = "^12.5.1"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.2.0"

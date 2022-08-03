@@ -2,7 +2,6 @@ import sys
 import time
 from dataclasses import dataclass
 from enum import Enum
-from pprint import pprint
 from typing import Any, Callable, List, Optional
 
 import bandit
@@ -14,6 +13,7 @@ import point_mass
 import space_invaders
 from base_env import Env, TimeStep
 from gym.wrappers import TimeLimit
+from rich.pretty import pprint
 from rl.lm import Data
 from run_logger import HasuraLogger
 
