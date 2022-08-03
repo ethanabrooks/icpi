@@ -93,7 +93,6 @@ def tabular_main(
         use_agent_prob = 1 / (1 + math.exp(2 * (min_successes - num_successes)))
 
         log_info = dict(
-            num_success=num_successes,
             use_model_prob=use_agent_prob,
             gamma=env.log_gamma(),
             seed=seed,
@@ -118,10 +117,10 @@ def tabular_main(
             use_agent = rng.random() < use_agent_prob
             action = agent.act(state) if use_agent else agent.act_random()
             next_state, reward, done, info = env.step(action)
-            timed_out = info.get("TimeLimit.truncated", False)
+            # timed_out = info.get("TimeLimit.truncated", False)
             agent.update(
                 cur_state=state,
-                done=False if timed_out else done,
+                done=False,
                 action=action,
                 reward=reward,
                 next_state=next_state,
@@ -140,9 +139,9 @@ def tabular_main(
             num_successes += 1
 
         make_log(
+            evaluation=False,
             logger=logger,
             info=info,
             rewards=rewards,
-            evaluation=False,
             **log_info,  # type: ignore
         )

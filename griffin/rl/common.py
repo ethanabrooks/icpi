@@ -123,20 +123,19 @@ def print_rank0(local_rank: Optional[int], *args, pretty=False, **kwargs):
 
 
 def make_log(
-    logger: HasuraLogger,
-    info: dict,
-    rewards: List[float],
-    num_success: int,
-    use_model_prob: float,
+    evaluation: bool,
     gamma: float,
+    info: dict,
+    logger: HasuraLogger,
+    rewards: List[float],
     seed: int,
     start_time: float,
     step: int,
-    evaluation: bool,
     local_rank: int = 0,
+    total_steps: Optional[int] = None,
+    **kwargs,
 ):
     discounted = sum([gamma**t * r for t, r in enumerate(rewards)])
-    undiscounted = sum(rewards)
     regret = info["optimal"] - discounted
     if regret < 0:
         breakpoint()
@@ -144,21 +143,20 @@ def make_log(
     prefix = "eval " if evaluation else ""
 
     log = dict(
-        hours=(time.time() - start_time) / 3600,
         seed=seed,
-        step=step,
-        use_model_prob=use_model_prob,
+        hours=(time.time() - start_time) / 3600,
         **{
             prefix + "return": discounted,
-            prefix + "undiscounted return": undiscounted,
             prefix + "regret": regret,
             "run ID": logger.run_id,
-            "success buffer": num_success,
         },
+        **kwargs,
     )
-    print_rank0(local_rank, log, pretty=True)
     if logger.run_id is not None:
-        logger.log(**log)
+        logger.log(**log, step=step)
+    log.update(step=step if total_steps is None else f"{step} / {total_steps}")
+    log = dict(sorted(list(log.items())))
+    print_rank0(local_rank, log, pretty=True)
 
 
 def evaluate(
@@ -167,7 +165,7 @@ def evaluate(
     eval_interval: int,
     logger: HasuraLogger,
     T: int,
-    **kwargs
+    **kwargs,
 ):
     start_states = env.start_states()
     finite_start_states = start_states is not None

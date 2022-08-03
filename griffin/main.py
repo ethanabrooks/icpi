@@ -113,7 +113,6 @@ def _log(
         ys = [
             "regret",
             "return",
-            "use_model_prob",
         ]
         if eval_interval is not None:
             ys.extend(["eval regret", "eval return"])

@@ -117,7 +117,6 @@ def train(
     while T < total_steps:
         use_model_prob = 1 / (1 + math.exp(2 * (min_successes - len(success_buffer))))
         log_info = dict(
-            num_success=len(success_buffer),
             use_model_prob=use_model_prob,
             gamma=env.log_gamma(),
             seed=seed,
@@ -158,10 +157,18 @@ def train(
                 print_rank0(local_rank, ".", end="")
                 episodes += 1
                 make_log(
-                    logger=logger,
-                    info=info,
-                    rewards=rewards,
+                    argmax=argmax,
+                    balance_prompts=balance_prompts,
+                    constrain_prompts=constrain_prompts,
+                    env_id=env_id,
                     evaluation=False,
+                    hint=hint,
+                    info=info,
+                    logger=logger,
+                    model_name=model_name,
+                    rewards=rewards,
+                    sil=sil,
+                    total_steps=total_steps,
                     **log_info,  # type: ignore
                 )
             trajectory.append(step)
