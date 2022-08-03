@@ -1,3 +1,4 @@
+import re
 import sys
 import time
 from dataclasses import dataclass
@@ -102,8 +103,12 @@ class OpenAi(LM):
                 openai.error.APIError,
                 openai.error.APIConnectionError,
             ) as e:
-                print(type(e))
-                print(e)
+                if isinstance(e, openai.error.RateLimitError):
+                    [count] = re.findall(r"Current: (\d+)", e.error.message)
+                    print(count, end=" ")
+                else:
+                    print(type(e))
+                    print(e)
                 sys.stdout.flush()
                 self.error_count += 1
                 continue
