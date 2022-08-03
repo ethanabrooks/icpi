@@ -54,16 +54,16 @@ class TabularQAgent:
 
         self.q[cur_state][action] = prev_q + self.learning_rate * prediction_error
         for s, v in self.q.items():
-            if s == 4 and ((v[1] < v[0] and v[0] != 1) or (v[1] < v[2] and v[2] != 1)):
+            if s == 4 and ((v[1] < v[0] != 1) or (v[1] < v[2] != 1)):
                 pprint(f"state: {s}; action: {action}; value {v}")
                 breakpoint()
-            if s != 4 and ((v[0] < v[1] and v[1] != 1) or (v[2] < v[1] and v[1] != 1)):
+            if s != 4 and ((v[0] < v[1] != 1) or (v[2] < v[1] != 1)):
                 pprint(f"state: {s}; action: {action}; value {v}")
                 breakpoint()
-            if s < 4 and ((v[2] < v[1] and v[1] != 1) or (v[2] < v[0] and v[0] != 1)):
+            if s < 4 and ((v[2] < v[1] != 1) or (v[2] < v[0] != 1)):
                 pprint(f"state: {s}; action: {action}; value {v}")
                 breakpoint()
-            if s > 4 and ((v[0] < v[1] and v[1] != 1) or (v[0] < v[2] and v[2] != 1)):
+            if s > 4 and ((v[0] < v[1] != 1) or (v[0] < v[2] != 1)):
                 pprint(f"state: {s}; action: {action}; value {v}")
                 breakpoint()
 
