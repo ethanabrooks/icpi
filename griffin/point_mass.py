@@ -1,7 +1,7 @@
 import math
 import re
 from dataclasses import dataclass, field
-from typing import Iterable, Optional
+from typing import Iterable, NamedTuple, Optional
 
 import base_env
 import numpy as np
@@ -10,8 +10,7 @@ from gym.spaces import Discrete
 from rl.lm import Data
 
 
-@dataclass
-class State:
+class State(NamedTuple):
     pos: float
     vel: float
 
