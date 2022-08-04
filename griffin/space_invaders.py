@@ -1,7 +1,7 @@
 import itertools
 import re
 from dataclasses import dataclass, field
-from typing import Iterable, List, NamedTuple, Optional, Tuple
+from typing import Iterable, NamedTuple, Optional, Tuple
 
 import base_env
 import gym
@@ -68,7 +68,7 @@ class Alien(NamedTuple):
 
 class Obs(NamedTuple):
     agent: int
-    aliens: List[Alien]
+    aliens: Tuple[Alien]
 
     def num_shot_down(self):
         return sum(1 for a in self.aliens if a.is_dead())
@@ -80,7 +80,7 @@ class Env(base_env.Env[Obs, int]):
     n_aliens: int
     random_seed: int
     width: int
-    aliens: List[Alien] = field(init=False)
+    aliens: Tuple[Alien] = field(init=False)
     random: np.random.Generator = field(init=False)
     action_space: gym.spaces.Discrete = field(init=False)
 
@@ -143,7 +143,7 @@ class Env(base_env.Env[Obs, int]):
         self.agent, *alien_xs = self.random.choice(
             self.width, size=self.n_aliens + 1, replace=False
         )
-        self.aliens = [Alien.spawn(x, self.height) for x in alien_xs]
+        self.aliens = tuple([Alien.spawn(x, self.height) for x in alien_xs])
         return Obs(agent=self.agent, aliens=self.aliens)
 
     def reward_str(self, reward: float) -> str:
@@ -162,7 +162,7 @@ class Env(base_env.Env[Obs, int]):
     def state_str(self, state: Obs) -> str:
         assertions = [
             f"{self.ship()} == {C(state.agent, 0)}",
-            f"aliens == {state.aliens}",
+            f"aliens == {list(state.aliens)}",
         ]
 
         if self.hint:
@@ -205,15 +205,15 @@ class Env(base_env.Env[Obs, int]):
                 done = True
             new_aliens.append(alien.descend())
 
-        self.aliens = new_aliens
+        self.aliens = tuple(new_aliens)
         if all(a.is_dead() for a in self.aliens):
             done = True
         info = dict(optimal=self.n_aliens)
         self.agent += action - 1
         self.agent = int(np.clip(self.agent, 0, self.width - 1))
         # print(f"landed={landed}, return={self.r}, done={done}")
-        state = Obs(self.agent, self.aliens)
-        return state, reward, done, info
+        obs = Obs(self.agent, self.aliens)
+        return obs, reward, done, info
 
     def ts_to_string(self, ts: TimeStep) -> str:
         parts = [
