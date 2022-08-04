@@ -86,7 +86,7 @@ def tabular_main(
             step=T,
         )
 
-        if episode % eval_interval == 0:
+        if eval_interval is not None and episode % eval_interval == 0:
             evaluate(
                 act_fn=lambda t, s: agent.act(s),
                 env=env,
