@@ -67,7 +67,7 @@ def make_env(data: Data, env_id: str, seed: int, hint: bool) -> Env:
     if env_id == "bandit":
         env = bandit.Env(data=data, num_steps=5, random_seed=seed, hint=hint)
     elif env_id == "cartpole":
-        env = cartpole.Wrapper(cartpole.Env(max_episode_steps=5, seed=seed))
+        env = cartpole.Wrapper(cartpole.CartPoleEnv(random_seed=seed), hint=hint)
     elif env_id == "catch":
         env = catch.Wrapper(
             data=data, env=catch.Env(columns=5, rows=10, seed=seed), hint=hint
@@ -136,9 +136,13 @@ def make_log(
     **kwargs,
 ):
     discounted = sum([gamma**t * r for t, r in enumerate(rewards)])
-    regret = info["optimal"] - discounted
-    if regret < 0:
-        breakpoint()
+    optimal = info.get("optimal")
+    if optimal is not None:
+        regret = info["optimal"] - discounted
+        if regret < 0:
+            breakpoint()
+    else:
+        regret = None
 
     prefix = "eval " if evaluation else ""
 
@@ -147,14 +151,17 @@ def make_log(
         hours=(time.time() - start_time) / 3600,
         **{
             prefix + "return": discounted,
-            prefix + "regret": regret,
             "run ID": logger.run_id,
         },
         **kwargs,
     )
+    if regret is not None:
+        log.update({prefix + "regret": regret})
     if logger.run_id is not None:
+        # noinspection PyTypeChecker
         logger.log(**log, step=step)
     log.update(step=step if total_steps is None else f"{step} / {total_steps}")
+    # noinspection PyTypeChecker
     log = dict(sorted(list(log.items())))
     print_rank0(local_rank, log, pretty=True)
 
