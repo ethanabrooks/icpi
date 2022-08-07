@@ -1,14 +1,13 @@
 import itertools
 import re
 from dataclasses import dataclass, field
-from typing import Iterable, NamedTuple, Optional, Tuple
+from typing import Iterable, List, NamedTuple, Optional, Tuple
 
 import base_env
 import gym
 import gym.spaces
 import numpy as np
 from base_env import TimeStep
-from rl.lm import Data
 
 DEAD = "dead"
 
@@ -69,7 +68,7 @@ class Alien(NamedTuple):
 
 class Obs(NamedTuple):
     agent: int
-    aliens: Tuple[Alien]
+    aliens: List[Alien]
 
     def num_shot_down(self):
         return sum(1 for a in self.aliens if a.is_dead())
@@ -81,7 +80,7 @@ class Env(base_env.Env[Obs, int]):
     n_aliens: int
     random_seed: int
     width: int
-    aliens: Tuple[Alien] = field(init=False)
+    aliens: List[Alien] = field(init=False)
     random: np.random.Generator = field(init=False)
     action_space: gym.spaces.Discrete = field(init=False)
 
@@ -141,8 +140,8 @@ class Env(base_env.Env[Obs, int]):
         self.agent, *alien_xs = self.random.choice(
             self.width, size=self.n_aliens + 1, replace=False
         )
-        self.aliens = tuple([Alien.spawn(x, self.height) for x in alien_xs])
-        return Obs(agent=self.agent, aliens=self.aliens)
+        self.aliens = [Alien.spawn(x, self.height) for x in alien_xs]
+        return Obs(agent=self.agent, aliens=tuple(self.aliens))
 
     def reward_str(self, reward: float) -> str:
         return f"assert reward == {int(reward)}\nfor a in aliens:\n    a.descend"
@@ -160,7 +159,7 @@ class Env(base_env.Env[Obs, int]):
     def state_str(self, state: Obs) -> str:
         assertions = [
             f"{self.ship()} == {C(state.agent, 0)}",
-            f"aliens == {list(state.aliens)}",
+            f"aliens == {state.aliens}",
         ]
 
         if self.hint:
@@ -189,7 +188,7 @@ class Env(base_env.Env[Obs, int]):
     def start_states(self) -> Optional[Iterable[Obs]]:
         for agent, *aliens in itertools.permutations(range(self.n_aliens)):
             aliens = [Alien.spawn(x, self.height) for x in aliens]
-            yield Obs(agent, aliens)
+            yield Obs(agent, tuple(aliens))
 
     def step(self, action: int) -> Tuple[Obs, float, bool, dict]:
         new_aliens = []
@@ -203,15 +202,15 @@ class Env(base_env.Env[Obs, int]):
                 done = True
             new_aliens.append(alien.descend())
 
-        self.aliens = tuple(new_aliens)
+        self.aliens = new_aliens
         if all(a.is_dead() for a in self.aliens):
             done = True
         info = dict(optimal=self.n_aliens)
         self.agent += action - 1
         self.agent = int(np.clip(self.agent, 0, self.width - 1))
         # print(f"landed={landed}, return={self.r}, done={done}")
-        obs = Obs(self.agent, self.aliens)
-        return obs, reward, done, info
+        state = Obs(self.agent, tuple(self.aliens))
+        return state, reward, done, info
 
     def ts_to_string(self, ts: TimeStep) -> str:
         parts = [
@@ -276,7 +275,6 @@ if __name__ == "__main__":
         n_aliens=2,
         random_seed=0,
         hint=True,
-        data=Data.code,
     )
     while True:
         s = env.reset()
@@ -286,19 +284,9 @@ if __name__ == "__main__":
         completions = []
         while not t:
             a = env.action_space.sample()
-            # a = int(input("Action: ")) - 1
+            a = int(input("Action: ")) - 1
             s_, r, t, i = env.step(a)
             ts = TimeStep(s, a, r, t, s_)
-            print(
-                env.initial_str()
-                + env.state_str(ts.state)
-                + env.action_str(ts.action)
-                + env.reward_str(ts.reward)
-                + env.reward_stop()
-                + env.done_str(ts.done)
-                + env.done_stop()
-            )
-            breakpoint()
             trajectory.append(ts)
             completions = [env.ts_to_string(ts) for ts in trajectory]
             # done_estimate = env.done(*completions, env.state_str(s_))
