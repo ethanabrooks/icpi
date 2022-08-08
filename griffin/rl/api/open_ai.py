@@ -25,14 +25,10 @@ class OpenAi(LM):
     def __post_init__(self):
         self.tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
         self.start_time = time.time()
-        self.max_tokens_accepted_by_lm = 4000
-        if self.wait_time is None:
-            if self.model_name == "code-davinci-002":
-                self.wait_time = 4
-            elif self.model_name == "text-davinci-002":
-                self.wait_time = 0
-            else:
-                raise ValueError(f"Unknown model {self.model_name}")
+        self.max_tokens_accepted_by_lm = {
+            "code-davinci-002": 4000,
+            "code-cushman-001": 2049,
+        }[self.model_name]
         assert self.logprobs <= 5
 
     def get_full_completion(
