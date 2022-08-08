@@ -130,6 +130,8 @@ def train(
             step=T,
             local_rank=local_rank,
         )
+        if sil:
+            log_info.update(success_buffer_size=len(success_buffer))
         if eval_interval is not None and episodes % eval_interval == 0:
             evaluate(
                 act_fn=pi.act,  # type: ignore
