@@ -9,3 +9,4 @@ config.yml
 .rsyncignore
 ignore.py
 .direnv/
+.local-models.yml

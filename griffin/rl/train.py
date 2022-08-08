@@ -3,10 +3,12 @@ import os
 import time
 from collections import deque
 from copy import deepcopy
+from pathlib import Path
 from typing import Deque, List, Optional
 
 import numpy as np
 import openai
+import yaml
 from rl.api.local import Local
 from rl.api.open_ai import OPENAI_MODELS, OpenAi
 from rl.common import evaluate, get_value, make_env, make_log, print_rank0
@@ -60,13 +62,17 @@ def train(
         require_cache=require_cache,
         top_p=top_p,
     )
-    local_models = ["InCoder", "GPT-J", "OPT-30B", "OPT-66B"]
+    local_models_path = Path(".local-models.yml")
+    if local_models_path.exists():
+        with local_models_path.open() as f:
+            local_models = yaml.load(f, yaml.FullLoader)
+    else:
+        local_models = {}
+
     if model_name in OPENAI_MODELS:
         lm = OpenAi(**kwargs, wait_time=wait_time)
     elif model_name in local_models:
-        url = os.getenv("LOCAL_URL")
-        assert url is not None, "LOCAL_URL must be set"
-        lm = Local(**kwargs, seed=seed, url=url)
+        lm = Local(**kwargs, seed=seed, url=local_models[model_name])
     else:
         raise RuntimeError(
             f"Unknown model name: {model_name}. For local models, use one of: {', '.join(local_models)}"
