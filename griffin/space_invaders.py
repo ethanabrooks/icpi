@@ -115,7 +115,7 @@ class Env(base_env.Env[Obs, int]):
         return "\n"
 
     def failure_threshold(self) -> float:
-        return 0
+        return 1
 
     @staticmethod
     def gamma() -> float:
