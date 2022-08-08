@@ -17,7 +17,7 @@ from rl.train import train
 from run_logger import HasuraLogger
 from run_logger.main import get_config_params, get_load_params
 from sweep_logger import create_sweep
-from sweep_logger.create_sweep import SweepMethod, compute_remaining_runs
+from sweep_logger.create_sweep import SweepMethod
 
 tree = CommandTree()
 
@@ -194,8 +194,6 @@ def sweep(
     config_path = Path(config)
     with config_path.open() as f:
         config = yaml.load(f, yaml.FullLoader)
-    if num_runs is None:
-        num_runs = compute_remaining_runs(config)
 
     config = dict(
         break_on_invalid=False,
@@ -217,8 +215,6 @@ def sweep(
         log_level="INFO",
         method=method.name,
         name=name,
-        project=None,
-        remaining_runs=num_runs,
     )
     config.update(sweep_id=sweep_id)
     ray.init()

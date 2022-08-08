@@ -1254,7 +1254,7 @@ run-logger = {git = "https://github.com/ethanabrooks/run-logger.git", rev = "mai
 type = "git"
 url = "https://github.com/run-tracker/sweep-logger.git"
 reference = "main"
-resolved_reference = "12931a66f1da37d7add4ed2f295b61ad6c30fa3a"
+resolved_reference = "a09de1ba09c64a0f18779205b1cc80a63bece8cd"
 
 [[package]]
 name = "tabulate"
