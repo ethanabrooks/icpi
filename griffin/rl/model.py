@@ -259,6 +259,10 @@ class Q(Model[ObsType, ActType]):
             action_u = self.env.action_str(action)
             completions = [x for x in [state_u, action_u] if x not in ("", None)]
         discounted_return = 0
+
+        def update_return(r: float):
+            return discounted_return + self.env.gamma() ** t * r
+
         env = deepcopy(self.env)
         while True:
             query = [state_u, action_u] if self.lm is None else [state_u + action_u]
@@ -289,7 +293,7 @@ class Q(Model[ObsType, ActType]):
                 if reward_u is None:
                     break
                 completions.append(reward_u)
-                discounted_return += self.env.gamma() ** t * self.env.reward(reward_u)
+                discounted_return = update_return(self.env.reward(reward_u))
                 if done:
                     break
                 state_u = self.predict(
@@ -304,16 +308,9 @@ class Q(Model[ObsType, ActType]):
                     break
                 completions.append(state_u)
             elif not self.predict_transitions:
-                state_u, reward, done, _ = env.step(action)
-                completions.extend(
-                    [
-                        env.done_str(done) + env.done_stop(),
-                        env.reward_str(reward) + env.reward_stop(),
-                    ]
-                )
-                if done:
+                if true_done:
                     break
-                completions.append(env.state_str(state_u) + env.state_stop())
+                discounted_return = update_return(true_reward)
             else:
                 raise RuntimeError("Unhandled case")
             action_u = self.generate_action(state_u, T)
