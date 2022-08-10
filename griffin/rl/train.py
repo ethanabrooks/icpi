@@ -12,6 +12,7 @@ import yaml
 from rl.api.local import Local
 from rl.api.open_ai import OPENAI_MODELS, OpenAi
 from rl.common import evaluate, get_value, make_env, make_log, print_rank0
+from rl.lm import Data
 from rl.model import Pi, Q, TimeStep, to_string
 from run_logger import HasuraLogger
 
@@ -31,7 +32,7 @@ def train(
     max_resamples: int,
     max_tokens: int,
     min_successes: int,
-    model_name: str,
+    model_name: Optional[str],
     predict_transitions: bool,
     require_cache: bool,
     seed: int,
@@ -73,12 +74,14 @@ def train(
         lm = OpenAi(**kwargs, wait_time=wait_time)
     elif model_name in local_models:
         lm = Local(**kwargs, seed=seed, url=local_models[model_name])
+    elif model_name is None:
+        lm = None
     else:
         raise RuntimeError(
             f"Unknown model name: {model_name}. For local models, use one of: {', '.join(local_models)}"
         )
 
-    env = make_env(data=lm.trained_on(), env_id=env_id, seed=seed, hint=hint)
+    env = make_env(data=Data.code, env_id=env_id, seed=seed, hint=hint)
     eval_env = deepcopy(env)
 
     pi = Pi(

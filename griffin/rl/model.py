@@ -6,7 +6,17 @@ from collections import Counter, defaultdict
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import reduce
-from typing import Callable, Deque, Generic, Hashable, Iterable, List, Optional, Tuple
+from typing import (
+    Any,
+    Callable,
+    Deque,
+    Generic,
+    Hashable,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+)
 
 from base_env import ActType, Env, ObsType, TimeStep
 from gym.spaces import Discrete
@@ -72,13 +82,27 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
 
     def predict(
         self,
-        query: List[str],
+        query,
         get_prompts: Callable[[], List[str]],
         name: str,
         stop: str,
         T: int,
         valid: Callable[[str], bool],
-    ) -> Optional[str]:
+    ) -> Optional[Any]:
+        if self.lm is None:
+            for t in reversed(self.buffer):
+                for ts in reversed(t):
+                    if name == "action":
+                        if ts.state == query:
+                            return ts.action
+                    else:
+                        state, action = query
+                        if ts.state == state and ts.action == action:
+                            return dict(
+                                done=ts.done, reward=ts.reward, state=ts.next_state
+                            )[name]
+            return None
+
         previous_prompts = set()
         for _ in range(self.max_resamples):
             prompts = get_prompts()
@@ -139,9 +163,10 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     def successful(self, trajectory: List[TimeStep]) -> bool:
         return not self.sil or self.get_value(trajectory) > self.env.failure_threshold()
 
-    def generate_action(self, state: str, T: int) -> Optional[str]:
+    def generate_action(self, state: "ObsType | str", T: int) -> Optional[str]:
+        query = state if self.lm is None else ["", self.env.initial_str(), state]
         maybe_action = self.predict(
-            ["", self.env.initial_str(), state],
+            query=query,
             get_prompts=self.sample_best,
             name="action",
             stop=self.env.action_stop(),
@@ -226,57 +251,60 @@ class Q(Model[ObsType, ActType]):
                 f"Computing Q rollout for state {state} and action {action}:"
             )
         t = 0
-        state_str = self.env.state_str(state)
-        if "state!=" in state_str:
-            breakpoint()
-        action_str = self.env.action_str(action)
-        completions = [s for s in [state_str, action_str] if s]
-        discounted_reward = 0.0
+        state_u = state
+        action_u = action
+        completions = []
+        if self.lm is not None:
+            state_u = self.env.state_str(state)
+            action_u = self.env.action_str(action)
+            completions = [x for x in [state_u, action_u] if x not in ("", None)]
+        discounted_return = 0
         env = deepcopy(self.env)
         while True:
-            query = [state_str + action_str]
+            query = [state_u, action_u] if self.lm is None else [state_u + action_u]
+            true_state, true_reward, true_done, _ = env.step(action)
             if self.predict_transitions:
                 if t == self.max_steps:
                     break
-                done_str = self.predict(
-                    query,
+                done_u = self.predict(
+                    query=query,
                     name="done",
                     get_prompts=lambda: self.sample_done(action),
                     stop=self.env.done_stop(),
                     T=T,
                     valid=self.env.valid_done,
                 )
-                if done_str is None:
+                if done_u is None:
                     break
-                completions.append(done_str)
-                done = self.env.done(done_str)
-                reward_str = self.predict(
-                    query,
+                completions.append(done_u)
+                done = done_u if self.lm is None else self.env.done(done_u)
+                reward_u = self.predict(
+                    query=query,
                     name="reward",
                     get_prompts=lambda: self.sample_reward(action=action, done=done),
                     stop=self.env.reward_stop(),
                     T=T,
                     valid=self.env.valid_reward,
                 )
-                if reward_str is None:
+                if reward_u is None:
                     break
-                completions.append(reward_str)
-                discounted_reward += self.env.gamma() ** t * self.env.reward(reward_str)
+                completions.append(reward_u)
+                discounted_return += self.env.gamma() ** t * self.env.reward(reward_u)
                 if done:
                     break
-                state_str = self.predict(
-                    query,
+                state_u = self.predict(
+                    query=query,
                     name="state",
                     get_prompts=lambda: self.sample_next_state(action=action),
                     stop=self.env.state_stop(),
                     T=T,
                     valid=self.env.valid_state,
                 )
-                if state_str is None:
+                if state_u is None:
                     break
-                completions.append(state_str)
+                completions.append(state_u)
             elif not self.predict_transitions:
-                next_state, reward, done, _ = env.step(action)
+                state_u, reward, done, _ = env.step(action)
                 completions.extend(
                     [
                         env.done_str(done) + env.done_stop(),
@@ -285,16 +313,15 @@ class Q(Model[ObsType, ActType]):
                 )
                 if done:
                     break
-                completions.append(env.state_str(next_state) + env.state_stop())
+                completions.append(env.state_str(state_u) + env.state_stop())
             else:
                 raise RuntimeError("Unhandled case")
-            action_str = self.generate_action(state_str, T)
-            action = self.env.action(action_str)
-            completions.append(action_str)
-            query.append(action_str)
+            action_u = self.generate_action(state_u, T)
+            action = self.env.action(action_u)
+            completions.append(action_u)
             t += 1
 
-        return "".join(completions), discounted_reward
+        return "" if self.lm is None else "".join(completions), discounted_return
 
     def sample_done(self, action: int) -> List[str]:
         time_steps = [
@@ -405,8 +432,6 @@ class Pi(Model[ObsType, ActType]):
     def _act(self, state: ObsType, T: int) -> ActType:
         if self.debug >= 2:
             Colorize.print_header(f"Computing pi action for state {state}:")
-        state = self.env.state_str(state)
-
         action_str = self.generate_action(state, T)
         action = self.env.action(action_str)
         assert action is not None
