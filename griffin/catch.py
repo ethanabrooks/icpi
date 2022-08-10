@@ -323,13 +323,7 @@ if __name__ == "__main__":
                 breakpoint()
                 env.done(*with_termination)
             prompt = "".join(with_termination)
-            value_from_prompt = env.quantify(prompt)
             value_from_trajectory = get_value(*trajectory, gamma=env.gamma())
-            if not value_from_prompt == value_from_trajectory:
-                print(value_from_prompt, value_from_trajectory)
-                breakpoint()
-                env.quantify(prompt)
-                get_value(*trajectory, gamma=env.gamma())
             print(env.ts_to_string(ts) + env.state_str(ts.next_state))
             # breakpoint()
             s = s_

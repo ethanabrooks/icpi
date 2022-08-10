@@ -13,7 +13,7 @@ from rl.api.local import Local
 from rl.api.open_ai import OPENAI_MODELS, OpenAi
 from rl.common import evaluate, get_value, make_env, make_log, print_rank0
 from rl.lm import Data
-from rl.model import Pi, Q, TimeStep, to_string
+from rl.model import Pi, Q, TimeStep
 from run_logger import HasuraLogger
 
 
@@ -184,16 +184,6 @@ def train(
                 )
             trajectory.append(step)
             state = next_state
-
-        # quantify unittest
-        prompt = to_string(*trajectory, env=env)
-        value_from_prompt = env.quantify(prompt)
-        value_from_trajectory = get_value(*trajectory, gamma=env.gamma())
-        if not value_from_prompt == value_from_trajectory:
-            print_rank0(local_rank, value_from_prompt, value_from_trajectory)
-            breakpoint()
-            env.quantify(prompt)
-            get_value(*trajectory, gamma=env.gamma())
 
         if timed_out:
             trajectory[-1].done = False

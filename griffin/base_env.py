@@ -70,15 +70,6 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
     def gamma() -> float:
         ...
 
-    def hint_stop(self) -> Optional[str]:
-        if not self.hint:
-            return None
-        if self.data == Data.code:
-            return "\n"
-        elif self.data == Data.natural_language:
-            return ". "
-        raise RuntimeError("Invalid data")
-
     @staticmethod
     @abc.abstractmethod
     def initial_str() -> str:
@@ -91,17 +82,6 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
     @abc.abstractmethod
     def max_q_steps(self) -> int:
         ...
-
-    def quantify(self, prompt: str, gamma: Optional[float] = None) -> float:
-        if gamma is None:
-            gamma = self.gamma()
-        if self.data == Data.code:
-            matches = re.findall(r"reward == (\d+)", prompt)
-        elif self.data == Data.natural_language:
-            matches = re.findall(r"Receive (\d+)", prompt)
-        else:
-            raise RuntimeError("Invalid data")
-        return sum([gamma**t * float(x) for t, x in enumerate(matches)])
 
     @staticmethod
     def reward(reward_str: str) -> float:
