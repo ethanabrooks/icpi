@@ -272,15 +272,18 @@ class Q(Model[ObsType, ActType]):
         def update_return(r: float):
             return discounted_return + self.env.gamma() ** t * r
 
+        true_done = False
         env = deepcopy(self.env)
         while True:
             query = [state_u, action_u] if self.lm is None else [state_u + action_u]
-            true_state, true_reward, true_done, _ = env.step(action)
+            if not true_done:
+                true_state, true_reward, true_done, _ = env.step(action)
             if self.predict_transitions:
                 if t == self.max_steps:
                     break
+                true_done_str = self.env.done_str(true_done)
                 done_u = self.predict(
-                    ground_truth=self.env.done_str(true_done),
+                    ground_truth=None if true_done else true_done_str,
                     query=query,
                     name="done",
                     get_prompts=lambda: self.sample_done(action),
@@ -292,8 +295,10 @@ class Q(Model[ObsType, ActType]):
                     break
                 completions.append(done_u)
                 done = done_u if self.lm is None else self.env.done(done_u)
+                # noinspection PyUnboundLocalVariable
+                true_reward_str = self.env.reward_str(true_reward)
                 reward_u = self.predict(
-                    ground_truth=self.env.reward_str(true_reward),
+                    ground_truth=None if true_done else true_reward_str,
                     query=query,
                     name="reward",
                     get_prompts=lambda: self.sample_reward(action=action, done=done),
@@ -307,8 +312,10 @@ class Q(Model[ObsType, ActType]):
                 discounted_return = update_return(self.env.reward(reward_u))
                 if done:
                     break
+                # noinspection PyUnboundLocalVariable
+                true_state_str = self.env.state_str(true_state)
                 state_u = self.predict(
-                    ground_truth=self.env.state_str(true_state),
+                    ground_truth=None if true_done else true_state_str,
                     query=query,
                     name="state",
                     get_prompts=lambda: self.sample_next_state(action=action),
