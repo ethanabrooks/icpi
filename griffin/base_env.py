@@ -37,9 +37,8 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
             return None
 
     @staticmethod
-    @abc.abstractmethod
     def action_stop() -> str:
-        ...
+        return "\n"
 
     @abc.abstractmethod
     def action_str(self, action: ActType) -> str:
@@ -53,22 +52,19 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
         return "assert done" in done_str
 
     @staticmethod
-    @abc.abstractmethod
     def done_stop() -> str:
-        ...
+        return "\n"
 
-    @abc.abstractmethod
     def done_str(self, done: bool) -> str:
-        ...
+        return "assert done" if done else "assert not done"
 
     @abc.abstractmethod
     def failure_threshold(self) -> float:
         ...
 
     @staticmethod
-    @abc.abstractmethod
     def gamma() -> float:
-        ...
+        return 0.8
 
     @staticmethod
     @abc.abstractmethod
@@ -92,9 +88,8 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
             return 0.0
         return float(reward)
 
-    @abc.abstractmethod
     def reward_str(self, reward: float) -> str:
-        ...
+        return f"assert reward == {int(reward)}"
 
     def reward_stop(self) -> str:
         if self.data == Data.code:
@@ -104,11 +99,7 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
         raise RuntimeError("Invalid data")
 
     def state_stop(self) -> str:
-        if self.data == Data.code:
-            return "\n"
-        elif self.data == Data.natural_language:
-            return ". "
-        raise RuntimeError("Invalid data")
+        return "\n"
 
     @abc.abstractmethod
     def start_states(self) -> Optional[Iterable[ObsType]]:

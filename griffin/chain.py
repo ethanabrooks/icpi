@@ -28,13 +28,6 @@ class Env(base_env.Env[int, int]):
         )
         self.observation_space = gym.spaces.Discrete(self.n)
 
-    def action_stop(self) -> str:
-        if self.data == Data.code:
-            return "\n"
-        elif self.data == Data.natural_language:
-            return ". "
-        raise RuntimeError("Invalid data")
-
     def action_str(self, action: int) -> str:
         action_str = self.actions()[action]
         if self.data == Data.code:
@@ -56,26 +49,8 @@ class Env(base_env.Env[int, int]):
             "right",
         ]
 
-    def done_stop(self) -> str:
-        if self.data == Data.code:
-            return "\n"
-        elif self.data == Data.natural_language:
-            return ". "
-        raise RuntimeError("Invalid data")
-
-    def done_str(self, done: bool) -> str:
-        if self.data == Data.code:
-            return "assert done" if done else "assert not done"
-        elif self.data == Data.natural_language:
-            return "You are " + ("" if done else "not ") + "done"
-        raise RuntimeError("Invalid data")
-
     def failure_threshold(self) -> float:
         return 0
-
-    @staticmethod
-    def gamma() -> float:
-        return 0.8
 
     def hint_str(self, state: int) -> str:
         if self.data == Data.code:
@@ -113,12 +88,6 @@ class Env(base_env.Env[int, int]):
     ) -> int:
         self._state = self._start_state = self.random.choice(self.n)
         return self._start_state
-
-    def reward_str(self, reward: float) -> str:
-        if self.data == Data.code:
-            return f"assert reward == {int(reward)}"
-        elif self.data == Data.natural_language:
-            return f"Receive {int(reward)} reward"
 
     def start_states(self) -> Optional[Iterable[int]]:
         return range(self.n)
