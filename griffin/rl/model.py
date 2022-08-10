@@ -6,7 +6,7 @@ from collections import Counter, defaultdict
 from copy import deepcopy
 from dataclasses import dataclass
 from functools import reduce
-from typing import Callable, Deque, Generic, Hashable, Iterable, List, Optional
+from typing import Callable, Deque, Generic, Hashable, Iterable, List, Optional, Tuple
 
 from base_env import ActType, Env, ObsType, TimeStep
 from gym.spaces import Discrete
@@ -168,12 +168,12 @@ class Q(Model[ObsType, ActType]):
             for action in actions:
                 yield self.rollout(state, action, T)
 
-        rollouts = list(get_rollouts())
-        action_rollouts = list(zip(actions, rollouts))
-        self.rng.shuffle(action_rollouts)
+        rollouts, returns = zip(*get_rollouts())
+        action_returns = list(zip(actions, returns))
+        self.rng.shuffle(action_returns)
         action, value = max(
-            action_rollouts,
-            key=lambda x: (self.env.quantify(x[1]), self.rng.random()),
+            action_returns,
+            key=lambda x: (x[1], self.rng.random()),
         )
 
         if self.debug >= 1:
@@ -220,7 +220,7 @@ class Q(Model[ObsType, ActType]):
         ]
         return all(done_ready + reward_ready + [next_state_ready]) and super().ready()
 
-    def rollout(self, state: ObsType, action: ActType, T: int) -> str:
+    def rollout(self, state: ObsType, action: ActType, T: int) -> Tuple[str, float]:
         if self.debug >= 2:
             Colorize.print_header(
                 f"Computing Q rollout for state {state} and action {action}:"
@@ -231,6 +231,7 @@ class Q(Model[ObsType, ActType]):
             breakpoint()
         action_str = self.env.action_str(action)
         completions = [s for s in [state_str, action_str] if s]
+        discounted_reward = 0.0
         env = deepcopy(self.env)
         while True:
             query = [state_str + action_str]
@@ -260,6 +261,7 @@ class Q(Model[ObsType, ActType]):
                 if reward_str is None:
                     break
                 completions.append(reward_str)
+                discounted_reward += self.env.gamma() ** t * self.env.reward(reward_str)
                 if done:
                     break
                 state_str = self.predict(
@@ -292,7 +294,7 @@ class Q(Model[ObsType, ActType]):
             query.append(action_str)
             t += 1
 
-        return "".join(completions)
+        return "".join(completions), discounted_reward
 
     def sample_done(self, action: int) -> List[str]:
         time_steps = [

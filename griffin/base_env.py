@@ -103,6 +103,15 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
             raise RuntimeError("Invalid data")
         return sum([gamma**t * float(x) for t, x in enumerate(matches)])
 
+    @staticmethod
+    def reward(reward_str: str) -> float:
+        matches = re.findall(r"reward == (\d+)", reward_str)
+        try:
+            [reward] = matches
+        except ValueError:
+            return 0.0
+        return float(reward)
+
     @abc.abstractmethod
     def reward_str(self, reward: float) -> str:
         ...
