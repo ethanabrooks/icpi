@@ -22,7 +22,7 @@ from base_env import ActType, Env, ObsType, TimeStep
 from gym.spaces import Discrete
 from numpy.random import Generator
 from rich.syntax import Syntax
-from rl.common import Colorize, console, get_value
+from rl.common import Colorize, Debug, console, get_value
 from rl.lm import LM
 
 
@@ -64,8 +64,8 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     def _act(self, state: ObsType, T: int) -> ActType:
         ...
 
-    def breakpoint(self, T: int, threshold: int):
-        if self.debug >= threshold and (
+    def breakpoint(self, T: int, threshold: Debug):
+        if threshold.meets_threshold(self.debug) and (
             self.t_threshold is None or T >= self.t_threshold
         ):
             breakpoint()
@@ -115,7 +115,10 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             previous_prompts.add("".join(prompts))
 
             new_prompt = "".join([*prompts, "".join(query)])
-            if self.debug >= 2:
+            if self.debug in [
+                Debug.debug_inferences,
+                Debug.debug_rollouts_and_print_inferences,
+            ]:
                 print()
                 console.print(
                     Syntax("".join(prompts).rstrip("\n"), "python", theme="ansi_dark"),
@@ -123,7 +126,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
                 )
                 console.rule(characters="·")
                 console.print(Syntax("".join(query), "python", theme="ansi_light"))
-            self.breakpoint(T, 4)
+            self.breakpoint(T, Debug.debug_inferences)
             completion = self.lm(
                 new_prompt,
                 stop=[stop],
@@ -135,22 +138,22 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             completion = completion.replace("ball.x!=", "ball.x !=")
             completion += stop
 
-            if self.debug >= 2:
+            if Debug.debug_inferences.meets_threshold(self.debug):
                 Colorize.print_prediction_type(name)
                 Colorize.print_completion(completion)
                 if ground_truth is not None:
                     Colorize.print_ground_truth(ground_truth)
-            self.breakpoint(T, 4)
+            self.breakpoint(T, Debug.debug_inferences)
             if valid(completion):
                 if "state!=" in completion:
                     breakpoint()
                 return completion
             else:
-                if self.debug >= 3:
+                if Debug.debug_inferences.meets_threshold(self.debug):
                     Colorize.print_warning(f"Invalid {name}:", end=" ")
                     Colorize.print_completion(completion)
                 if self.break_on_invalid:
-                    self.breakpoint(T, 3)
+                    self.breakpoint(T, Debug.debug_inferences)
                 valid(completion)
         return None
 
@@ -210,7 +213,7 @@ class Q(Model[ObsType, ActType]):
             key=lambda x: (x[1], self.rng.random()),
         )
 
-        if self.debug >= 1:
+        if Debug.debug_rollouts.meets_threshold(self.debug):
             print()
             Colorize.print_header("Q prompts")
             Colorize.print_prediction_type("state:", end=" ")
@@ -231,8 +234,7 @@ class Q(Model[ObsType, ActType]):
             Colorize.print_prediction_type("chosen", end=" ")
             Colorize.print_green(action)
 
-        threshold = 3
-        self.breakpoint(T, threshold)
+        self.breakpoint(T, Debug.debug_rollouts)
         return action
 
     def balance(self, *lists: List) -> List[List]:
@@ -255,7 +257,7 @@ class Q(Model[ObsType, ActType]):
         return all(done_ready + reward_ready + [next_state_ready]) and super().ready()
 
     def rollout(self, state: ObsType, action: ActType, T: int) -> Tuple[str, float]:
-        if self.debug >= 2:
+        if Debug.debug_rollouts_and_print_inferences.meets_threshold(self.debug):
             Colorize.print_header(
                 f"Computing Q rollout for state {state} and action {action}"
             )
@@ -446,7 +448,7 @@ class Q(Model[ObsType, ActType]):
 
 class Pi(Model[ObsType, ActType]):
     def _act(self, state: ObsType, T: int) -> ActType:
-        if self.debug >= 2:
+        if Debug.debug_inferences.meets_threshold(self.debug):
             Colorize.print_header(f"Computing pi action for state {state}")
         action_str = self.generate_action(state, T)
         action = self.env.action(action_str)

@@ -79,10 +79,6 @@ query get_completion($prompt: String!, $temperature: numeric!, $top_p: numeric!,
     def max_prompt_tokens(self) -> int:
         ...
 
-    def print(self, *args, **kwargs):
-        if self.debug >= 5:
-            print(*args, **kwargs)
-
     def post_completion(
         self,
         completion: str,

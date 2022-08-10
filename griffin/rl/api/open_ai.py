@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 import openai
-from rl.common import Colorize
+from rl.common import Colorize, Debug
 from rl.lm import LM, Data
 from transformers import GPT2TokenizerFast
 
@@ -34,7 +34,7 @@ class OpenAi(LM):
     def get_full_completion(
         self, prompt: str, stop: list[str], temperature: float, use_cache: bool = True
     ):
-        if self.debug >= 0:
+        if Debug.print_api_call_indicator.meets_threshold(self.debug):
             print("<", end="")
 
         prompt = self.clip_prompt(prompt)
@@ -47,7 +47,7 @@ class OpenAi(LM):
                 completion, *_ = completions
                 # print("Completion:")
                 # print(value)
-                if self.debug >= 0:
+                if Debug.print_api_call_indicator.meets_threshold(self.debug):
                     print(">", end="")
                 return completion
             elif self.require_cache:
@@ -55,9 +55,9 @@ class OpenAi(LM):
                 Colorize.print_warning("No completions found in cache for this prompt.")
                 exit()
 
-        self.print("Prompt:")
-        self.print(prompt)
-        if self.debug >= 5:
+        if Debug.debug_api_calls.meets_threshold(self.debug):
+            print("Prompt:")
+            print(prompt)
             breakpoint()
         completion_tick = time.time()
         self.completion_count += 1
@@ -125,10 +125,10 @@ class OpenAi(LM):
             )["insert_completions_one"]["completion"]
             if response != completion:
                 breakpoint()
-            if self.debug >= 0:
+            if Debug.print_api_call_indicator.meets_threshold(self.debug):
                 print(">", end="")
-            self.print("Completion:", completion.split("\n")[0])
-            if self.debug >= 6:
+            if Debug.debug_api_calls.meets_threshold(self.debug):
+                print("Completion:", completion.split("\n")[0])
                 breakpoint()
             self.completion_times += time.time() - completion_tick
             if self.logger.run_id is not None:
@@ -148,10 +148,6 @@ class OpenAi(LM):
 
     def max_prompt_tokens(self) -> int:
         return self.max_tokens_accepted_by_lm - self.max_tokens_in_completion - 100
-
-    def print(self, *args, **kwargs):
-        if self.debug >= 5:
-            print(*args, **kwargs)
 
     def trained_on(self) -> Data:
         training_data: dict[str, Data] = {

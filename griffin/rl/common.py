@@ -1,5 +1,6 @@
 import time
 from dataclasses import dataclass
+from enum import Enum, auto
 from typing import Any, Callable, List, Optional
 
 import bandit
@@ -18,6 +19,17 @@ from rl.lm import Data
 from run_logger import HasuraLogger
 
 console = Console()
+
+
+class Debug(Enum):
+    print_api_call_indicator = auto()  # 1
+    debug_rollouts = auto()  # 2
+    debug_rollouts_and_print_inferences = auto()  # 3
+    debug_inferences = auto()  # 4
+    debug_api_calls = auto()  # 5
+
+    def meets_threshold(self, threshold: int) -> bool:
+        return threshold >= self.value
 
 
 @dataclass

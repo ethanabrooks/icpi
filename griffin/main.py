@@ -56,7 +56,7 @@ REQUIRE_CACHE_FLAG = flag("require_cache", default=False)
     parsers=dict(
         kwargs=nonpositional(
             option("break_on_invalid", type=bool, default=False),
-            option("debug", type=int, default=0),
+            option("debug", type=int, default=1),
             option("t_threshold", type=int, default=None),
             LOCAL_RANK_ARG,
             NO_CACHE_FLAG,
@@ -166,7 +166,7 @@ def log(config: str = DEFAULT_CONFIG, **kwargs):
     repo = Repo(".")
     params = get_config_params(config)
     params.update(kwargs)
-    return _log(**params, break_on_invalid=False, debug=0, repo=repo, sweep_id=None)
+    return _log(**params, break_on_invalid=False, debug=1, repo=repo, sweep_id=None)
 
 
 def trainable(config: dict):
@@ -197,7 +197,7 @@ def sweep(
 
     config = dict(
         break_on_invalid=False,
-        debug=-1,  # do not print <>
+        debug=0,  # do not print <>
         name=name,
         repo=Repo("."),
         **kwargs,
