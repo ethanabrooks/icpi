@@ -1,22 +1,9 @@
 import abc
 import itertools
-import math
-import operator
-from collections import Counter, defaultdict
+from collections import defaultdict
 from copy import deepcopy
 from dataclasses import dataclass
-from functools import reduce
-from typing import (
-    Any,
-    Callable,
-    Deque,
-    Generic,
-    Hashable,
-    Iterable,
-    List,
-    Optional,
-    Tuple,
-)
+from typing import Any, Callable, Deque, Generic, List, Optional, Tuple
 
 from base_env import ActType, Env, ObsType, TimeStep
 from gym.spaces import Discrete
@@ -24,19 +11,6 @@ from numpy.random import Generator
 from rich.syntax import Syntax
 from rl.common import Colorize, Debug, console, get_value
 from rl.lm import LM
-
-
-def to_string(*trajectory: TimeStep, env) -> str:
-    return "".join([env.initial_str()] + [env.ts_to_string(ts) for ts in trajectory])
-
-
-def product(x):
-    return reduce(operator.mul, x, 1)
-
-
-def unique_permutations(population: Iterable[Hashable]) -> int:
-    counts = list(Counter(population).values())
-    return math.factorial(sum(counts)) // product(math.factorial(c) for c in counts)
 
 
 @dataclass
@@ -169,7 +143,10 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             if self.successful(trajectory[start:stop])
         ]
         self.rng.shuffle(trajectories)
-        return [to_string(*t, env=self.env) for t in trajectories]
+        return [
+            "".join([self.env.initial_str()] + [self.env.ts_to_string(ts) for ts in t])
+            for t in trajectories
+        ]
 
     def successful(self, trajectory: List[TimeStep]) -> bool:
         return not self.sil or self.get_value(trajectory) > self.env.failure_threshold()
