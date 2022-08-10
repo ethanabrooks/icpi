@@ -21,7 +21,8 @@ from typing import (
 from base_env import ActType, Env, ObsType, TimeStep
 from gym.spaces import Discrete
 from numpy.random import Generator
-from rl.common import Colorize, get_value
+from rich.syntax import Syntax
+from rl.common import Colorize, console, get_value
 from rl.lm import LM
 
 
@@ -84,6 +85,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         self,
         query,
         get_prompts: Callable[[], List[str]],
+        ground_truth: Optional[str],
         name: str,
         stop: str,
         T: int,
@@ -115,8 +117,12 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             new_prompt = "".join([*prompts, "".join(query)])
             if self.debug >= 2:
                 print()
-                print("".join(prompts), end="")
-                Colorize.print_bold("".join(query))
+                console.print(
+                    Syntax("".join(prompts).rstrip("\n"), "python", theme="ansi_dark"),
+                    end="",
+                )
+                console.rule(characters="·")
+                console.print(Syntax("".join(query), "python", theme="ansi_light"))
             self.breakpoint(T, 4)
             completion = self.lm(
                 new_prompt,
@@ -130,8 +136,10 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             completion += stop
 
             if self.debug >= 2:
-                Colorize.print_blue(name)
-                Colorize.print_cyan(completion)
+                Colorize.print_prediction_type(name)
+                Colorize.print_completion(completion)
+                if ground_truth is not None:
+                    Colorize.print_ground_truth(ground_truth)
             self.breakpoint(T, 4)
             if valid(completion):
                 if "state!=" in completion:
@@ -140,7 +148,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
             else:
                 if self.debug >= 3:
                     Colorize.print_warning(f"Invalid {name}:", end=" ")
-                    Colorize.print_cyan(completion)
+                    Colorize.print_completion(completion)
                 if self.break_on_invalid:
                     self.breakpoint(T, 3)
                 valid(completion)
@@ -166,6 +174,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     def generate_action(self, state: "ObsType | str", T: int) -> Optional[str]:
         query = state if self.lm is None else ["", self.env.initial_str(), state]
         maybe_action = self.predict(
+            ground_truth=None,
             query=query,
             get_prompts=self.sample_best,
             name="action",
@@ -204,23 +213,23 @@ class Q(Model[ObsType, ActType]):
         if self.debug >= 1:
             print()
             Colorize.print_header("Q prompts")
-            Colorize.print_blue("state:", end=" ")
-            Colorize.print_cyan(state)
+            Colorize.print_prediction_type("state:", end=" ")
+            Colorize.print_green(state)
             for a, v in zip(actions, rollouts):
-                Colorize.print_blue("action:", end=" ")
-                Colorize.print_cyan(a)
+                Colorize.print_prediction_type("action:", end=" ")
+                Colorize.print_green(a)
                 trajectory_strings = [
                     self.env.state_str(state),
                     self.env.action_str(a),
                 ]
                 trajectory_str = "".join(trajectory_strings)
-                print("rollout:", trajectory_str, end="")
+                console.print("rollout:", trajectory_str, end="")
                 if not v.startswith(trajectory_str):
-                    print(trajectory_str)
+                    console.print(trajectory_str)
                     breakpoint()
-                Colorize.print_cyan(v[len(trajectory_str) :])
-            Colorize.print_blue("chosen", end=" ")
-            Colorize.print_cyan(action)
+                Colorize.print_completion(v[len(trajectory_str) :])
+            Colorize.print_prediction_type("chosen", end=" ")
+            Colorize.print_green(action)
 
         threshold = 3
         self.breakpoint(T, threshold)
@@ -248,7 +257,7 @@ class Q(Model[ObsType, ActType]):
     def rollout(self, state: ObsType, action: ActType, T: int) -> Tuple[str, float]:
         if self.debug >= 2:
             Colorize.print_header(
-                f"Computing Q rollout for state {state} and action {action}:"
+                f"Computing Q rollout for state {state} and action {action}"
             )
         t = 0
         state_u = state
@@ -271,6 +280,7 @@ class Q(Model[ObsType, ActType]):
                 if t == self.max_steps:
                     break
                 done_u = self.predict(
+                    ground_truth=self.env.done_str(true_done),
                     query=query,
                     name="done",
                     get_prompts=lambda: self.sample_done(action),
@@ -283,6 +293,7 @@ class Q(Model[ObsType, ActType]):
                 completions.append(done_u)
                 done = done_u if self.lm is None else self.env.done(done_u)
                 reward_u = self.predict(
+                    ground_truth=self.env.reward_str(true_reward),
                     query=query,
                     name="reward",
                     get_prompts=lambda: self.sample_reward(action=action, done=done),
@@ -297,6 +308,7 @@ class Q(Model[ObsType, ActType]):
                 if done:
                     break
                 state_u = self.predict(
+                    ground_truth=self.env.state_str(true_state),
                     query=query,
                     name="state",
                     get_prompts=lambda: self.sample_next_state(action=action),
@@ -428,7 +440,7 @@ class Q(Model[ObsType, ActType]):
 class Pi(Model[ObsType, ActType]):
     def _act(self, state: ObsType, T: int) -> ActType:
         if self.debug >= 2:
-            Colorize.print_header(f"Computing pi action for state {state}:")
+            Colorize.print_header(f"Computing pi action for state {state}")
         action_str = self.generate_action(state, T)
         action = self.env.action(action_str)
         assert action is not None

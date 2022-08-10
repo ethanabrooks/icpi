@@ -1,7 +1,5 @@
-import sys
 import time
 from dataclasses import dataclass
-from enum import Enum
 from typing import Any, Callable, List, Optional
 
 import bandit
@@ -13,54 +11,45 @@ import point_mass
 import space_invaders
 from base_env import Env, TimeStep
 from gym.wrappers import TimeLimit
+from rich.console import Console
 from rich.pretty import pprint
+from rich.syntax import Syntax
 from rl.lm import Data
 from run_logger import HasuraLogger
 
-
-class Color(Enum):
-    HEADER = "\033[95m"
-    OKBLUE = "\033[94m"
-    OKCYAN = "\033[96m"
-    OKGREEN = "\033[92m"
-    WARNING = "\033[93m"
-    FAIL = "\033[91m"
-    ENDC = "\033[0m"
-    BOLD = "\033[1m"
-    UNDERLINE = "\033[4m"
+console = Console()
 
 
 @dataclass
 class Colorize:
-    color: Color
-
-    def print(self, *objects, sep=" ", end="\n", file=sys.stdout):
-        string = sep.join(map(str, objects))
-        print(self.color.value + string + Color.ENDC.value, end=end, file=file)
+    @staticmethod
+    def print_header(*args, **kwargs):
+        console.rule(*args, **kwargs)
 
     @staticmethod
-    def print_header(*objects, sep=" ", end="\n", file=sys.stdout):
-        return Colorize(Color.HEADER).print(*objects, sep=sep, end=end, file=file)
+    def print_prediction_type(*args, **kwargs):
+        return console.print(*args, **kwargs, style="bold green")
 
     @staticmethod
-    def print_bold(*objects, sep=" ", end="\n", file=sys.stdout):
-        return Colorize(Color.BOLD).print(*objects, sep=sep, end=end, file=file)
+    def print_with_comment(code: str, comment: str):
+        code = code.rstrip("\n")
+        console.print(Syntax(f"{code}  # {comment}", "python"))
 
     @staticmethod
-    def print_blue(*objects, sep=" ", end="\n", file=sys.stdout):
-        return Colorize(Color.OKBLUE).print(*objects, sep=sep, end=end, file=file)
+    def print_completion(completion: str):
+        Colorize.print_with_comment(completion, "completion")
 
     @staticmethod
-    def print_cyan(*objects, sep=" ", end="\n", file=sys.stdout):
-        return Colorize(Color.OKCYAN).print(*objects, sep=sep, end=end, file=file)
+    def print_ground_truth(completion: str):
+        Colorize.print_with_comment(completion, "ground truth")
 
     @staticmethod
-    def print_green(*objects, sep=" ", end="\n", file=sys.stdout):
-        return Colorize(Color.OKGREEN).print(*objects, sep=sep, end=end, file=file)
+    def print_green(*args, **kwargs):
+        console.print(*args, **kwargs, style="green")
 
     @staticmethod
-    def print_warning(*objects, sep=" ", end="\n", file=sys.stdout):
-        return Colorize(Color.WARNING).print(*objects, sep=sep, end=end, file=file)
+    def print_warning(*args, **kwargs):
+        console.print(*args, **kwargs, style="yellow")
 
 
 def make_env(data: Data, env_id: str, seed: int, hint: bool) -> Env:
