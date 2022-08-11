@@ -33,6 +33,7 @@ def train(
     max_tokens: int,
     min_successes: int,
     model_name: Optional[str],
+    policy_hint: bool,
     predict_transitions: bool,
     require_cache: bool,
     seed: int,
@@ -81,7 +82,11 @@ def train(
             f"Unknown model name: {model_name}. For local models, use one of: {', '.join(local_models)}"
         )
 
-    env = make_env(data=Data.code, env_id=env_id, seed=seed, hint=hint)
+    def _make_env(_hint: bool):
+        return make_env(data=Data.code, env_id=env_id, seed=seed, hint=_hint)
+
+    env = _make_env(hint)
+    policy_env = _make_env(hint if policy_hint else False)
     eval_env = deepcopy(env)
 
     pi = Pi(
@@ -92,6 +97,7 @@ def train(
         lm=lm,
         max_prompts=max_prompts,
         max_resamples=max_resamples,
+        policy_env=policy_env,
         rng=rng,
         sil=sil,
         success_buffer=success_buffer,
@@ -110,6 +116,7 @@ def train(
         max_prompts=max_prompts,
         max_resamples=max_resamples,
         max_steps=env.max_q_steps(),
+        policy_env=policy_env,
         predict_transitions=predict_transitions,
         rng=rng,
         sil=sil,
@@ -177,6 +184,7 @@ def train(
                     info=info,
                     logger=logger,
                     model_name=model_name,
+                    policy_hint=policy_hint,
                     rewards=rewards,
                     sil=sil,
                     total_steps=total_steps,

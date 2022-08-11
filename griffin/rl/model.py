@@ -22,6 +22,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
     lm: LM
     max_prompts: int
     max_resamples: int
+    policy_env: Env
     rng: Generator
     sil: bool
     success_buffer: Deque[List[TimeStep]]
@@ -132,9 +133,9 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         return None
 
     def ready(self) -> bool:
-        return bool(self.sample_best())
+        return bool(self.sample_action())
 
-    def sample_best(self) -> List[str]:
+    def sample_action(self) -> List[str]:
         trajectories = list(self.success_buffer)
         trajectories = [
             trajectory[start:stop]
@@ -144,7 +145,10 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         ]
         self.rng.shuffle(trajectories)
         return [
-            "".join([self.env.initial_str()] + [self.env.ts_to_string(ts) for ts in t])
+            "".join(
+                [self.policy_env.initial_str()]
+                + [self.policy_env.ts_to_string(ts) for ts in t]
+            )
             for t in trajectories
         ]
 
@@ -156,7 +160,7 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         maybe_action = self.predict(
             ground_truth=None,
             query=query,
-            get_prompts=self.sample_best,
+            get_prompts=self.sample_action,
             name="action",
             stop=self.env.action_stop(),
             T=T,

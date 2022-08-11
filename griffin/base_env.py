@@ -44,10 +44,6 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
     def action_str(self, action: ActType) -> str:
         ...
 
-    @abc.abstractmethod
-    def actions(self) -> "list[str]":
-        ...
-
     def done(self, done_str: str) -> bool:
         return "assert done" in done_str
 
@@ -78,6 +74,9 @@ class Env(gym.Env, Generic[ObsType, ActType], abc.ABC):
     @abc.abstractmethod
     def max_q_steps(self) -> int:
         ...
+
+    def render(self, mode="human"):
+        pass
 
     @staticmethod
     def reward(reward_str: str) -> float:
