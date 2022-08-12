@@ -292,7 +292,8 @@ class Q(Model[ObsType, ActType]):
                 if reward_u is None:
                     break
                 completions.append(reward_u)
-                discounted_return = update_return(self.env.reward(reward_u))
+                reward = reward_u if self.lm is None else self.env.reward(reward_u)
+                discounted_return = update_return(reward)
                 if done:
                     break
                 # noinspection PyUnboundLocalVariable
@@ -316,7 +317,8 @@ class Q(Model[ObsType, ActType]):
             else:
                 raise RuntimeError("Unhandled case")
             action_u = self.generate_action(state_u, T)
-            action = self.env.action(action_u)
+            if self.lm is not None:
+                action = self.env.action(action_u)
             completions.append(action_u)
             t += 1
 
