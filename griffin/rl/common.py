@@ -75,7 +75,12 @@ def make_env(data: Data, env_id: str, seed: int, hint: bool) -> Env:
         )
     elif env_id == "chain":
         env = TimeLimit(
-            chain.Env(data=data, goal=4, n=8, random_seed=seed, hint=hint),
+            chain.Env(d=1, data=data, goal=4, n=8, random_seed=seed, hint=hint),
+            max_episode_steps=8,
+        )
+    elif env_id == "distractor-chain":
+        env = TimeLimit(
+            chain.Env(d=3, data=data, goal=4, n=8, random_seed=seed, hint=hint),
             max_episode_steps=8,
         )
     elif env_id == "maze":

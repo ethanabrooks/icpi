@@ -27,7 +27,6 @@ class Env(base_env.Env[int, int]):
         self.action_space = gym.spaces.Discrete(
             len(self.actions()), seed=self.random_seed
         )
-        self.observation_space = gym.spaces.Discrete(self.n)
 
     def action_str(self, action: int) -> str:
         action_str = self.actions()[action]
@@ -36,7 +35,8 @@ class Env(base_env.Env[int, int]):
         else:
             return f"state = {action_str}(){self.action_stop()}"
 
-    def actions(self):
+    @staticmethod
+    def actions():
         return [
             "left",
             "try_goal",
@@ -46,8 +46,14 @@ class Env(base_env.Env[int, int]):
     def failure_threshold(self) -> float:
         return 0
 
-    def hint_str(self, state: int) -> str:
-        return "state " + ("==" if state == self.goal else "!=") + f" {self.goal}"
+    def hint_str(self, state: Tuple[int, ...]) -> str:
+        _, *tail = state
+        goal_vector = [self.goal, *tail]
+        return (
+            "state "
+            + ("==" if list(state) == goal_vector else "!=")
+            + f" {goal_vector}"
+        )
 
     def initial_str(self) -> str:
         return "\nstate, reward = reset()\n"
@@ -68,27 +74,28 @@ class Env(base_env.Env[int, int]):
         seed: Optional[int] = None,
         return_info: bool = False,
         options: Optional[dict] = None,
-    ) -> int:
-        self._state = self._start_state = self.random.choice(self.n)
-        return self._start_state
+    ) -> Tuple[int, ...]:
+        self._state = self._start_state = self.random.choice(self.n, size=self.d)
+        return tuple(self._start_state)
 
     def start_states(self) -> Optional[Iterable[int]]:
-        return range(self.n)
+        return None
 
-    def state_str(self, state: int) -> str:
-        state_str = f"assert state == {state}"
+    def state_str(self, state: Tuple[int, ...]) -> str:
+        state_str = f"assert state == {list(state)}"
         if self.hint:
             state_str += f" and {self.hint_str(state)}"
         return state_str + self.state_stop()
 
-    def step(self, action: int) -> Tuple[int, float, bool, dict]:
-        optimal = self.gamma() ** abs(self._start_state - self.goal)
+    def step(self, action: int) -> Tuple[Tuple[int, ...], float, bool, dict]:
+        optimal = self.gamma() ** abs(self._start_state[0] - self.goal)
         info = dict(optimal=optimal)
-        self._state += action - 1
+        self._state[1:] = self.random.choice(self.n, size=self.d - 1)
+        self._state[0] += action - 1
         self._state = np.clip(self._state, 0, self.n - 1)
         done = action == 1
-        success = done and self._state == self.goal
-        state = int(self._state)
+        success = done and self._state[0] == self.goal
+        state = tuple(self._state)
         return state, float(success), done, info
 
     def ts_to_string(self, ts: TimeStep) -> str:
@@ -100,13 +107,13 @@ class Env(base_env.Env[int, int]):
             self.reward_stop(),
         ]
         s = "".join(parts)
-        if self.hint and ts.reward == 1 and f"state == {self.goal}" not in s:
+        if self.hint and ts.reward == 1 and f"state == [{self.goal}" not in s:
             breakpoint()
         if (
             self.hint
             and ts.action == 1
             and ts.reward == 0
-            and f"state != {self.goal}" not in s
+            and f"state != [{self.goal}" not in s
         ):
             breakpoint()
         return s
@@ -134,7 +141,7 @@ if __name__ == "__main__":
     def get_value(*trajectory: TimeStep, gamma: float) -> float:
         return sum([gamma**t * ts.reward for t, ts in enumerate(trajectory)])
 
-    env = Env(goal=4, n=8, hint=True, random_seed=0, data=Data.code)
+    env = Env(goal=4, n=8, d=3, hint=True, random_seed=0, data=Data.code)
     while True:
         s = env.reset()
         print(env.initial_str() + env.state_str(s))
