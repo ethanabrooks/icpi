@@ -17,6 +17,7 @@ REWARDS = {
 
 @dataclass
 class Env(base_env.Env[int, int]):
+    d: int
     goal: int
     n: int
     random_seed: int
@@ -30,17 +31,10 @@ class Env(base_env.Env[int, int]):
 
     def action_str(self, action: int) -> str:
         action_str = self.actions()[action]
-        if self.data == Data.code:
-            if action == 1:
-                return f"reward = {action_str}(state){self.action_stop()}"
-            else:
-                return f"state = {action_str}(){self.action_stop()}"
-        elif self.data == Data.natural_language:
-            if action == 1:
-                return f"Check if you are at the goal{self.action_stop()}"
-            else:
-                return f"Move {action_str}{self.action_stop()}"
-        raise RuntimeError("Invalid data")
+        if action == 1:
+            return f"reward = {action_str}(state){self.action_stop()}"
+        else:
+            return f"state = {action_str}(){self.action_stop()}"
 
     def actions(self):
         return [
@@ -53,21 +47,10 @@ class Env(base_env.Env[int, int]):
         return 0
 
     def hint_str(self, state: int) -> str:
-        if self.data == Data.code:
-            return "state " + ("==" if state == self.goal else "!=") + f" {self.goal}"
-        elif self.data == Data.natural_language:
-            if state == self.goal:
-                return ""
-            else:
-                return f", not state {self.goal}"
-        raise RuntimeError("Invalid data")
+        return "state " + ("==" if state == self.goal else "!=") + f" {self.goal}"
 
     def initial_str(self) -> str:
-        if self.data == Data.code:
-            return "\nstate, reward = reset()\n"
-        elif self.data == Data.natural_language:
-            return "\n"
-        raise RuntimeError("Invalid data")
+        return "\nstate, reward = reset()\n"
 
     @classmethod
     def log_gamma(cls) -> float:
@@ -93,16 +76,10 @@ class Env(base_env.Env[int, int]):
         return range(self.n)
 
     def state_str(self, state: int) -> str:
-        if self.data == Data.code:
-            state_str = f"assert state == {state}"
-            if self.hint:
-                state_str += f" and {self.hint_str(state)}"
-            return state_str + self.state_stop()
-        elif self.data == Data.natural_language:
-            state_str = f"You are at state {state}"
-            if self.hint:
-                state_str += f"{self.hint_str(state)}"
-            return state_str + self.state_stop()
+        state_str = f"assert state == {state}"
+        if self.hint:
+            state_str += f" and {self.hint_str(state)}"
+        return state_str + self.state_stop()
 
     def step(self, action: int) -> Tuple[int, float, bool, dict]:
         optimal = self.gamma() ** abs(self._start_state - self.goal)
@@ -115,12 +92,7 @@ class Env(base_env.Env[int, int]):
         return state, float(success), done, info
 
     def ts_to_string(self, ts: TimeStep) -> str:
-        if self.data == Data.code:
-            reward_str = f"assert reward == {ts.reward}"
-        elif self.data == Data.natural_language:
-            reward_str = f"Receive {int(ts.reward)} reward"
-        else:
-            raise RuntimeError("Invalid data")
+        reward_str = f"assert reward == {ts.reward}"
         parts = [
             self.state_str(ts.state),
             self.action_str(ts.action),
@@ -128,53 +100,33 @@ class Env(base_env.Env[int, int]):
             self.reward_stop(),
         ]
         s = "".join(parts)
-        if self.data == Data.code:
-            if self.hint and ts.reward == 1 and f"state == {self.goal}" not in s:
-                breakpoint()
-            if (
-                self.hint
-                and ts.action == 1
-                and ts.reward == 0
-                and f"state != {self.goal}" not in s
-            ):
-                breakpoint()
+        if self.hint and ts.reward == 1 and f"state == {self.goal}" not in s:
+            breakpoint()
+        if (
+            self.hint
+            and ts.action == 1
+            and ts.reward == 0
+            and f"state != {self.goal}" not in s
+        ):
+            breakpoint()
         return s
 
     def valid_done(self, done_str: str) -> bool:
-        if self.data == Data.code:
-            return (
-                done_str.startswith("assert")
-                and "done" in done_str
-                and done_str.endswith(self.done_stop())
-            )
-        elif self.data == Data.natural_language:
-            return (
-                done_str.startswith("You are")
-                and "done" in done_str
-                and done_str.endswith(self.done_stop())
-            )
-        raise RuntimeError("Invalid data")
+        return (
+            done_str.startswith("assert")
+            and "done" in done_str
+            and done_str.endswith(self.done_stop())
+        )
 
     def valid_reward(self, reward_str: str) -> bool:
-        if self.data == Data.code:
-            return bool(
-                re.findall(r"assert reward == \d+", reward_str)
-            ) and reward_str.endswith(self.reward_stop())
-        elif self.data == Data.natural_language:
-            return bool(re.findall(r"Receive \d+", reward_str)) and reward_str.endswith(
-                self.reward_stop()
-            )
-        raise RuntimeError("Invalid data")
+        return bool(
+            re.findall(r"assert reward == \d+", reward_str)
+        ) and reward_str.endswith(self.reward_stop())
 
     def valid_state(self, state_str: str) -> bool:
-        if self.data == Data.code:
-            return bool(
-                state_str.startswith("assert state == ")
-            ) and state_str.endswith(self.state_stop())
-        elif self.data == Data.natural_language:
-            return bool(
-                state_str.startswith("You are at state ")
-            ) and state_str.endswith(self.state_stop())
+        return bool(state_str.startswith("assert state == ")) and state_str.endswith(
+            self.state_stop()
+        )
 
 
 if __name__ == "__main__":
