@@ -156,6 +156,8 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         return not self.sil or self.get_value(trajectory) > self.env.failure_threshold()
 
     def generate_action(self, state: "ObsType | str", T: int) -> Optional[str]:
+        if not isinstance(state, str):
+            state = self.env.state_str(state)
         query = state if self.lm is None else ["", self.env.initial_str(), state]
         maybe_action = self.predict(
             ground_truth=None,
