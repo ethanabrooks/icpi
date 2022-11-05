@@ -79,6 +79,9 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         T: int,
         valid: Callable[[str], bool],
     ) -> Optional[str]:
+        if name == 'reward':
+            reward = int(self.rng.choice(2))
+            return self.env.reward_str(reward)
         previous_prompts = set()
         for _ in range(self.max_resamples):
             prompts = get_prompts()
