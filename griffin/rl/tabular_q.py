@@ -79,6 +79,7 @@ def tabular_main(
     env_id: str,
     eval_interval: int,
     min_successes: int,
+    learning_rate: float,
     logger: HasuraLogger,
     seed: int,
     total_steps: int,
@@ -87,7 +88,7 @@ def tabular_main(
     env = make_env(data=Data.code, env_id=env_id, seed=seed, hint=False)
     agent = TabularQAgent(
         n_actions=env.action_space.n,
-        learning_rate=1,
+        learning_rate=learning_rate,
         discount_factor=env.gamma(),
         initial_q_value=1,
         seed=seed,
@@ -101,12 +102,13 @@ def tabular_main(
         use_agent_prob = 1 / (1 + math.exp(2 * (min_successes - num_successes)))
 
         log_info = dict(
-            num_success=num_successes,
-            use_model_prob=use_agent_prob,
             gamma=env.log_gamma(),
+            learning_rate=learning_rate,
+            num_success=num_successes,
             seed=seed,
             start_time=start_time,
             step=T,
+            use_model_prob=use_agent_prob,
         )
 
         if eval_interval is not None and episode % eval_interval == 0:
