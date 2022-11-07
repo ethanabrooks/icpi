@@ -15,14 +15,19 @@ from run_logger import HasuraLogger
 @dataclass
 class TabularQAgent:
     discount_factor: float
+    exploration_bonus: bool
     initial_q_value: float
     learning_rate: float
     n_actions: int
     seed: int
+    n: defaultdict = field(init=False)
     q: defaultdict = field(init=False)
     _rng: Generator = field(init=False)
 
     def __post_init__(self):
+        self.n = defaultdict(
+            lambda: self.initial_q_value * np.zeros(self.n_actions, dtype=float)
+        )
         self.q = defaultdict(
             lambda: self.initial_q_value * np.ones(self.n_actions, dtype=float)
         )
@@ -30,6 +35,8 @@ class TabularQAgent:
 
     def act(self, state: Hashable) -> int:
         q_vals = self.q[state]
+        if self.exploration_bonus:
+            q_vals += 1 / (1 + self.n[state])
         best_actions = np.flatnonzero(q_vals == q_vals.max())
         return self._rng.choice(best_actions)
 
@@ -50,6 +57,7 @@ class TabularQAgent:
             prediction_error += self.discount_factor * self.q[next_state].max()
 
         self.q[cur_state][action] = prev_q + self.learning_rate * prediction_error
+        self.n[cur_state][action] += 1
         # from rich.pretty import pprint
         #
         # for s, v in self.q.items():
