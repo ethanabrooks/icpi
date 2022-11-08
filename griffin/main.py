@@ -223,7 +223,7 @@ def sweep(
     )
     config.update(sweep_id=sweep_id)
     ray.init()
-    analysis = tune.run(trainable, config=config)
+    analysis = tune.run(trainable, config=config, max_concurrent_trials=4)
     print(analysis.stats())
 
 
