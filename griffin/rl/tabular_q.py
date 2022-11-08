@@ -80,6 +80,7 @@ def tabular_main(
     eval_interval: int,
     min_successes: int,
     learning_rate: float,
+    exploration_bonus: bool,
     logger: HasuraLogger,
     seed: int,
     total_steps: int,
@@ -91,6 +92,7 @@ def tabular_main(
         learning_rate=learning_rate,
         discount_factor=env.gamma(),
         initial_q_value=1,
+        exploration_bonus=exploration_bonus,
         seed=seed,
     )
 
