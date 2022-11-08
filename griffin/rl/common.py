@@ -130,6 +130,7 @@ def make_log(
     use_model_prob: float,
     gamma: float,
     seed: int,
+    learning_rate: float,
     start_time: float,
     step: int,
     evaluation: bool,
@@ -148,6 +149,7 @@ def make_log(
         seed=seed,
         step=step,
         use_model_prob=use_model_prob,
+        learning_rate=learning_rate,
         **{
             prefix + "return": discounted,
             prefix + "undiscounted return": undiscounted,
