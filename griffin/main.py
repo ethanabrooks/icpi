@@ -128,7 +128,7 @@ def _log(
             yield "hours", y
 
     charts = [
-        line.spec(color="learning-rate", x=x, y=y, visualizer_url=visualizer_url)
+        line.spec(color="learning_rate", x=x, y=y, visualizer_url=visualizer_url)
         for x, y in xy()
     ]
 
