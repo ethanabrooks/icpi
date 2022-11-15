@@ -159,15 +159,21 @@ class Model(abc.ABC, Generic[ObsType, ActType]):
         if not isinstance(state, str):
             state = self.env.state_str(state)
         query = state if self.lm is None else ["", self.env.initial_str(), state]
-        maybe_action = self.predict(
-            ground_truth=None,
-            query=query,
-            get_prompts=self.sample_action,
-            name="action",
-            stop=self.env.action_stop(),
-            T=T,
-            valid=lambda s: self.env.action(s) is not None,
-        )
+        actions = [ts.action for traj in self.buffer for ts in traj if ts.state == state]
+        if actions:
+            action = self.rng.choice(actions)
+        else:
+            action = self.env.action_space.sample()
+        maybe_action = self.env.action_str(action)
+        # maybe_action = self.predict(
+            # ground_truth=None,
+            # query=query,
+            # get_prompts=self.sample_action,
+            # name="action",
+            # stop=self.env.action_stop(),
+            # T=T,
+            # valid=lambda s: self.env.action(s) is not None,
+        # )
         if maybe_action is None:
             return self.env.action_str(self.env.action_space.sample())
         return maybe_action
