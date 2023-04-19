@@ -1,10 +1,7 @@
 {
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    utils = {
-      url = "github:numtide/flake-utils";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    nixpkgs.url = "github:nixos/nixpkgs/a983cc62cc2345443620597697015c1c9c4e5b06";
+    utils.url = "github:numtide/flake-utils/93a2b84fc4b70d9e089d029deacc3583435c2ed6";
   };
 
   outputs = {
@@ -15,112 +12,61 @@
     out = system: let
       pkgs = import nixpkgs {
         inherit system;
-        config.allowUnfree = true;
-        overlays = [
-          (final: prev: {
-            # Reassigning python3 to python39 so that arrow-cpp
-            # will be built using it.
-            python3 = prev.python39.override {
-              packageOverrides = pyfinal: pyprev: {
-                # See: https://github.com/NixOS/nixpkgs/pull/172397,
-                # https://github.com/pyca/pyopenssl/issues/87
-                pyopenssl =
-                  pyprev.pyopenssl.overridePythonAttrs
-                  (old: {meta.broken = false;});
-
-                # Twisted currently fails tests because of pyopenssl
-                # (see linked issues above)
-                twisted = pyprev.buildPythonPackage {
-                  pname = "twisted";
-                  version = "22.4.0";
-                  format = "wheel";
-                  src = final.fetchurl {
-                    url = "https://files.pythonhosted.org/packages/db/99/38622ff95bb740bcc991f548eb46295bba62fcb6e907db1987c4d92edd09/Twisted-22.4.0-py3-none-any.whl";
-                    sha256 = "sha256-+fepH5STJHep/DsWnVf1T5bG50oj142c5UA5p/SJKKI=";
-                  };
-                  propagatedBuildInputs = with pyfinal; [
-                    automat
-                    constantly
-                    hyperlink
-                    incremental
-                    setuptools
-                    typing-extensions
-                    zope_interface
-                  ];
-                };
-              };
-            };
-            thrift = prev.thrift.overrideAttrs (old: {
-              # Concurrency test fails on Darwin
-              # TInterruptTest, TNonblockingSSLServerTest
-              # SecurityTest, and SecurityFromBufferTest
-              # fail on Linux.
-              doCheck = false;
-            });
-          })
-        ];
+        config = {
+          allowUnfree = true;
+        };
       };
-      inherit (pkgs) poetry2nix lib stdenv fetchurl;
-      inherit (pkgs.cudaPackages) cudatoolkit;
-      inherit (pkgs.linuxPackages) nvidia_x11;
-      python = pkgs.python39;
-      pythonEnv = poetry2nix.mkPoetryEnv {
-        inherit python;
+      inherit (pkgs) poetry2nix;
+      mujoco = fetchTarball {
+        url = "https://mujoco.org/download/mujoco210-linux-x86_64.tar.gz";
+        sha256 = "sha256:1lvppcdfca460sqnb0ryrach6lv1g9dwcjfim0dl4vmxg2ryaq7p";
+      };
+      overrides = pyfinal: pyprev: rec {
+        mujoco-py =
+          (pyprev.mujoco-py.override {
+            preferWheel = false;
+          })
+          .overridePythonAttrs (old: {
+            env.NIX_CFLAGS_COMPILE = "-L${pkgs.mesa.osmesa}/lib";
+            preBuild = ''
+              export MUJOCO_PY_MUJOCO_PATH="${mujoco}"
+              export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${mujoco}/bin:${pkgs.mesa.osmesa}/lib:${pkgs.libGL}/lib:${pkgs.gcc-unwrapped.lib}/lib
+            '';
+            buildInputs =
+              old.buildInputs
+              ++ [
+                pyfinal.setuptools
+                pkgs.mesa
+                pkgs.libGL
+              ];
+            patches = [./mujoco-py.patch];
+          });
+        torch = pyprev.pytorch-bin.overridePythonAttrs (old: {
+          src = pkgs.fetchurl {
+            url = "https://download.pytorch.org/whl/cu116/torch-1.13.1%2Bcu116-cp39-cp39-linux_x86_64.whl";
+            sha256 = "sha256-20V6gi1zYBO2/+UJBTABvJGL3Xj+aJZ7YF9TmEqa+sU=";
+          };
+        });
+        torchrl = pyprev.torchrl.overridePythonAttrs (old: {
+          preFixup = "addAutoPatchelfSearchPath ${pyfinal.torch}";
+        });
+      };
+      poetryEnv = pkgs.poetry2nix.mkPoetryEnv {
+        python = pkgs.python39;
         projectDir = ./.;
         preferWheels = true;
-        overrides =
-          poetry2nix.overrides.withDefaults
-          (pyfinal: pyprev: rec {
-            astunparse = pyprev.astunparse.overridePythonAttrs (old: {
-              buildInputs = (old.buildInputs or []) ++ [pyfinal.wheel];
-            });
-            dollar-lambda = pyprev.dollar-lambda.overridePythonAttrs (old: {
-              buildInputs = (old.buildInputs or []) ++ [pyfinal.poetry];
-            });
-            vega-charts = pyprev.vega-charts.overridePythonAttrs (old: {
-              buildInputs = (old.buildInputs or []) ++ [pyfinal.poetry];
-            });
-            run-logger = pyprev.run-logger.overridePythonAttrs (old: {
-              buildInputs = (old.buildInputs or []) ++ [pyfinal.poetry];
-            });
-            sweep-logger = pyprev.sweep-logger.overridePythonAttrs (old: {
-              buildInputs = (old.buildInputs or []) ++ [pyfinal.poetry];
-            });
-            pandas-stubs = pyprev.pandas-stubs.overridePythonAttrs (old:{
-              # Prevent collisions with actual pandas installation.
-              postInstall = ''
-                rm -rf $out/${python.sitePackages}/pandas
-              '';
-            });
-            # Poetry2Nix tries to apply an override to lowercased
-            # gitpython (which does not exist). We first assign
-            # it to the GitPython that does exist to prevent a
-            # missing attribute error.
-            gitpython = pyprev.GitPython;
-            # Then we replace the GitPython key with overridden version
-            # so that we get the fixes that poetry2nix applies.
-            GitPython = pyfinal.gitpython;
-            orjson = python.pkgs.orjson.override {
-              inherit (python) pythonOlder;
-              inherit
-                (pyprev)
-                pytestCheckHook
-                buildPythonPackage
-                numpy
-                psutil
-                python-dateutil
-                pytz
-                xxhash
-                ;
-            };
-          });
+        overrides = poetry2nix.overrides.withDefaults overrides;
       };
     in {
       devShell = pkgs.mkShell {
-        buildInputs = [pythonEnv];
+        LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:${pkgs.linuxPackages.nvidia_x11}/lib:${pkgs.mesa.osmesa}/lib:${pkgs.libGL}/lib:${pkgs.gcc-unwrapped.lib}/lib";
+        buildInputs = with pkgs; [
+          alejandra
+          poetry
+          poetryEnv
+        ];
+        PYTHONBREAKPOINT = "ipdb.set_trace";
         shellHook = ''
-          export pythonfaulthandler=1
-          export pythonbreakpoint=ipdb.set_trace
           set -o allexport
           source .env
           set +o allexport
@@ -128,5 +74,5 @@
       };
     };
   in
-    with utils.lib; eachSystem defaultSystems out;
+    utils.lib.eachDefaultSystem out;
 }
