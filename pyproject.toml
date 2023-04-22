@@ -19,6 +19,7 @@ transformers = "^4.28.1"
 gitpython = "^3.1.31"
 rich = "^13.3.4"
 dm-env = "^1.6"
+scipy = "^1.10.1"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.2.0"
