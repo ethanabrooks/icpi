@@ -41,6 +41,9 @@
               ];
             patches = [./mujoco-py.patch];
           });
+        bsuite = pyprev.bsuite.overridePythonAttrs (old: {
+          buildInputs = (old.buildInputs or []) ++ [pyprev.scipy];
+        });
         dollar-lambda = pyprev.dollar-lambda.overridePythonAttrs (old: {
           buildInputs = (old.buildInputs or []) ++ [pyprev.poetry];
         });
