@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import List
 
-from run_logger import HasuraLogger
+from run_logger import RunLogger
 from transformers import PreTrainedTokenizer
 
 from gql import gql
@@ -18,7 +18,7 @@ class Data(Enum):
 @dataclass
 class LM(ABC):
     debug: int
-    logger: HasuraLogger
+    logger: RunLogger
     logprobs: int
     model_name: str
     top_p: float
