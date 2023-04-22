@@ -316,14 +316,14 @@ colorama = {version = "*", markers = "platform_system == \"Windows\""}
 
 [[package]]
 name = "cloudpickle"
-version = "1.6.0"
+version = "2.2.1"
 description = "Extended pickling support for Python objects"
 category = "main"
 optional = false
-python-versions = ">=3.5"
+python-versions = ">=3.6"
 files = [
-    {file = "cloudpickle-1.6.0-py3-none-any.whl", hash = "sha256:3a32d0eb0bc6f4d0c57fbc4f3e3780f7a81e6fee0fa935072884d58ae8e1cc7c"},
-    {file = "cloudpickle-1.6.0.tar.gz", hash = "sha256:9bc994f9e9447593bd0a45371f0e7ac7333710fcf64a4eb9834bf149f4ef2f32"},
+    {file = "cloudpickle-2.2.1-py3-none-any.whl", hash = "sha256:61f594d1f4c295fa5cd9014ceb3a1fc4a70b0de1164b94fbc2d854ccba056f9f"},
+    {file = "cloudpickle-2.2.1.tar.gz", hash = "sha256:d89684b8de9e34a2a43b3460fbca07d09d6e25ce858df4d5a44240403b6178f5"},
 ]
 
 [[package]]
@@ -746,17 +746,6 @@ files = [
 ]
 
 [[package]]
-name = "future"
-version = "0.18.3"
-description = "Clean single-source support for Python 3 and 2"
-category = "main"
-optional = false
-python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
-files = [
-    {file = "future-0.18.3.tar.gz", hash = "sha256:34a17436ed1e96697a86f9de3d15a3b0be01d8bc8de9c1dffd59fb8234ed5307"},
-]
-
-[[package]]
 name = "gitdb"
 version = "4.0.10"
 description = "Git Object Database"
@@ -946,27 +935,44 @@ protobuf = ["grpcio-tools (>=1.54.0)"]
 
 [[package]]
 name = "gym"
-version = "0.17.3"
-description = "The OpenAI Gym: A toolkit for developing and comparing your reinforcement learning agents."
+version = "0.26.2"
+description = "Gym: A universal API for reinforcement learning environments"
 category = "main"
 optional = false
-python-versions = ">=3.5"
+python-versions = ">=3.6"
 files = [
-    {file = "gym-0.17.3.tar.gz", hash = "sha256:96a7dd4e9cdb39e30c7a79e5773570fd9408f7fdb58c714c293cfbb314818eb6"},
+    {file = "gym-0.26.2.tar.gz", hash = "sha256:e0d882f4b54f0c65f203104c24ab8a38b039f1289986803c7d02cdbe214fbcc4"},
 ]
 
 [package.dependencies]
-cloudpickle = ">=1.2.0,<1.7.0"
-numpy = ">=1.10.4"
-pyglet = ">=1.4.0,<=1.5.0"
-scipy = "*"
+cloudpickle = ">=1.2.0"
+gym_notices = ">=0.0.4"
+importlib_metadata = {version = ">=4.8.0", markers = "python_version < \"3.10\""}
+numpy = ">=1.18.0"
 
 [package.extras]
-all = ["Pillow", "atari_py (>=0.2.0,<0.3.0)", "box2d-py (>=2.3.5,<2.4.0)", "imageio", "imageio", "mujoco_py (>=1.50,<2.0)", "mujoco_py (>=1.50,<2.0)", "opencv-python"]
-atari = ["Pillow", "atari_py (>=0.2.0,<0.3.0)", "opencv-python"]
-box2d = ["box2d-py (>=2.3.5,<2.4.0)"]
-mujoco = ["imageio", "mujoco_py (>=1.50,<2.0)"]
-robotics = ["imageio", "mujoco_py (>=1.50,<2.0)"]
+accept-rom-license = ["autorom[accept-rom-license] (>=0.4.2,<0.5.0)"]
+all = ["ale-py (>=0.8.0,<0.9.0)", "box2d-py (==2.3.5)", "imageio (>=2.14.1)", "lz4 (>=3.1.0)", "matplotlib (>=3.0)", "moviepy (>=1.0.0)", "mujoco (==2.2)", "mujoco_py (>=2.1,<2.2)", "opencv-python (>=3.0)", "pygame (==2.1.0)", "pytest (==7.0.1)", "swig (>=4.0.0,<5.0.0)"]
+atari = ["ale-py (>=0.8.0,<0.9.0)"]
+box2d = ["box2d-py (==2.3.5)", "pygame (==2.1.0)", "swig (>=4.0.0,<5.0.0)"]
+classic-control = ["pygame (==2.1.0)"]
+mujoco = ["imageio (>=2.14.1)", "mujoco (==2.2)"]
+mujoco-py = ["mujoco_py (>=2.1,<2.2)"]
+other = ["lz4 (>=3.1.0)", "matplotlib (>=3.0)", "moviepy (>=1.0.0)", "opencv-python (>=3.0)"]
+testing = ["box2d-py (==2.3.5)", "imageio (>=2.14.1)", "lz4 (>=3.1.0)", "matplotlib (>=3.0)", "moviepy (>=1.0.0)", "mujoco (==2.2)", "mujoco_py (>=2.1,<2.2)", "opencv-python (>=3.0)", "pygame (==2.1.0)", "pytest (==7.0.1)", "swig (>=4.0.0,<5.0.0)"]
+toy-text = ["pygame (==2.1.0)"]
+
+[[package]]
+name = "gym-notices"
+version = "0.0.8"
+description = "Notices for gym"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "gym-notices-0.0.8.tar.gz", hash = "sha256:ad25e200487cafa369728625fe064e88ada1346618526102659b4640f2b4b911"},
+    {file = "gym_notices-0.0.8-py3-none-any.whl", hash = "sha256:e5f82e00823a166747b4c2a07de63b6560b1acb880638547e0cabf825a01e463"},
+]
 
 [[package]]
 name = "huggingface-hub"
@@ -1057,6 +1063,26 @@ linting = ["black", "flake8"]
 pyav = ["av"]
 test = ["fsspec[github]", "invoke", "pytest", "pytest-cov"]
 tifffile = ["tifffile"]
+
+[[package]]
+name = "importlib-metadata"
+version = "6.5.1"
+description = "Read metadata from Python packages"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "importlib_metadata-6.5.1-py3-none-any.whl", hash = "sha256:cd4687a8df60d9aefd424ed9364a8f29def203a9482ec8eb8e8070ef06075f89"},
+    {file = "importlib_metadata-6.5.1.tar.gz", hash = "sha256:b986d197242e4e9960a12743a6ec5a9fc8b3d7054612d90489452170785c98a5"},
+]
+
+[package.dependencies]
+zipp = ">=0.5"
+
+[package.extras]
+docs = ["furo", "jaraco.packaging (>=9)", "jaraco.tidelift (>=1.4)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-lint"]
+perf = ["ipython"]
+testing = ["flake8 (<5)", "flufl.flake8", "importlib-resources (>=1.3)", "packaging", "pyfakefs", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=1.3)", "pytest-flake8", "pytest-mypy (>=0.9.1)", "pytest-perf (>=0.9.2)"]
 
 [[package]]
 name = "importlib-resources"
@@ -2141,21 +2167,6 @@ files = [
 
 [package.extras]
 tests = ["pytest"]
-
-[[package]]
-name = "pyglet"
-version = "1.5.0"
-description = "Cross-platform windowing and multimedia library"
-category = "main"
-optional = false
-python-versions = "*"
-files = [
-    {file = "pyglet-1.5.0-py2.py3-none-any.whl", hash = "sha256:a42f599ebd0dc8113563041c402ae09be05cdcbc643bb1183785141ba3c3304e"},
-    {file = "pyglet-1.5.0.zip", hash = "sha256:6ea918985feddfa9bf0fcc01ffe9ff5849e7b6e832d9b2e03b9d2a36369cb6ee"},
-]
-
-[package.dependencies]
-future = "*"
 
 [[package]]
 name = "pygments"
@@ -3338,4 +3349,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.12"
-content-hash = "c5304fbcac35e9ab0bc210e41d3ec4524a5a68083f0babe59c3a749c2eb3f034"
+content-hash = "8cf3dd9f309507d47fb1d945136d5e6f9c7959711756c80de7b9b275894ed6e5"

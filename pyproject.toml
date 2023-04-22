@@ -6,7 +6,6 @@ authors = ["Ethan Brooks <ethanabrooks@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.12"
-gym = "^0.17.2"
 openai = "^0.16.0"
 sweep-logger = {git = "https://github.com/run-tracker/sweep-logger.git", rev = "main"}
 vega-charts = {git = "https://github.com/run-tracker/vega-charts.git", rev = "main"}
