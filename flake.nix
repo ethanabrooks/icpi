@@ -41,11 +41,23 @@
               ];
             patches = [./mujoco-py.patch];
           });
+        dollar-lambda = pyprev.dollar-lambda.overridePythonAttrs (old: {
+          buildInputs = (old.buildInputs or []) ++ [pyprev.poetry];
+        });
+        run-logger = pyprev.run-logger.overridePythonAttrs (old: {
+          buildInputs = (old.buildInputs or []) ++ [pyprev.poetry];
+        });
+        sweep-logger = pyprev.sweep-logger.overridePythonAttrs (old: {
+          buildInputs = (old.buildInputs or []) ++ [pyprev.poetry];
+        });
         torch = pyprev.pytorch-bin.overridePythonAttrs (old: {
           src = pkgs.fetchurl {
             url = "https://download.pytorch.org/whl/cu116/torch-1.13.1%2Bcu116-cp39-cp39-linux_x86_64.whl";
             sha256 = "sha256-20V6gi1zYBO2/+UJBTABvJGL3Xj+aJZ7YF9TmEqa+sU=";
           };
+        });
+        vega-charts = pyprev.vega-charts.overridePythonAttrs (old: {
+          buildInputs = (old.buildInputs or []) ++ [pyprev.poetry];
         });
         torchrl = pyprev.torchrl.overridePythonAttrs (old: {
           preFixup = "addAutoPatchelfSearchPath ${pyfinal.torch}";

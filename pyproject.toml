@@ -6,20 +6,18 @@ authors = ["Ethan Brooks <ethanabrooks@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.9"
-#openai = "^0.16.0"
-#gym = "^0.21.0"
-#numpy = "^1.22.3"
-#pandas = "^1.4.3"
-#altair = "^4.2.0"
-#GitPython = "^3.1.27"
-#sweep-logger = {git = "https://github.com/run-tracker/sweep-logger.git", rev = "main"}
-#vega-charts = {git = "https://github.com/run-tracker/vega-charts.git", rev = "main"}
-#bsuite = "^0.3.5"
-#ray = {version = "^1.13.0", extras = ["tune"]}
-#dollar-lambda = {git = "https://github.com/ethanabrooks/dollar-lambda.git", rev = "main"}
-#transformers = "^4.20.1"
-#requests-toolbelt = "^0.9.1"
-#rich = "^12.5.1"
+gym = "^0.17.2"
+openai = "^0.16.0"
+sweep-logger = {git = "https://github.com/run-tracker/sweep-logger.git", rev = "main"}
+vega-charts = {git = "https://github.com/run-tracker/vega-charts.git", rev = "main"}
+dollar-lambda = {git = "https://github.com/ethanabrooks/dollar-lambda.git", rev = "main"}
+requests-toolbelt = "^0.9.1"
+pandas = "^2.0.0"
+altair = "^4.2.2"
+ray = {version = "^2.3.1", extras = ["tune"]}
+transformers = "^4.28.1"
+gitpython = "^3.1.31"
+rich = "^13.3.4"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.2.0"
