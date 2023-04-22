@@ -4,7 +4,7 @@ import sys
 import time
 from pathlib import Path
 from shlex import quote
-from typing import Optional
+from typing import Optional, Union
 
 import line
 import ray
@@ -14,10 +14,30 @@ from git import Repo
 from ray import tune
 from rl.tabular_q import tabular_main
 from rl.train import train
-from run_logger import HasuraLogger
-from run_logger.main import get_config_params, get_load_params
-from sweep_logger import create_sweep
-from sweep_logger.create_sweep import SweepMethod
+from run_logger import RunLogger
+# from sweep_logger import create_sweep
+# from sweep_logger.create_sweep import SweepMethod
+
+def get_config_params(config: Union[str, Path]) -> dict:
+    if isinstance(config, str):
+        config = Path(config)
+    with Path(config).open() as f:
+        config = yaml.load(f, yaml.FullLoader)
+    return config
+
+
+def get_load_params(load_id: int, logger: RunLogger) -> dict:
+    return logger.execute(
+        gql(
+            """
+query GetParameters($id: Int!) {
+run_by_pk(id: $id) {
+metadata(path: "parameters")
+}
+}"""
+        ),
+        variable_values=dict(id=load_id),
+    )["run_by_pk"]["metadata"]
 
 tree = CommandTree()
 
@@ -69,7 +89,7 @@ def no_log(
     load_id: Optional[int] = None,
     **kwargs,
 ):
-    logger = HasuraLogger(GRAPHQL_ENDPOINT)
+    logger = RunLogger(GRAPHQL_ENDPOINT)
     params = get_config_params(config)
     if load_id is not None:
         load_params = get_load_params(load_id=load_id, logger=logger)

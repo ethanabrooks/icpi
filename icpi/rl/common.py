@@ -16,7 +16,7 @@ from rich.console import Console
 from rich.pretty import pprint
 from rich.syntax import Syntax
 from rl.lm import Data
-from run_logger import HasuraLogger
+from run_logger import RunLogger
 
 console = Console()
 
@@ -132,7 +132,7 @@ def make_log(
     evaluation: bool,
     gamma: float,
     info: dict,
-    logger: HasuraLogger,
+    logger: RunLogger,
     rewards: List[float],
     seed: int,
     start_time: float,
@@ -176,7 +176,7 @@ def evaluate(
     act_fn: Callable[[List[TimeStep], Any, int], int],
     env: Env,
     eval_interval: int,
-    logger: HasuraLogger,
+    logger: RunLogger,
     T: int,
     **kwargs,
 ):
