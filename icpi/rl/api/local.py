@@ -1,29 +1,38 @@
 import re
 import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
-import requests
 from rl.common import Colorize, Debug
 from rl.lm import LM, Data
+from text_generation import Client
 from transformers import GPT2TokenizerFast
+
+CODE_ONLY_TEMPLATE = "```python\n{input_text}"
+INSTRUCTION_TEMPLATE = (
+    "Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n"
+    "### Instruction:\n{instruction}\n\n### Response:\n" + CODE_ONLY_TEMPLATE
+)
 
 
 @dataclass
 class Local(LM):
     seed: int
     url: str
+    template: str
     completion_count: int = 0
     completion_times: float = 0
     error_count: int = 0
     query_count: int = 0
     query_tick: float = time.time()
     query_times: float = 0
+    client: Client = field(init=False)
 
     def __post_init__(self):
+        self.client = Client(self.url)
         self.tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
         self.start_time = time.time()
-        self.max_tokens_accepted_by_lm = 600
+        self.max_tokens_accepted_by_lm = 2048
         assert self.logprobs == 0
 
     def get_full_completion(
@@ -66,23 +75,23 @@ class Local(LM):
             sys.stdout.flush()
             self.query_tick = time.time()
             self.query_count += 1
-            response = requests.post(
-                self.url,
-                headers={
-                    "accept": "application/json",
-                    # Already added when you pass json= but not when you pass data=
-                    # 'Content-Type': 'application/json',
-                },
-                json=dict(
-                    prompt=prompt,
-                    max_tokens=self.max_tokens_in_completion,
+            try:
+                response = self.client.generate(
+                    self.template.format(input_text=prompt),
+                    max_new_tokens=self.max_tokens_in_completion,
+                    do_sample=True,
                     temperature=0.1,
-                    top_p=1,
-                    logprobs=self.logprobs,
-                    stop=[stop],
+                    top_p=1.0,
                     seed=self.seed,
-                ),
-            )
+                    stop_sequences=stop,
+                    watermark=False,
+                )
+            except Exception as e:
+                print(e)
+                sys.stdout.flush()
+                self.error_count += 1
+                continue
+
             self.query_times += time.time() - self.query_tick
 
             if self.logger.run_id is not None:
@@ -94,15 +103,8 @@ class Local(LM):
                     },
                 )
 
-            if not response.ok:
-                print(response.text)
-                sys.stdout.flush()
-                self.error_count += 1
-                continue
-
-            choice, *_ = response.json()["choices"]
-            completion = choice["text"].lstrip()
-            completion = completion[: completion.find(stop)]  # TODO
+            completion = response.generated_text.lstrip()
+            completion = completion[: completion.rfind(stop)]  # TODO
             completion = re.sub(r"(\S)!=", r"\1 !=", completion)
 
             top_logprobs = []
