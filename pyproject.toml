@@ -20,6 +20,7 @@ rich = "^13.3.4"
 dm-env = "^1.6"
 scipy = "1.9.1"
 bsuite = "^0.3.5"
+text-generation = "^0.6.0"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.2.0"
