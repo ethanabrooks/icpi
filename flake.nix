@@ -22,48 +22,14 @@
         sha256 = "sha256:1lvppcdfca460sqnb0ryrach6lv1g9dwcjfim0dl4vmxg2ryaq7p";
       };
       overrides = pyfinal: pyprev: rec {
-        mujoco-py =
-          (pyprev.mujoco-py.override {
-            preferWheel = false;
-          })
-          .overridePythonAttrs (old: {
-            env.NIX_CFLAGS_COMPILE = "-L${pkgs.mesa.osmesa}/lib";
-            preBuild = ''
-              export MUJOCO_PY_MUJOCO_PATH="${mujoco}"
-              export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${mujoco}/bin:${pkgs.mesa.osmesa}/lib:${pkgs.libGL}/lib:${pkgs.gcc-unwrapped.lib}/lib
-            '';
-            buildInputs =
-              old.buildInputs
-              ++ [
-                pyfinal.setuptools
-                pkgs.mesa
-                pkgs.libGL
-              ];
-            patches = [./mujoco-py.patch];
-          });
         bsuite = pyprev.bsuite.overridePythonAttrs (old: {
           buildInputs = (old.buildInputs or []) ++ [pyprev.scipy];
         });
         dollar-lambda = pyprev.dollar-lambda.overridePythonAttrs (old: {
           buildInputs = (old.buildInputs or []) ++ [pyprev.poetry];
         });
-        run-logger = pyprev.run-logger.overridePythonAttrs (old: {
-          buildInputs = (old.buildInputs or []) ++ [pyprev.poetry];
-        });
-        sweep-logger = pyprev.sweep-logger.overridePythonAttrs (old: {
-          buildInputs = (old.buildInputs or []) ++ [pyprev.poetry];
-        });
-        torch = pyprev.pytorch-bin.overridePythonAttrs (old: {
-          src = pkgs.fetchurl {
-            url = "https://download.pytorch.org/whl/cu116/torch-1.13.1%2Bcu116-cp39-cp39-linux_x86_64.whl";
-            sha256 = "sha256-20V6gi1zYBO2/+UJBTABvJGL3Xj+aJZ7YF9TmEqa+sU=";
-          };
-        });
         vega-charts = pyprev.vega-charts.overridePythonAttrs (old: {
           buildInputs = (old.buildInputs or []) ++ [pyprev.poetry];
-        });
-        torchrl = pyprev.torchrl.overridePythonAttrs (old: {
-          preFixup = "addAutoPatchelfSearchPath ${pyfinal.torch}";
         });
       };
       poetryEnv = pkgs.poetry2nix.mkPoetryEnv {
