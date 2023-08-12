@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from rl.common import Debug
 from rl.lm import LM, Data
 from text_generation import Client
-from transformers import GPT2TokenizerFast
+from transformers import AutoTokenizer
 
 CODE_ONLY_TEMPLATE = "```python\n{input_text}"
 INSTRUCTION_TEMPLATE = (
@@ -30,7 +30,9 @@ class Local(LM):
 
     def __post_init__(self):
         self.client = Client(self.url)
-        self.tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            "WizardLM/WizardCoder-15B-V1.0", use_fast=True
+        )
         self.start_time = time.time()
         self.max_tokens_accepted_by_lm = 2047
         assert self.logprobs == 0
