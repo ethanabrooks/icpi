@@ -6,6 +6,8 @@ from pathlib import Path
 from shlex import quote
 from typing import Optional, Union
 
+import wandb
+
 import line
 import ray
 import yaml
@@ -14,9 +16,11 @@ from git import Repo
 from ray import tune
 from rl.tabular_q import tabular_main
 from rl.train import train
+
 # from run_logger import RunLogger
 # from sweep_logger import create_sweep
 # from sweep_logger.create_sweep import SweepMethod
+
 
 def get_config_params(config: Union[str, Path]) -> dict:
     if isinstance(config, str):
@@ -92,8 +96,8 @@ def no_log(
     # logger = RunLogger(GRAPHQL_ENDPOINT)
     params = get_config_params(config)
     # if load_id is not None:
-        # load_params = get_load_params(load_id=load_id, logger=logger)
-        # params.update(load_params)  # load params > config params
+    # load_params = get_load_params(load_id=load_id, logger=logger)
+    # params.update(load_params)  # load params > config params
     params.update(kwargs)  # kwargs params > load params > config params
     main(**params)
 
@@ -160,6 +164,13 @@ def _log(
     #         name=name,
     #     )
     # )  # todo: encapsulate in HasuraLogger
+    wandb.init(
+        config=dict(eval_interval=eval_interval, **kwargs),
+        name=name,
+        # notes=notes,
+        project="icpi",
+        # tags=get_tags(**kwargs),
+    )
     main(
         **kwargs,
         break_on_invalid=break_on_invalid,

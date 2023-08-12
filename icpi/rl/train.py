@@ -144,7 +144,6 @@ def train(
                 act_fn=pi.act,  # type: ignore
                 env=eval_env,
                 eval_interval=eval_interval,
-                logger=logger,
                 T=T,
                 **log_info,
             )

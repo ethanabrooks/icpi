@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Any, Callable, List, Optional
 
+import wandb
+
 import bandit
 import cartpole
 import catch
@@ -150,20 +152,20 @@ def make_log(
 
     prefix = "eval " if evaluation else ""
 
-    # log = dict(
-    #     seed=seed,
-    #     hours=(time.time() - start_time) / 3600,
-    #     **{
-    #         prefix + "return": discounted,
-    #         "run ID": logger.run_id,
-    #     },
-    #     **kwargs,
-    # )
-    # if regret is not None:
-    #     log.update({prefix + "regret": regret})
-    # if logger.run_id is not None:
-    #     # noinspection PyTypeChecker
-    #     logger.log(**log, step=step)
+    log = dict(
+        seed=seed,
+        # hours=(time.time() - start_time) / 3600,
+        **{
+            prefix + "return": discounted,
+            # "run ID": logger.run_id,
+        },
+        **kwargs,
+    )
+    if regret is not None:
+        log.update({prefix + "regret": regret})
+    if wandb.run is not None:
+        # noinspection PyTypeChecker
+        wandb.log(log, step=step)
     # log.update(step=step if total_steps is None else f"{step} / {total_steps}")
     # noinspection PyTypeChecker
     # log = dict(sorted(list(log.items())))
