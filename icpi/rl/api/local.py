@@ -46,6 +46,7 @@ class Local(LM):
         if Debug.print_api_call_indicator.meets_threshold(self.debug):
             print("<", end="")
 
+        prompt = self.template.format(input_text=prompt)
         prompt = self.clip_prompt(prompt)
 
         # if use_cache:
@@ -77,7 +78,7 @@ class Local(LM):
             self.query_count += 1
             try:
                 response = self.client.generate(
-                    self.template.format(input_text=prompt),
+                    prompt=prompt,
                     max_new_tokens=self.max_tokens_in_completion,
                     do_sample=True,
                     temperature=0.1,
