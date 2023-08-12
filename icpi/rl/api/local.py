@@ -32,7 +32,7 @@ class Local(LM):
         self.client = Client(self.url)
         self.tokenizer = GPT2TokenizerFast.from_pretrained("gpt2")
         self.start_time = time.time()
-        self.max_tokens_accepted_by_lm = 2048
+        self.max_tokens_accepted_by_lm = 2047
         assert self.logprobs == 0
 
     def get_full_completion(
