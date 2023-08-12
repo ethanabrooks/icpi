@@ -3,7 +3,7 @@ import sys
 import time
 from dataclasses import dataclass, field
 
-from rl.common import Colorize, Debug
+from rl.common import Debug
 from rl.lm import LM, Data
 from text_generation import Client
 from transformers import GPT2TokenizerFast
@@ -19,7 +19,6 @@ INSTRUCTION_TEMPLATE = (
 class Local(LM):
     seed: int
     url: str
-    template: str
     completion_count: int = 0
     completion_times: float = 0
     error_count: int = 0
@@ -27,6 +26,7 @@ class Local(LM):
     query_tick: float = time.time()
     query_times: float = 0
     client: Client = field(init=False)
+    template: str = CODE_ONLY_TEMPLATE
 
     def __post_init__(self):
         self.client = Client(self.url)
@@ -48,21 +48,21 @@ class Local(LM):
 
         prompt = self.clip_prompt(prompt)
 
-        if use_cache:
-            completions = self.get_completions(
-                prompt, stop=[stop], temperature=temperature
-            )
-            if completions:
-                completion, *_ = completions
-                # print("Completion:")
-                # print(value)
-                if Debug.print_api_call_indicator.meets_threshold(self.debug):
-                    print(">", end="")
-                return completion
-            elif self.require_cache:
-                print(prompt)
-                Colorize.print_warning("No completions found in cache for this prompt.")
-                exit()
+        # if use_cache:
+        #     completions = self.get_completions(
+        #         prompt, stop=[stop], temperature=temperature
+        #     )
+        #     if completions:
+        #         completion, *_ = completions
+        #         # print("Completion:")
+        #         # print(value)
+        #         if Debug.print_api_call_indicator.meets_threshold(self.debug):
+        #             print(">", end="")
+        #         return completion
+        #     elif self.require_cache:
+        #         print(prompt)
+        #         Colorize.print_warning("No completions found in cache for this prompt.")
+        #         exit()
 
         if Debug.debug_api_calls.meets_threshold(self.debug):
             print("Prompt:")
@@ -81,9 +81,9 @@ class Local(LM):
                     max_new_tokens=self.max_tokens_in_completion,
                     do_sample=True,
                     temperature=0.1,
-                    top_p=1.0,
+                    top_p=0.99,
                     seed=self.seed,
-                    stop_sequences=stop,
+                    stop_sequences=[stop],
                     watermark=False,
                 )
             except Exception as e:
@@ -94,44 +94,44 @@ class Local(LM):
 
             self.query_times += time.time() - self.query_tick
 
-            if self.logger.run_id is not None:
-                self.logger.log(
-                    **{
-                        "hours": (time.time() - self.start_time) / 3600,
-                        "run ID": self.logger.run_id,
-                        "seconds per query": self.query_times / self.query_count,
-                    },
-                )
+            # if self.logger.run_id is not None:
+            #     self.logger.log(
+            #         **{
+            #             "hours": (time.time() - self.start_time) / 3600,
+            #             "run ID": self.logger.run_id,
+            #             "seconds per query": self.query_times / self.query_count,
+            #         },
+            #     )
 
             completion = response.generated_text.lstrip()
             completion = completion[: completion.rfind(stop)]  # TODO
             completion = re.sub(r"(\S)!=", r"\1 !=", completion)
 
             top_logprobs = []
-            response = self.post_completion(
-                completion=completion,
-                prompt=prompt,
-                stop=[stop],
-                temperature=temperature,
-                top_logprobs=top_logprobs,
-            )["insert_completions_one"]["completion"]
-            if response != completion:
-                breakpoint()
+            # response = self.post_completion(
+            #     completion=completion,
+            #     prompt=prompt,
+            #     stop=[stop],
+            #     temperature=temperature,
+            #     top_logprobs=top_logprobs,
+            # )["insert_completions_one"]["completion"]
+            # if response != completion:
+            #     breakpoint()
             if Debug.print_api_call_indicator.meets_threshold(self.debug):
                 print(">", end="")
             if Debug.debug_api_calls.meets_threshold(self.debug):
                 print("Completion:", completion)
                 breakpoint()
             self.completion_times += time.time() - completion_tick
-            if self.logger.run_id is not None:
-                self.logger.log(
-                    **{
-                        "hours": (time.time() - self.start_time) / 3600,
-                        "run ID": self.logger.run_id,
-                        "seconds per completion": self.completion_times
-                        / self.completion_count,
-                    },
-                )
+            # if self.logger.run_id is not None:
+            #     self.logger.log(
+            #         **{
+            #             "hours": (time.time() - self.start_time) / 3600,
+            #             "run ID": self.logger.run_id,
+            #             "seconds per completion": self.completion_times
+            #             / self.completion_count,
+            #         },
+            #     )
             if "state!=" in completion:
                 breakpoint()
             return dict(

@@ -76,7 +76,7 @@ REQUIRE_CACHE_FLAG = flag("require_cache", default=False)
     parsers=dict(
         kwargs=nonpositional(
             option("break_on_invalid", type=bool, default=False),
-            option("debug", type=int, default=1),
+            option("debug", type=int, default=0),
             option("t_threshold", type=int, default=None),
             LOCAL_RANK_ARG,
             NO_CACHE_FLAG,
