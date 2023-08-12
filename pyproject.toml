@@ -18,6 +18,7 @@ dm-env = "^1.6"
 scipy = "1.9.1"
 bsuite = "^0.3.5"
 text-generation = "^0.6.0"
+gym = "^0.17.2"
 
 [tool.poetry.dev-dependencies]
 ipython = "^8.2.0"
