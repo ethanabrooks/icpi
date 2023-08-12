@@ -10,3 +10,4 @@ config.yml
 ignore.py
 .direnv/
 .local-models.yml
+wandb/
