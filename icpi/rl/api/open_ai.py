@@ -39,21 +39,21 @@ class OpenAi(LM):
 
         prompt = self.clip_prompt(prompt)
 
-        if use_cache:
-            completions = self.get_completions(
-                prompt, stop=stop, temperature=temperature
-            )
-            if completions:
-                completion, *_ = completions
-                # print("Completion:")
-                # print(value)
-                if Debug.print_api_call_indicator.meets_threshold(self.debug):
-                    print(">", end="")
-                return completion
-            elif self.require_cache:
-                print(prompt)
-                Colorize.print_warning("No completions found in cache for this prompt.")
-                exit()
+        # if use_cache:
+        #     completions = self.get_full_completion(
+        #         prompt, stop=stop, temperature=temperature
+        #     )
+        #     if completions:
+        #         completion, *_ = completions
+        #         # print("Completion:")
+        #         # print(value)
+        #         if Debug.print_api_call_indicator.meets_threshold(self.debug):
+        #             print(">", end="")
+        #         return completion
+        #     elif self.require_cache:
+        #         print(prompt)
+        #         Colorize.print_warning("No completions found in cache for this prompt.")
+        #         exit()
 
         if Debug.debug_api_calls.meets_threshold(self.debug):
             print("Prompt:")

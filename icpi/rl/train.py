@@ -14,7 +14,6 @@ from rl.api.open_ai import OPENAI_MODELS, OpenAi
 from rl.common import evaluate, get_value, make_env, make_log, print_rank0
 from rl.lm import Data
 from rl.model import Pi, Q, TimeStep
-from run_logger import RunLogger
 
 
 def train(
@@ -27,7 +26,6 @@ def train(
     eval_interval: Optional[int],
     hint: bool,
     logprobs: int,
-    logger: RunLogger,
     max_prompts: int,
     max_resamples: int,
     max_tokens: int,
@@ -58,7 +56,6 @@ def train(
     kwargs = dict(
         debug=debug,
         logprobs=logprobs,
-        logger=logger,
         max_tokens_in_completion=max_tokens,
         model_name=model_name,
         require_cache=require_cache,
@@ -182,7 +179,6 @@ def train(
                     evaluation=False,
                     hint=hint,
                     info=info,
-                    logger=logger,
                     model_name=model_name,
                     policy_hint=policy_hint,
                     rewards=rewards,

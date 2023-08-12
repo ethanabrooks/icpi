@@ -16,7 +16,6 @@ from rich.console import Console
 from rich.pretty import pprint
 from rich.syntax import Syntax
 from rl.lm import Data
-from run_logger import RunLogger
 
 console = Console()
 
@@ -132,7 +131,6 @@ def make_log(
     evaluation: bool,
     gamma: float,
     info: dict,
-    logger: RunLogger,
     rewards: List[float],
     seed: int,
     start_time: float,
@@ -152,31 +150,30 @@ def make_log(
 
     prefix = "eval " if evaluation else ""
 
-    log = dict(
-        seed=seed,
-        hours=(time.time() - start_time) / 3600,
-        **{
-            prefix + "return": discounted,
-            "run ID": logger.run_id,
-        },
-        **kwargs,
-    )
-    if regret is not None:
-        log.update({prefix + "regret": regret})
-    if logger.run_id is not None:
-        # noinspection PyTypeChecker
-        logger.log(**log, step=step)
-    log.update(step=step if total_steps is None else f"{step} / {total_steps}")
+    # log = dict(
+    #     seed=seed,
+    #     hours=(time.time() - start_time) / 3600,
+    #     **{
+    #         prefix + "return": discounted,
+    #         "run ID": logger.run_id,
+    #     },
+    #     **kwargs,
+    # )
+    # if regret is not None:
+    #     log.update({prefix + "regret": regret})
+    # if logger.run_id is not None:
+    #     # noinspection PyTypeChecker
+    #     logger.log(**log, step=step)
+    # log.update(step=step if total_steps is None else f"{step} / {total_steps}")
     # noinspection PyTypeChecker
-    log = dict(sorted(list(log.items())))
-    print_rank0(local_rank, log, pretty=True)
+    # log = dict(sorted(list(log.items())))
+    # print_rank0(local_rank, log, pretty=True)
 
 
 def evaluate(
     act_fn: Callable[[List[TimeStep], Any, int], int],
     env: Env,
     eval_interval: int,
-    logger: RunLogger,
     T: int,
     **kwargs,
 ):
@@ -204,10 +201,10 @@ def evaluate(
             state = next_state
             rewards.append(reward)
             t += 1
-            if done:
-                make_log(
-                    logger=logger, info=info, rewards=rewards, evaluation=True, **kwargs
-                )
+            # if done:
+            #     make_log(
+            #         logger=logger, info=info, rewards=rewards, evaluation=True, **kwargs
+            #     )
 
 
 def get_value(*trajectory: TimeStep, gamma: float) -> float:

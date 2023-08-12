@@ -9,7 +9,6 @@ import numpy as np
 from numpy.random import Generator, default_rng
 from rl.common import evaluate, make_env, make_log
 from rl.lm import Data
-from run_logger import RunLogger
 
 
 @dataclass
@@ -71,7 +70,6 @@ def tabular_main(
     env_id: str,
     eval_interval: int,
     min_successes: int,
-    logger: RunLogger,
     seed: int,
     total_steps: int,
     **_,

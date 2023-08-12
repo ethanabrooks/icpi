@@ -25,7 +25,7 @@ class Env(base_env.Env[int, int]):
     def __post_init__(self):
         self.random = np.random.default_rng(self.random_seed)
         self.action_space = gym.spaces.Discrete(
-            len(self.actions()), seed=self.random_seed
+            len(self.actions())
         )
 
     def action_str(self, action: int) -> str:

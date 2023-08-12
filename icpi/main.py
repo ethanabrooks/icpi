@@ -14,7 +14,7 @@ from git import Repo
 from ray import tune
 from rl.tabular_q import tabular_main
 from rl.train import train
-from run_logger import RunLogger
+# from run_logger import RunLogger
 # from sweep_logger import create_sweep
 # from sweep_logger.create_sweep import SweepMethod
 
@@ -26,18 +26,18 @@ def get_config_params(config: Union[str, Path]) -> dict:
     return config
 
 
-def get_load_params(load_id: int, logger: RunLogger) -> dict:
-    return logger.execute(
-        gql(
-            """
-query GetParameters($id: Int!) {
-run_by_pk(id: $id) {
-metadata(path: "parameters")
-}
-}"""
-        ),
-        variable_values=dict(id=load_id),
-    )["run_by_pk"]["metadata"]
+# def get_load_params(load_id: int, logger: RunLogger) -> dict:
+#     return logger.execute(
+#         gql(
+#             """
+# query GetParameters($id: Int!) {
+# run_by_pk(id: $id) {
+# metadata(path: "parameters")
+# }
+# }"""
+#         ),
+#         variable_values=dict(id=load_id),
+#     )["run_by_pk"]["metadata"]
 
 tree = CommandTree()
 
@@ -89,13 +89,13 @@ def no_log(
     load_id: Optional[int] = None,
     **kwargs,
 ):
-    logger = RunLogger(GRAPHQL_ENDPOINT)
+    # logger = RunLogger(GRAPHQL_ENDPOINT)
     params = get_config_params(config)
-    if load_id is not None:
-        load_params = get_load_params(load_id=load_id, logger=logger)
-        params.update(load_params)  # load params > config params
+    # if load_id is not None:
+        # load_params = get_load_params(load_id=load_id, logger=logger)
+        # params.update(load_params)  # load params > config params
     params.update(kwargs)  # kwargs params > load params > config params
-    main(logger=logger, **params)
+    main(**params)
 
 
 def _log(
@@ -151,21 +151,21 @@ def _log(
         for x, y in xy()
     ]
 
-    logger = HasuraLogger(GRAPHQL_ENDPOINT)
-    logger.create_run(metadata=metadata, sweep_id=sweep_id, charts=charts)
-    logger.update_metadata(  # this updates the metadata stored in the database
-        dict(
-            parameters=dict(eval_interval=eval_interval, **kwargs),
-            run_id=logger.run_id,
-            name=name,
-        )
-    )  # todo: encapsulate in HasuraLogger
+    # logger = HasuraLogger(GRAPHQL_ENDPOINT)
+    # logger.create_run(metadata=metadata, sweep_id=sweep_id, charts=charts)
+    # logger.update_metadata(  # this updates the metadata stored in the database
+    #     dict(
+    #         parameters=dict(eval_interval=eval_interval, **kwargs),
+    #         run_id=logger.run_id,
+    #         name=name,
+    #     )
+    # )  # todo: encapsulate in HasuraLogger
     main(
         **kwargs,
         break_on_invalid=break_on_invalid,
         debug=debug,
         eval_interval=eval_interval,
-        logger=logger,
+        # logger=logger,
         require_cache=require_cache,
         use_cache=use_cache,
     )
@@ -228,15 +228,15 @@ def sweep(
             for k, v in config.items()
         },
     )
-    method = SweepMethod.random if random_search else SweepMethod.grid
-    sweep_id = create_sweep.run(
-        config=config_path,
-        graphql_endpoint=GRAPHQL_ENDPOINT,
-        log_level="INFO",
-        method=method.name,
-        name=name,
-    )
-    config.update(sweep_id=sweep_id)
+    # method = SweepMethod.random if random_search else SweepMethod.grid
+    # sweep_id = create_sweep.run(
+    #     config=config_path,
+    #     graphql_endpoint=GRAPHQL_ENDPOINT,
+    #     log_level="INFO",
+    #     method=method.name,
+    #     name=name,
+    # )
+    # config.update(sweep_id=sweep_id)
     ray.init()
     analysis = tune.run(trainable, config=config)
     print(analysis.stats())
